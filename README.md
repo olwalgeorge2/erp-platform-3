@@ -41,6 +41,11 @@ This repository hosts a modular, cloud-native Enterprise Resource Planning (ERP)
 6.3 `docs/BUILD_SYSTEM_UPDATE.md` records build tooling decisions and conventions.
 6.4 `docs/runbooks/` contains operational guides and incident response procedures.
 6.5 `docs/adr/` stores architecture decision records for major technical choices.
+6.6 `bounded-contexts/README.md` indexes every bounded context and links to service-level documentation.
+6.7 `bounded-contexts/tenancy-identity/README.md` describes the platform identity and tenancy services.
+6.8 `bounded-contexts/financial-management/README.md` covers accounting, AP/AR, and shared finance modules.
+6.9 `bounded-contexts/commerce/README.md` summarizes omnichannel commerce capabilities and shared kernels.
+6.10 `bounded-contexts/communication-hub/README.md` highlights messaging orchestration and channel adapters.
 
 ## 7. Contributing
 7.1 Create or update ADRs for noteworthy design decisions.

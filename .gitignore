@@ -97,5 +97,8 @@ secrets/
 generated/
 target/
 
-# ktlint
-!ktlint
+# ktlint binaries (wrapper scripts are tracked)
+ktlint
+ktlint.jar
+!ktlint.bat
+!ktlint.sh

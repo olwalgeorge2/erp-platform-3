@@ -16,6 +16,8 @@ This repository hosts a modular, cloud-native Enterprise Resource Planning (ERP)
 3.4 PostgreSQL for relational persistence and Kafka-class brokers for eventing.
 3.5 OpenTelemetry, JSON logging, and metrics for full-stack observability.
 
+See `docs/BUILD_SYSTEM_UPDATE.md` for detailed dependency versions, tooling rationale, and upgrade guidance.
+
 ## 4. Repository Layout
 4.1 `api-gateway/` - Edge service for request routing and composition.
 4.2 `bounded-contexts/` - Domain services grouped by bounded context.

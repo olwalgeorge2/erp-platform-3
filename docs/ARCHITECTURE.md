@@ -167,6 +167,7 @@ Multi-tenancy support and identity/access management.
 - `identity-application/` - Authentication and authorization
 - `identity-domain/` - User, role, and tenant domain models
 - `identity-infrastructure/` - Identity provider integrations
+- Related ADRs: ADR-005 Multi-Tenancy Data Isolation Strategy.
 
 ## Platform Components
 
@@ -183,6 +184,7 @@ Central entry point for all client requests.
 **Configuration**:
 - `config/api-gateway.env` - Environment configuration
 - `config/rate-limits.yml` - Rate limiting rules
+- Related ADRs: ADR-004 API Gateway Pattern.
 
 ### Platform Infrastructure (`platform-infrastructure/`)
 Shared infrastructure components and patterns.
@@ -194,12 +196,14 @@ Shared infrastructure components and patterns.
    - Command handlers
    - Query handlers
    - Command bus and query bus abstractions
+   - Related ADRs: ADR-001 Modular CQRS Implementation.
 
 2. **Eventing** (`eventing/`)
    - Domain event publishers
    - Event subscribers
    - Event store abstractions
    - Event-driven communication patterns
+   - Related ADRs: ADR-003 Event-Driven Integration Between Contexts.
 
 3. **Monitoring** (`monitoring/`)
    - Health checks
@@ -242,6 +246,7 @@ Web-based user interface built with TypeScript.
 - **Eventual Consistency** - Between bounded contexts
 - **Strong Consistency** - Within bounded context (transaction boundaries)
 - **Saga Pattern** - Distributed transaction coordination
+- Related ADRs: ADR-002 Database Per Bounded Context, ADR-005 Multi-Tenancy Data Isolation Strategy.
 
 ## Deployment Architecture
 

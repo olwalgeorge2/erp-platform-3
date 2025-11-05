@@ -48,7 +48,7 @@
 
 ### Delivered Artifacts
 - GitHub Actions workflows with 4-stage CI pipeline (build, code-quality, architecture-tests, build-status)
-- ktlint 1.3.1 integration with EditorConfig style rules
+- ktlint 1.7.1 integration with EditorConfig style rules
 - PR template with bounded context checklist
 - Comprehensive documentation (CONTRIBUTING.md, docs/CI_CD.md, updated README.md)
 - Convention plugins for consistent build configuration

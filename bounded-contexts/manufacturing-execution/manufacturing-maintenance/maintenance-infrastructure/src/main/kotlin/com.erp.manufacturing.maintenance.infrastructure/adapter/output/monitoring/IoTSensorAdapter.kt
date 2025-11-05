@@ -1,0 +1,3 @@
+package com.erp.manufacturing.maintenance.infrastructure.adapter.output.monitoring
+
+object IoTSensorAdapterPlaceholder

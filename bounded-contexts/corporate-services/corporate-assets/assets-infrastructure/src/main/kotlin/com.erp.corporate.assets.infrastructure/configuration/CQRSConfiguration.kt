@@ -1,0 +1,3 @@
+package com.erp.corporate.assets.infrastructure.configuration
+
+object CQRSConfigurationPlaceholder

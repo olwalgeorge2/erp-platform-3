@@ -1,0 +1,3 @@
+package com.erp.commerce.marketplace.infrastructure.configuration
+
+object MarketplaceConfigurationPlaceholder

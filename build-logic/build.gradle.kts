@@ -15,6 +15,7 @@ repositories {
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:${libs.findVersion("kotlin").get().requiredVersion}")
+    implementation("org.jlleitschuh.gradle:ktlint-gradle:12.1.1")
 }
 
 gradlePlugin {
@@ -36,6 +37,12 @@ gradlePlugin {
             implementationClass = "erp.platform.buildlogic.NativeImageConventionsPlugin"
             displayName = "ERP Quarkus native image conventions"
             description = "Native image configuration shared across Quarkus services"
+        }
+        create("ktlintConventions") {
+            id = "erp.ktlint-conventions"
+            implementationClass = "erp.platform.buildlogic.KtlintConventionsPlugin"
+            displayName = "ERP ktlint conventions"
+            description = "Code style conventions using ktlint"
         }
     }
 }

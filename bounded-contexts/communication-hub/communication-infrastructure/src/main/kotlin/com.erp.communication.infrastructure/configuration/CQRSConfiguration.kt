@@ -1,0 +1,3 @@
+package com.erp.communication.infrastructure.configuration
+
+object CQRSConfigurationPlaceholder

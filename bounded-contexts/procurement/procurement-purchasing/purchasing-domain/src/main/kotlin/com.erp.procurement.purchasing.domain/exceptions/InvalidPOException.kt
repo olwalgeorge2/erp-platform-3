@@ -1,0 +1,3 @@
+package com.erp.procurement.purchasing.domain.exceptions
+
+object InvalidPOExceptionPlaceholder

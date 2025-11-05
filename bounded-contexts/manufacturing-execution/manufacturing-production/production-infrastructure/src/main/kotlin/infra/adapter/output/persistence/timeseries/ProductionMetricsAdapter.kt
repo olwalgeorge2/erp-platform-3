@@ -1,0 +1,3 @@
+package infra.adapter.output.persistence.timeseries
+
+object ProductionMetricsAdapterPlaceholder

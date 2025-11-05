@@ -1,0 +1,3 @@
+package com.erp.identity.domain.exceptions
+
+object InvalidCredentialExceptionPlaceholder

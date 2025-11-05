@@ -1,0 +1,3 @@
+package com.erp.communication.application.service.command
+
+object CommunicationCommandHandlerPlaceholder

@@ -1,0 +1,3 @@
+package infra.configuration
+
+object ProductionConfigurationPlaceholder

@@ -1,0 +1,3 @@
+package com.erp.inventory.warehouse.infrastructure.adapter.output.messaging
+
+object WarehouseEventPublisherPlaceholder

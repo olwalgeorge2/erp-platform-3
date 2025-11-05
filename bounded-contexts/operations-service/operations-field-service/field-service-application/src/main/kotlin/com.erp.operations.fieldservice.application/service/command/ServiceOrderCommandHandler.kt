@@ -1,0 +1,3 @@
+package com.erp.operations.fieldservice.application.service.command
+
+object ServiceOrderCommandHandlerPlaceholder

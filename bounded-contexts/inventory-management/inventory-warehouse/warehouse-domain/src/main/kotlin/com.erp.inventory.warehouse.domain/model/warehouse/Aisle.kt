@@ -1,0 +1,3 @@
+package com.erp.inventory.warehouse.domain.model.warehouse
+
+object AislePlaceholder

@@ -1,0 +1,3 @@
+package com.erp.commerce.marketplace.domain.exceptions
+
+object ListingRejectionExceptionPlaceholder

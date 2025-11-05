@@ -1,0 +1,3 @@
+package infra.adapter.output.messaging
+
+object ProductionEventPublisherPlaceholder

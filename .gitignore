@@ -97,6 +97,10 @@ secrets/
 generated/
 target/
 
+# Downloaded dependency metadata
+*-index.html
+quarkus-*.html
+
 # ktlint binaries (wrapper scripts are tracked)
 ktlint
 ktlint.jar

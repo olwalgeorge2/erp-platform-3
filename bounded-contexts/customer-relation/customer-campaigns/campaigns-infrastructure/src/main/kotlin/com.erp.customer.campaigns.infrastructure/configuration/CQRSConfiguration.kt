@@ -1,0 +1,3 @@
+package com.erp.customer.campaigns.infrastructure.configuration
+
+object CQRSConfigurationPlaceholder

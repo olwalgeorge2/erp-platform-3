@@ -1,0 +1,3 @@
+package com.erp.communication.infrastructure.adapter.output.persistence
+
+object NotificationJpaAdapterPlaceholder

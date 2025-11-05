@@ -1,0 +1,3 @@
+package com.erp.manufacturing.production.domain.exceptions
+
+object InsufficientCapacityExceptionPlaceholder

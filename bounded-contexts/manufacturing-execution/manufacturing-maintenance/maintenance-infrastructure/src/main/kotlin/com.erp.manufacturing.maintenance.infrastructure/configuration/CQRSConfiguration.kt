@@ -1,0 +1,3 @@
+package com.erp.manufacturing.maintenance.infrastructure.configuration
+
+object CQRSConfigurationPlaceholder

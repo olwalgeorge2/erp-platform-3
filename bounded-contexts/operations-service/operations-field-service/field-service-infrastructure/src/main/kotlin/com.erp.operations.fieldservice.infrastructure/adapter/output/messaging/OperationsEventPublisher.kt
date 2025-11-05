@@ -1,0 +1,3 @@
+package com.erp.operations.fieldservice.infrastructure.adapter.output.messaging
+
+object OperationsEventPublisherPlaceholder

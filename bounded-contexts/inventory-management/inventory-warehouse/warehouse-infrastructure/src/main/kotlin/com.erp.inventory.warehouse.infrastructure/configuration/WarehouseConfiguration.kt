@@ -1,0 +1,3 @@
+package com.erp.inventory.warehouse.infrastructure.configuration
+
+object WarehouseConfigurationPlaceholder

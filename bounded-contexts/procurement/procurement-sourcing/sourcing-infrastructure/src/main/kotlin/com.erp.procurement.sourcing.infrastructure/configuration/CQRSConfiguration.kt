@@ -1,0 +1,3 @@
+package com.erp.procurement.sourcing.infrastructure.configuration
+
+object CQRSConfigurationPlaceholder

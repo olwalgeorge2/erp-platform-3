@@ -1,0 +1,3 @@
+package com.erp.identity.infrastructure.configuration
+
+object SecurityConfigurationPlaceholder

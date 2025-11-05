@@ -1,0 +1,3 @@
+package com.erp.commerce.marketplace.infrastructure.adapter.output.messaging
+
+object MarketplaceEventPublisherPlaceholder

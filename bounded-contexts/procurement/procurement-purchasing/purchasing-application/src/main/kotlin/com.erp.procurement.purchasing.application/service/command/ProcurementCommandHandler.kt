@@ -1,0 +1,3 @@
+package com.erp.procurement.purchasing.application.service.command
+
+object ProcurementCommandHandlerPlaceholder

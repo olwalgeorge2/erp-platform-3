@@ -1,5 +1,8 @@
 # ERP Platform
 
+[![CI](https://github.com/olwalgeorge2/erp-platform-3/actions/workflows/ci.yml/badge.svg)](https://github.com/olwalgeorge2/erp-platform-3/actions/workflows/ci.yml)
+[![Nightly Build](https://github.com/olwalgeorge2/erp-platform-3/actions/workflows/nightly.yml/badge.svg)](https://github.com/olwalgeorge2/erp-platform-3/actions/workflows/nightly.yml)
+
 ## 1. Overview
 This repository hosts a modular, cloud-native Enterprise Resource Planning (ERP) platform built with Kotlin and Quarkus. The system embraces Domain-Driven Design (DDD), hexagonal architecture, and microservices principles to deliver a scalable, multi-tenant solution composed of independent bounded contexts.
 
@@ -31,11 +34,56 @@ See `docs/BUILD_SYSTEM_UPDATE.md` for detailed dependency versions, tooling rati
 4.10 `settings.gradle.kts` - Gradle settings and project wiring.
 
 ## 5. Getting Started
-5.1 Install prerequisites: Git, JDK 21, and Kotlin 2.2 toolchain.
-5.2 Clone the repository and copy `.env.example` to `.env` with environment-specific values.
-5.3 Run `./gradlew tasks` (or `gradlew.bat tasks` on Windows) to verify the toolchain.
-5.4 Execute `./gradlew build` to compile modules and run the default test suite.
-5.5 Review `docs/ROADMAP.md` and `docs/ARCHITECTURE.md` for project context before contributing changes.
+
+### Prerequisites
+- **JDK 21** (Temurin or similar)
+- **Kotlin 2.2+** toolchain
+- **Git** for version control
+- **Docker** (optional, for local infrastructure)
+
+### Quick Start
+```bash
+# 1. Clone the repository
+git clone https://github.com/olwalgeorge2/erp-platform-3.git
+cd erp-platform-3
+
+# 2. Copy environment configuration
+cp .env.example .env
+# Edit .env with your local values
+
+# 3. Verify toolchain
+./gradlew tasks              # Linux/Mac
+.\gradlew.bat tasks          # Windows
+
+# 4. Build all modules
+./gradlew build
+
+# 5. Run tests
+./gradlew test
+
+# 6. Check code style
+./gradlew ktlintCheck
+
+# 7. Auto-format code
+./gradlew ktlintFormat
+```
+
+### Build Commands
+| Command | Description |
+|---------|-------------|
+| `./gradlew build` | Compile all modules and run tests |
+| `./gradlew test` | Run unit tests across all modules |
+| `./gradlew check` | Run all verification tasks |
+| `./gradlew ktlintCheck` | Check Kotlin code style |
+| `./gradlew ktlintFormat` | Auto-format Kotlin code |
+| `./gradlew projects` | List all modules |
+| `./gradlew build --scan` | Build with Gradle Build Scan |
+
+### Review Documentation
+- `docs/ROADMAP.md` - Implementation phases and milestones
+- `docs/ARCHITECTURE.md` - System design and bounded contexts
+- `docs/BUILD_SYSTEM_UPDATE.md` - Build tooling and conventions
+
 
 ## 6. Documentation Guide
 6.1 `docs/ARCHITECTURE.md` outlines the domain model, bounded contexts, and system design.
@@ -50,8 +98,32 @@ See `docs/BUILD_SYSTEM_UPDATE.md` for detailed dependency versions, tooling rati
 6.10 `bounded-contexts/communication-hub/README.md` highlights messaging orchestration and channel adapters.
 
 ## 7. Contributing
-7.1 Create or update ADRs for noteworthy design decisions.
-7.2 Follow the coding standards enforced by ktlint and the project’s static analysis.
-7.3 Keep bounded contexts autonomous; share functionality through `platform-shared/` only when necessary.
+
+### Development Workflow
+1. Create a feature branch from `main`
+2. Make your changes following the coding standards
+3. Run `./gradlew ktlintFormat` to auto-format code
+4. Run `./gradlew check` to verify all tests pass
+5. Commit with clear, descriptive messages
+6. Push and create a Pull Request
+
+### Code Standards
+- Follow ktlint rules (enforced via `.editorconfig`)
+- Write unit tests for new functionality
+- Update documentation for architectural changes
+- Create ADRs for significant design decisions
+- Keep bounded contexts autonomous
+- Share functionality through `platform-shared/` only when necessary
+
+### CI/CD Pipeline
+All pull requests trigger automated checks:
+- ✅ Kotlin code style verification (ktlint)
+- ✅ Unit and integration tests
+- ✅ Build verification across all modules
+- ✅ Architecture tests (boundary enforcement)
+- ✅ Static analysis and security checks
+
+See `.github/workflows/ci.yml` for the complete pipeline configuration.
+
 7.4 Add tests alongside features and update relevant runbooks or documentation.
 7.5 Open a pull request with a concise summary, testing notes, and links to related tickets.

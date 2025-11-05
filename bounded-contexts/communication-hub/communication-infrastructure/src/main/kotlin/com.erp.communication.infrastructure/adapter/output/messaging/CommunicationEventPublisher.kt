@@ -1,0 +1,3 @@
+package com.erp.communication.infrastructure.adapter.output.messaging
+
+object CommunicationEventPublisherPlaceholder

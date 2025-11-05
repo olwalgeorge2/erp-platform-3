@@ -1,0 +1,3 @@
+package com.erp.manufacturing.maintenance.application.service.query
+
+object MaintenanceQueryHandlerPlaceholder

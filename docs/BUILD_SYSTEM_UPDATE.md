@@ -308,6 +308,9 @@ slf4j = "2.0.16"
 [libraries]
 quarkus-bom = { group = "io.quarkus.platform", name = "quarkus-bom", version.ref = "quarkus" }
 quarkus-rest = { group = "io.quarkus", name = "quarkus-rest", version.ref = "quarkus" }
+quarkus-messaging = { group = "io.quarkus", name = "quarkus-messaging", version.ref = "quarkus" }
+quarkus-messaging-kafka = { group = "io.quarkus", name = "quarkus-messaging-kafka", version.ref = "quarkus" }
+quarkus-kafka-client = { group = "io.quarkus", name = "quarkus-kafka-client", version.ref = "quarkus" }
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit" }
 # ... more libraries
 ```
@@ -321,7 +324,10 @@ quarkus-core = [
   "quarkus-rest-jackson",
   "quarkus-logging-json",
   "quarkus-hibernate-orm",
-  "quarkus-hibernate-validator"
+  "quarkus-hibernate-validator",
+  "quarkus-messaging",
+  "quarkus-messaging-kafka",
+  "quarkus-kafka-client"
 ]
 testing-core = [
   "junit-jupiter",

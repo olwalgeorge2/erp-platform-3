@@ -17,6 +17,9 @@ quarkus-arc = { group = "io.quarkus", name = "quarkus-arc", version.ref = "quark
 quarkus-jdbc-postgresql = { group = "io.quarkus", name = "quarkus-jdbc-postgresql", version.ref = "quarkus" }
 quarkus-elytron-security = { group = "io.quarkus", name = "quarkus-elytron-security", version.ref = "quarkus" }
 quarkus-logging-json = { group = "io.quarkus", name = "quarkus-logging-json", version.ref = "quarkus" }
+quarkus-messaging = { group = "io.quarkus", name = "quarkus-messaging", version.ref = "quarkus" }
+quarkus-messaging-kafka = { group = "io.quarkus", name = "quarkus-messaging-kafka", version.ref = "quarkus" }
+quarkus-kafka-client = { group = "io.quarkus", name = "quarkus-kafka-client", version.ref = "quarkus" }
 quarkus-opentelemetry = { group = "io.quarkus", name = "quarkus-opentelemetry", version.ref = "quarkus" }
 quarkus-cache = { group = "io.quarkus", name = "quarkus-cache", version.ref = "quarkus" }
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
@@ -34,7 +37,10 @@ quarkus-core = [
   "quarkus-rest-jackson",
   "quarkus-logging-json",
   "quarkus-hibernate-orm",
-  "quarkus-hibernate-validator"
+  "quarkus-hibernate-validator",
+  "quarkus-messaging",
+  "quarkus-messaging-kafka",
+  "quarkus-kafka-client"
 ]
 testing-core = [
   "junit-jupiter",

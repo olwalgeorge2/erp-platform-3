@@ -13,7 +13,7 @@ This repository hosts a modular, cloud-native Enterprise Resource Planning (ERP)
 3.1 Kotlin 2.2 and Java 21 as the primary language and runtime.
 3.2 Quarkus 3.x for reactive, cloud-native microservices.
 3.3 Gradle 8 with Kotlin DSL for builds and dependency management.
-3.4 PostgreSQL for relational persistence and Kafka-class brokers for eventing.
+3.4 PostgreSQL for relational persistence and Apache Kafka (KRaft mode) for eventing.
 3.5 OpenTelemetry, JSON logging, and metrics for full-stack observability.
 
 See `docs/BUILD_SYSTEM_UPDATE.md` for detailed dependency versions, tooling rationale, and upgrade guidance.

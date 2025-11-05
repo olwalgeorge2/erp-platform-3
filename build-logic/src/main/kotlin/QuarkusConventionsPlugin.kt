@@ -7,6 +7,7 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.dependencies
 import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.withType
+import org.gradle.kotlin.dsl.*
 
 class QuarkusConventionsPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {
@@ -23,7 +24,10 @@ class QuarkusConventionsPlugin : Plugin<Project> {
             "quarkus-rest-jackson",
             "quarkus-hibernate-orm",
             "quarkus-hibernate-validator",
-            "quarkus-logging-json"
+            "quarkus-logging-json",
+            "quarkus-messaging",
+            "quarkus-messaging-kafka",
+            "quarkus-kafka-client"
         )
 
         dependencies {
@@ -36,7 +40,7 @@ class QuarkusConventionsPlugin : Plugin<Project> {
             add("testImplementation", libs.findLibrary("junit-jupiter").orElseThrow())
         }
 
-        tasks.withType(Test::class.java).configureEach {
+        tasks.withType<Test>().configureEach {
             useJUnitPlatform()
             systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
         }

@@ -28,7 +28,7 @@ We will use **asynchronous event-driven integration** as the primary communicati
    - No breaking changes without migration path
 
 3. **Message Broker**
-   - **Apache Kafka** for production
+   - **Apache Kafka (KRaft mode)** for production (ZooKeeper-less quorum)
    - Durable, ordered, replayable event log
    - Topic per event type or per bounded context
    - Consumer groups for parallel processing
@@ -77,7 +77,7 @@ We will use **asynchronous event-driven integration** as the primary communicati
 - ❌ Duplicate message handling required (idempotency)
 
 ### Neutral
-- ⚖️ Requires message broker infrastructure (Kafka)
+- ⚖️ Requires message broker infrastructure (Kafka KRaft cluster)
 - ⚖️ Developers must understand async patterns
 - ⚖️ Testing integration flows more complex
 
@@ -230,6 +230,15 @@ mp.messaging.incoming.commerce-events.value.deserializer=io.quarkus.kafka.client
 mp.messaging.incoming.commerce-events.group.id=inventory-consumer
 ```
 
+KRaft mode eliminates ZooKeeper. Our broker configuration uses combined broker/controller roles:
+
+```properties
+process.roles=broker,controller
+controller.listener.names=CONTROLLER
+listener.security.protocol.map=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+controller.quorum.voters=1@localhost:9093
+```
+
 ## Idempotency
 
 All event handlers MUST be idempotent:
@@ -297,7 +306,7 @@ PaymentFailed -> ReleaseInventory -> CancelOrder
 ## Testing Strategy
 
 - **Unit Tests**: Mock `EventPublisher` interface
-- **Integration Tests**: Use Testcontainers for Kafka
+- **Integration Tests**: Use Testcontainers for Kafka (KRaft-enabled `KafkaContainer`)
 - **Contract Tests**: Verify event schema compatibility
 - **E2E Tests**: Full workflow testing with real broker
 

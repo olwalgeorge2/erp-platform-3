@@ -1,3 +1,20 @@
 package com.erp.identity.domain.events
 
-object UserCreatedEventPlaceholder
+import com.erp.identity.domain.model.identity.UserId
+import com.erp.identity.domain.model.identity.UserStatus
+import com.erp.identity.domain.model.tenant.TenantId
+import com.erp.shared.types.events.DomainEvent
+import com.erp.shared.types.events.EventVersion
+import java.time.Instant
+import java.util.UUID
+
+data class UserCreatedEvent(
+    val tenantId: TenantId,
+    val userId: UserId,
+    val username: String,
+    val email: String,
+    val status: UserStatus,
+    override val eventId: UUID = UUID.randomUUID(),
+    override val occurredAt: Instant = Instant.now(),
+    override val version: EventVersion = EventVersion.initial(),
+) : DomainEvent

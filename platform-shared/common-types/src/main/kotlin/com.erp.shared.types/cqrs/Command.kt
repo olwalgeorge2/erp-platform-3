@@ -1,3 +1,6 @@
 package com.erp.shared.types.cqrs
 
-object CommandPlaceholder
+/**
+ * Marker interface for commands that mutate state.
+ */
+interface Command<R>

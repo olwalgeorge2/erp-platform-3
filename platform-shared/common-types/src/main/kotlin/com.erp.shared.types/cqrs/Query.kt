@@ -1,3 +1,6 @@
 package com.erp.shared.types.cqrs
 
-object QueryPlaceholder
+/**
+ * Marker interface for queries that read state.
+ */
+interface Query<R>

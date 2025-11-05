@@ -1,3 +1,7 @@
 package com.erp.shared.types.aggregate
 
-object ValueObjectPlaceholder
+/**
+ * Marker interface for value objects.
+ * Value objects should be immutable and equality should be based on state.
+ */
+interface ValueObject

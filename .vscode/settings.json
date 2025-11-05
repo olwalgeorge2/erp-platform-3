@@ -1,6 +1,7 @@
 {
   "kotlin.formatter.path": "${workspaceFolder}/ktlint.jar",
   "kotlin.ktlint.path": "${workspaceFolder}/ktlint.jar",
+  "kotlinLanguageServer.ktlintPath": "${workspaceFolder}/ktlint.jar",
   "java.compile.nullAnalysis.mode": "automatic",
   "postman.settings.dotenv-detection-notification-visibility": false
 }

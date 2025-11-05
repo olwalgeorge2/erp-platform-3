@@ -37,21 +37,9 @@ jobs:
 
       - name: Check Kotlin code style
         run: ./gradlew ktlintCheck --no-daemon --stacktrace
-        continue-on-error: true  # Don't fail build yet, just report
-
-      - name: Run tests
-        run: ./gradlew test --no-daemon --stacktrace
-
-      - name: Run verification checks
-        run: ./gradlew check --no-daemon --stacktrace
 
       - name: Build all modules
-        run: ./gradlew build -x test --no-daemon --stacktrace
-
-      - name: Generate test report
-        if: always()
-        run: ./gradlew testAggregateTestReport --no-daemon
-        continue-on-error: true
+        run: ./gradlew build --no-daemon --stacktrace
 
       - name: Upload test results
         if: always()

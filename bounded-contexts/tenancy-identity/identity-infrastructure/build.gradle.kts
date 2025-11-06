@@ -9,4 +9,6 @@ dependencies {
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.1")
     implementation("io.quarkus:quarkus-scheduler")
+    implementation("io.quarkus:quarkus-hibernate-validator")
+    implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
 }

@@ -6,9 +6,9 @@ import jakarta.ws.rs.container.ContainerRequestFilter
 import jakarta.ws.rs.container.ContainerResponseContext
 import jakarta.ws.rs.container.ContainerResponseFilter
 import jakarta.ws.rs.ext.Provider
-import org.jboss.logging.MDC
 import java.time.Duration
 import java.util.UUID
+import org.slf4j.MDC
 
 @Provider
 class RequestLoggingFilter : ContainerRequestFilter, ContainerResponseFilter {
@@ -29,7 +29,7 @@ class RequestLoggingFilter : ContainerRequestFilter, ContainerResponseFilter {
         requestContext: ContainerRequestContext,
         responseContext: ContainerResponseContext,
     ) {
-        val traceId = (requestContext.getProperty("traceId") as? String) ?: MDC.get("traceId")?.toString()
+        val traceId = (requestContext.getProperty("traceId") as? String) ?: MDC.get("traceId")
         if (!traceId.isNullOrBlank()) {
             responseContext.headers.add(TRACE_ID_HEADER, traceId)
         }

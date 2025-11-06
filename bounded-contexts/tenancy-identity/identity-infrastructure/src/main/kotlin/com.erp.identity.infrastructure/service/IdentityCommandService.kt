@@ -19,9 +19,9 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.transaction.Transactional
 import jakarta.transaction.Transactional.TxType
 import jakarta.validation.Valid
-import org.jboss.logging.MDC
 import java.time.Duration
 import java.util.UUID
+import org.slf4j.MDC
 
 @ApplicationScoped
 class IdentityCommandService(

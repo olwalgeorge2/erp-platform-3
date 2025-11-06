@@ -5,5 +5,6 @@ plugins {
 dependencies {
     implementation(project(":bounded-contexts:tenancy-identity:identity-domain"))
     implementation(project(":platform-shared:common-types"))
+    implementation("io.quarkus:quarkus-hibernate-validator")
     implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
 }

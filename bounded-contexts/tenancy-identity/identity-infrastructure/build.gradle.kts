@@ -14,3 +14,8 @@ dependencies {
     implementation("io.quarkus:quarkus-messaging-kafka")
     implementation("de.mkammerer:argon2-jvm:2.11")
 }
+
+// Enable tests (override convention plugin's disabled state)
+tasks.named<Test>("test") {
+    enabled = true
+}

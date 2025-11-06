@@ -45,7 +45,7 @@ class QuarkusConventionsPlugin : Plugin<Project> {
             useJUnitPlatform()
             systemProperty("java.util.logging.manager", "org.jboss.logmanager.LogManager")
             
-            // Skip tests during build for now (placeholder tests)
+            // Skip tests by default (enable per-module when ready)
             enabled = false
         }
 
@@ -57,3 +57,4 @@ class QuarkusConventionsPlugin : Plugin<Project> {
         }
     }
 }
+

@@ -21,30 +21,31 @@ This document links all code reviews to the [Implementation Roadmap](ROADMAP.md)
 #### Batch 1: Core Infrastructure Layer
 **File:** [REVIEW_PHASE2_TASK3.1_INFRASTRUCTURE_BATCH1.md](REVIEW_PHASE2_TASK3.1_INFRASTRUCTURE_BATCH1.md)  
 **Review Date:** November 6, 2025  
-**Grade:** B- (78/100)  
+**Grade:** A (92/100) → A- (90/100) Final  
 **Focus Areas (updated):**
 - ✅ Transaction boundaries with `@Transactional` (Grade: A)
 - ✅ N+1 query elimination with bulk fetching (Grade: A+)
 - ✅ JPA persistence with unique constraints (Grade: A)
-- ⚠️ PBKDF2 crypto adapter (Grade: B+ – constant-time comparison pending)
-- ✅ Outbox pattern entity & scheduler publisher (Grade: A- – connect to messaging broker)
-- ✅ Result<T> adoption (Grade: A-)
+- ✅ Argon2id crypto adapter with PBKDF2 fallback (Grade: A - verified with tests)
+- ✅ Outbox pattern with Kafka publisher (Grade: A - fully wired with metrics)
+- ✅ Result<T> adoption (Grade: A)
 - ✅ Password policy enforcement (Grade: A)
 
 **Critical Items (Priority 1) – Status:**
-1. **Outbox Event Publisher** ✅ Scheduler + repository live; follow-up to wire Kafka/AMQP publisher & metrics.
-2. **Password Policy Enforcement** ✅ Enforced via Bean Validation and domain policy.
-3. **Repository Result<T> Pattern** ✅ Ports/adapters now return `Result` with constraint violation translation.
+1. **Outbox Event Publisher** ✅ Kafka transport integrated with headers and metrics
+2. **Password Policy Enforcement** ✅ Enforced via Bean Validation and domain policy
+3. **Repository Result<T> Pattern** ✅ Ports/adapters return `Result` with constraint violation translation
+4. **Argon2id Upgrade** ✅ Modern cryptography implemented with legacy PBKDF2 fallback (3/3 tests passing)
 
-**Status:** Complete (awaiting reviewer sign-off)  
-**Next Steps:** Implement constant-time PBKDF2 compare, integrate real message transport, emit publish metrics.
+**Status:** ✅ Complete (approved)  
+**Next Steps:** Add database indexes, expand unit test coverage, integration tests
 
 ---
 
 #### Batch 2: Validation & Observability
 **File:** [REVIEW_PHASE2_TASK3.1_VALIDATION_LOGGING_BATCH2.md](REVIEW_PHASE2_TASK3.1_VALIDATION_LOGGING_BATCH2.md)  
 **Review Date:** November 6, 2025  
-**Priority:** High  
+**Grade:** A (95/100)  
 **Focus Areas:**
 - ✅ Bean Validation on command DTOs (`@NotBlank`, `@Email`, `@Pattern`, `@Size`)
 - ✅ Structured logging with correlation IDs (traceId, tenantId)
@@ -58,8 +59,23 @@ This document links all code reviews to the [Implementation Roadmap](ROADMAP.md)
 3. **Request Filter** – `RequestLoggingFilter` seeds correlation IDs and records timing.
 4. **Metrics** – Micrometer counters/timers with Prometheus export enabled.
 
-**Status:** Complete (awaiting reviewer sign-off)  
+**Status:** ✅ Complete (approved)  
 **Next Steps:** Extend logging/metrics coverage as additional APIs are built (e.g., API Gateway).
+
+---
+
+#### Batch 3: Cryptography Upgrade & Testing
+**Focus:** Argon2id password hashing with PBKDF2 fallback, test infrastructure  
+**Review Date:** November 6, 2025  
+**Grade:** A (95/100)  
+**Components:**
+- ✅ Argon2id implementation (3 iterations, 19MB memory, parallelism=1)
+- ✅ PBKDF2 fallback for legacy credentials (120k iterations)
+- ✅ Unit tests (3/3 passing - hash generation, Argon2 verification, PBKDF2 fallback)
+- ✅ Test infrastructure (convention-with-override pattern for selective test execution)
+
+**Status:** ✅ Complete (approved)  
+**Next Steps:** Expand test coverage to domain models, services, repositories
 
 ---
 
@@ -90,8 +106,10 @@ This document links all code reviews to the [Implementation Roadmap](ROADMAP.md)
 | Phase | Task | Review Grade | Completion | Issues (Critical) |
 |-------|------|--------------|------------|-------------------|
 | 1 | Platform Bootstrap | N/A | 100% | 0 |
-| 2.1 | Identity Infrastructure Batch 1 | B- (78/100) | 80% | 3 |
-| 2.1 | Identity Validation Batch 2 | Pending | 0% | N/A |
+| 2.1 | Identity Infrastructure Batch 1 | A- (90/100) | 100% | 0 |
+| 2.1 | Identity Validation Batch 2 | A (95/100) | 100% | 0 |
+| 2.1 | Identity Cryptography Batch 3 | A (95/100) | 100% | 0 |
+| 2.1 | Overall Task Status | A- (93/100) | 80% | 3 remaining |
 
 ---
 

@@ -3,32 +3,33 @@ package com.erp.identity.application.port.output
 import com.erp.identity.domain.model.identity.User
 import com.erp.identity.domain.model.identity.UserId
 import com.erp.identity.domain.model.tenant.TenantId
+import com.erp.shared.types.results.Result
 
 interface UserRepository {
     fun findById(
         tenantId: TenantId,
         userId: UserId,
-    ): User?
+    ): Result<User?>
 
     fun findByUsername(
         tenantId: TenantId,
         username: String,
-    ): User?
+    ): Result<User?>
 
     fun findByEmail(
         tenantId: TenantId,
         email: String,
-    ): User?
+    ): Result<User?>
 
     fun existsByUsername(
         tenantId: TenantId,
         username: String,
-    ): Boolean
+    ): Result<Boolean>
 
     fun existsByEmail(
         tenantId: TenantId,
         email: String,
-    ): Boolean
+    ): Result<Boolean>
 
-    fun save(user: User): User
+    fun save(user: User): Result<User>
 }

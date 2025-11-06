@@ -8,4 +8,5 @@ dependencies {
     implementation(project(":platform-shared:common-types"))
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.1")
+    implementation("io.quarkus:quarkus-scheduler")
 }

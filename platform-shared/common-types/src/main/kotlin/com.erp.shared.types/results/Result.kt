@@ -23,6 +23,12 @@ sealed class Result<out T> {
             is Failure -> this
         }
 
+    inline fun <R> flatMap(transform: (T) -> Result<R>): Result<R> =
+        when (this) {
+            is Success -> transform(value)
+            is Failure -> this
+        }
+
     inline fun onSuccess(block: (T) -> Unit): Result<T> {
         if (this is Success) {
             block(value)

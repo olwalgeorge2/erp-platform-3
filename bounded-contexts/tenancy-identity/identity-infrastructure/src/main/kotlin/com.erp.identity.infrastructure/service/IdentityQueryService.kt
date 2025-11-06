@@ -7,6 +7,7 @@ import com.erp.identity.application.service.query.TenantQueryHandler
 import com.erp.identity.application.service.query.UserQueryHandler
 import com.erp.identity.domain.model.identity.User
 import com.erp.identity.domain.model.tenant.Tenant
+import com.erp.shared.types.results.Result
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.transaction.Transactional
 import jakarta.transaction.Transactional.TxType
@@ -17,11 +18,11 @@ class IdentityQueryService(
     private val userQueryHandler: UserQueryHandler,
 ) {
     @Transactional(TxType.SUPPORTS)
-    fun getTenant(query: GetTenantQuery): Tenant? = tenantQueryHandler.handle(query)
+    fun getTenant(query: GetTenantQuery): Result<Tenant?> = tenantQueryHandler.handle(query)
 
     @Transactional(TxType.SUPPORTS)
-    fun listTenants(query: ListTenantsQuery): List<Tenant> = tenantQueryHandler.handle(query)
+    fun listTenants(query: ListTenantsQuery): Result<List<Tenant>> = tenantQueryHandler.handle(query)
 
     @Transactional(TxType.SUPPORTS)
-    fun getUser(query: GetUserQuery): User? = userQueryHandler.handle(query)
+    fun getUser(query: GetUserQuery): Result<User?> = userQueryHandler.handle(query)
 }

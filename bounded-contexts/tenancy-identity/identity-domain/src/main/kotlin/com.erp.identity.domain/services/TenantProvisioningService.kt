@@ -5,6 +5,8 @@ import com.erp.identity.domain.model.tenant.Organization
 import com.erp.identity.domain.model.tenant.Subscription
 import com.erp.identity.domain.model.tenant.Tenant
 import com.erp.shared.types.results.Result
+import com.erp.shared.types.results.Result.Companion.failure
+import com.erp.shared.types.results.Result.Companion.success
 import java.util.UUID
 
 class TenantProvisioningService(
@@ -19,8 +21,14 @@ class TenantProvisioningService(
         requestedBy: UUID? = null,
     ): Result<TenantProvisioningResult> {
         val normalizedSlug = slug.trim().lowercase()
-        if (!slugUniquenessChecker.isUnique(normalizedSlug)) {
-            return Result.failure(
+        val uniquenessResult = slugUniquenessChecker.isUnique(normalizedSlug)
+        val isUnique =
+            when (uniquenessResult) {
+                is Result.Success -> uniquenessResult.value
+                is Result.Failure -> return uniquenessResult
+            }
+        if (!isUnique) {
+            return failure(
                 code = "TENANT_SLUG_EXISTS",
                 message = "Tenant slug already exists",
                 details = mapOf("slug" to normalizedSlug),
@@ -40,7 +48,7 @@ class TenantProvisioningService(
                 occurredBy = requestedBy,
             )
 
-        return Result.success(
+        return success(
             TenantProvisioningResult(
                 tenant = tenantWithMetadata,
                 event = event,
@@ -55,5 +63,5 @@ data class TenantProvisioningResult(
 )
 
 fun interface TenantSlugUniquenessChecker {
-    fun isUnique(slug: String): Boolean
+    fun isUnique(slug: String): Result<Boolean>
 }

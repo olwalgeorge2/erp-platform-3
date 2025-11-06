@@ -41,6 +41,7 @@ class IdentityApplicationConfiguration {
         credentialCryptoPort: CredentialCryptoPort,
         authenticationService: AuthenticationService,
         eventPublisherPort: EventPublisherPort,
+        passwordPolicy: PasswordPolicy,
     ): UserCommandHandler =
         UserCommandHandler(
             tenantRepository = tenantRepository,
@@ -49,6 +50,7 @@ class IdentityApplicationConfiguration {
             credentialCryptoPort = credentialCryptoPort,
             authenticationService = authenticationService,
             eventPublisher = eventPublisherPort,
+            passwordPolicy = passwordPolicy,
         )
 
     @Produces

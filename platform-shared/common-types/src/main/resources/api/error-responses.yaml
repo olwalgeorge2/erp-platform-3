@@ -1,0 +1,277 @@
+openapi: 3.0.3
+info:
+  title: Common Error Response Schemas
+  version: 1.0.0
+  description: Standard error response formats used across all ERP platform APIs
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      description: Standard error response structure
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+        - traceId
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when the error occurred
+          example: "2025-11-06T10:30:45.123Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP status text
+          example: "Bad Request"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Validation failed for request"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/users"
+        traceId:
+          type: string
+          format: uuid
+          description: Unique trace ID for request correlation
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        tenantId:
+          type: string
+          format: uuid
+          description: Tenant ID if applicable
+          example: "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
+        details:
+          type: array
+          description: Detailed error information (e.g., validation errors)
+          items:
+            $ref: '#/components/schemas/ErrorDetail'
+
+    ErrorDetail:
+      type: object
+      description: Detailed error information for specific fields or issues
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "FIELD_REQUIRED"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "The 'email' field is required"
+        field:
+          type: string
+          description: Field name that caused the error (for validation errors)
+          example: "email"
+        rejectedValue:
+          type: string
+          description: The value that was rejected
+          example: "invalid-email"
+
+    ValidationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            details:
+              type: array
+              description: Field-level validation errors
+              items:
+                $ref: '#/components/schemas/ValidationError'
+
+    ValidationError:
+      type: object
+      description: Field-level validation error
+      required:
+        - field
+        - code
+        - message
+      properties:
+        field:
+          type: string
+          description: Name of the field that failed validation
+          example: "email"
+        code:
+          type: string
+          description: Validation error code
+          enum:
+            - REQUIRED
+            - INVALID_FORMAT
+            - TOO_SHORT
+            - TOO_LONG
+            - OUT_OF_RANGE
+            - DUPLICATE
+            - NOT_FOUND
+          example: "INVALID_FORMAT"
+        message:
+          type: string
+          description: Human-readable validation error message
+          example: "Email format is invalid"
+        rejectedValue:
+          description: The value that was rejected
+          example: "not-an-email"
+
+    BusinessErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            errorCode:
+              type: string
+              description: Business-specific error code
+              example: "INSUFFICIENT_PERMISSIONS"
+            context:
+              type: object
+              description: Additional context about the error
+              additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Bad Request - Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+          example:
+            timestamp: "2025-11-06T10:30:45.123Z"
+            status: 400
+            error: "Bad Request"
+            message: "Validation failed"
+            path: "/api/v1/users"
+            traceId: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+            details:
+              - field: "email"
+                code: "INVALID_FORMAT"
+                message: "Email format is invalid"
+                rejectedValue: "not-an-email"
+
+    Unauthorized:
+      description: Unauthorized - Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-11-06T10:30:45.123Z"
+            status: 401
+            error: "Unauthorized"
+            message: "Authentication required"
+            path: "/api/v1/users"
+            traceId: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BusinessErrorResponse'
+          example:
+            timestamp: "2025-11-06T10:30:45.123Z"
+            status: 403
+            error: "Forbidden"
+            message: "Insufficient permissions to access this resource"
+            path: "/api/v1/users/123"
+            traceId: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+            errorCode: "INSUFFICIENT_PERMISSIONS"
+
+    NotFound:
+      description: Not Found - Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-11-06T10:30:45.123Z"
+            status: 404
+            error: "Not Found"
+            message: "Resource not found"
+            path: "/api/v1/users/123"
+            traceId: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+
+    Conflict:
+      description: Conflict - Resource already exists or state conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/BusinessErrorResponse'
+          example:
+            timestamp: "2025-11-06T10:30:45.123Z"
+            status: 409
+            error: "Conflict"
+            message: "User with this email already exists"
+            path: "/api/v1/users"
+            traceId: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+            errorCode: "DUPLICATE_USER"
+
+    TooManyRequests:
+      description: Too Many Requests - Rate limit exceeded
+      headers:
+        X-RateLimit-Limit:
+          description: Maximum number of requests allowed
+          schema:
+            type: integer
+            example: 100
+        X-RateLimit-Remaining:
+          description: Number of requests remaining
+          schema:
+            type: integer
+            example: 0
+        X-RateLimit-Reset:
+          description: Unix timestamp when the rate limit resets
+          schema:
+            type: integer
+            example: 1699267845
+        Retry-After:
+          description: Seconds until the rate limit resets
+          schema:
+            type: integer
+            example: 60
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-11-06T10:30:45.123Z"
+            status: 429
+            error: "Too Many Requests"
+            message: "Rate limit exceeded. Please try again later."
+            path: "/api/v1/users"
+            traceId: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+
+    InternalServerError:
+      description: Internal Server Error - Unexpected error occurred
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-11-06T10:30:45.123Z"
+            status: 500
+            error: "Internal Server Error"
+            message: "An unexpected error occurred"
+            path: "/api/v1/users"
+            traceId: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+
+    ServiceUnavailable:
+      description: Service Unavailable - Service temporarily unavailable
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-11-06T10:30:45.123Z"
+            status: 503
+            error: "Service Unavailable"
+            message: "Service is temporarily unavailable"
+            path: "/api/v1/users"
+            traceId: "f47ac10b-58cc-4372-a567-0e02b2c3d479"

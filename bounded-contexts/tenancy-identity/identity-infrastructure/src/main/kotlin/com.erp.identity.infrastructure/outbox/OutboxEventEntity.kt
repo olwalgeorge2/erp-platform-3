@@ -56,7 +56,41 @@ class OutboxEventEntity(
 
     @Column(name = "trace_id")
     var traceId: UUID? = null,
+
+    @Column(name = "published_at")
+    var publishedAt: Instant? = null,
+
+    @Column(name = "last_attempt_at")
+    var lastAttemptAt: Instant? = null,
+
+    @Column(name = "failure_count", nullable = false)
+    var failureCount: Int = 0,
+
+    @Column(name = "last_error", length = 2000)
+    var lastError: String? = null,
 ) {
+    fun markPublished() {
+        status = OutboxEventStatus.PUBLISHED
+        publishedAt = Instant.now()
+        lastAttemptAt = publishedAt
+        lastError = null
+    }
+
+    fun markForRetry(
+        failure: Throwable,
+        maxAttemptsBeforeFailure: Int,
+    ) {
+        failureCount += 1
+        lastAttemptAt = Instant.now()
+        lastError = failure.message?.take(2000)
+        status =
+            if (failureCount >= maxAttemptsBeforeFailure) {
+                OutboxEventStatus.FAILED
+            } else {
+                OutboxEventStatus.PENDING
+            }
+    }
+
     companion object {
         fun from(
             event: DomainEvent,

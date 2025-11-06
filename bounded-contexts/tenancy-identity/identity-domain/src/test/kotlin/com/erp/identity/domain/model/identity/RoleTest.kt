@@ -90,4 +90,45 @@ class RoleTest {
             systemRole.updateDescription("New description")
         }
     }
+
+    @Test
+    fun `hasPermission and helpers reflect membership`() {
+        val role =
+            Role.create(
+                tenantId = tenantId,
+                name = "Auditor",
+                description = "Audit role",
+                permissions = setOf(userRead, userManage),
+            )
+
+        assertTrue(role.hasPermission(userRead))
+        assertTrue(role.hasAnyPermission(setOf(Permission.manage("tenant"), userRead)))
+        assertFalse(role.hasAllPermissions(setOf(Permission.read("foo"), userRead)))
+    }
+
+    @Test
+    fun `system roles must declare permissions`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            Role.create(
+                tenantId = tenantId,
+                name = "System",
+                description = "System role",
+                isSystem = true,
+            )
+        }
+    }
+
+    @Test
+    fun `hasPermission by resource and action`() {
+        val role =
+            Role.create(
+                tenantId = tenantId,
+                name = "Auditor",
+                description = "Audit role",
+                permissions = setOf(userRead, userManage),
+            )
+
+        assertTrue(role.hasPermission("user", "read"))
+        assertFalse(role.hasPermission("tenant", "manage"))
+    }
 }

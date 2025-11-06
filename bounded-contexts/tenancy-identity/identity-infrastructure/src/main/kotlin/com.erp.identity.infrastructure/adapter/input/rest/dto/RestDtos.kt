@@ -2,6 +2,8 @@ package com.erp.identity.infrastructure.adapter.input.rest.dto
 
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSetter
+import com.fasterxml.jackson.annotation.Nulls
 import com.erp.identity.domain.model.identity.RoleId
 import com.erp.identity.domain.model.identity.User
 import com.erp.identity.domain.model.identity.UserId
@@ -173,8 +175,10 @@ data class CreateUserRequest
         @JsonProperty("password")
         val password: String,
         @JsonProperty("roleIds")
+        @param:JsonSetter(nulls = Nulls.AS_EMPTY)
         val roleIds: Set<UUID> = emptySet(),
         @JsonProperty("metadata")
+        @param:JsonSetter(nulls = Nulls.AS_EMPTY)
         val metadata: Map<String, String> = emptyMap(),
         @JsonProperty("createdBy")
         val createdBy: String? = null,

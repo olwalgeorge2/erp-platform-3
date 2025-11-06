@@ -7,7 +7,6 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
-import jakarta.persistence.Lob
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
 import java.time.Instant
@@ -37,8 +36,7 @@ class OutboxEventEntity(
     @Column(name = "aggregate_id", length = 64)
     var aggregateId: String? = null,
 
-    @Lob
-    @Column(name = "payload", nullable = false)
+    @Column(name = "payload", nullable = false, columnDefinition = "TEXT")
     var payload: String = "",
 
     @Column(name = "occurred_at", nullable = false)

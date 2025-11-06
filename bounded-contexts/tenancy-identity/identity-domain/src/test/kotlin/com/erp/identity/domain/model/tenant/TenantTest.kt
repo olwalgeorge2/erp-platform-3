@@ -47,6 +47,15 @@ class TenantTest {
     }
 
     @Test
+    fun `suspend requires active tenant`() {
+        val provisioning = Tenant.provision("Acme", "acme", baseSubscription, null)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            provisioning.suspend("ops")
+        }
+    }
+
+    @Test
     fun `reactivate clears suspension reason`() {
         val tenant = Tenant.provision("Acme", "acme", baseSubscription, null).activate()
         val suspended = tenant.suspend("payment overdue")
@@ -87,5 +96,71 @@ class TenantTest {
 
         assertTrue(activeTenant.isOperational())
         assertFalse(expiredTenant.isOperational())
+    }
+
+    @Test
+    fun `expire transitions active tenant to expired`() {
+        val tenant = Tenant.provision("Acme", "acme", baseSubscription, null).activate()
+
+        val expired = tenant.expire()
+
+        assertEquals(TenantStatus.EXPIRED, expired.status)
+    }
+
+    @Test
+    fun `archive moves tenant to archived from any non deleted state`() {
+        val tenant = Tenant.provision("Acme", "acme", baseSubscription, null).activate()
+
+        val archived = tenant.archive()
+
+        assertEquals(TenantStatus.ARCHIVED, archived.status)
+    }
+
+    @Test
+    fun `delete marks tenant as deleted`() {
+        val tenant = Tenant.provision("Acme", "acme", baseSubscription, null).activate()
+
+        val deleted = tenant.delete()
+
+        assertEquals(TenantStatus.DELETED, deleted.status)
+    }
+
+    @Test
+    fun `archive rejects deleted tenant`() {
+        val deleted = Tenant.provision("Acme", "acme", baseSubscription, null).activate().delete()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            deleted.archive()
+        }
+    }
+
+    @Test
+    fun `provision merges provided metadata`() {
+        val subscription = baseSubscription
+        val reactivated =
+            Tenant.provision(
+                name = "Meta",
+                slug = "meta",
+                subscription = subscription,
+                organization = null,
+            ).copy(metadata = mapOf("existing" to "value"))
+                .activate()
+                .suspend("maintenance")
+                .reactivate()
+
+        assertEquals("value", reactivated.metadata["existing"])
+        assertFalse(reactivated.metadata.containsKey("suspension_reason"))
+    }
+
+    @Test
+    fun `provision validates slug format`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            Tenant.provision(
+                name = "Acme",
+                slug = "INVALID!",
+                subscription = baseSubscription,
+                organization = null,
+            )
+        }
     }
 }

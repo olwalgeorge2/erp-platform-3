@@ -41,6 +41,17 @@ class JpaTenantRepositoryTest {
         assertEquals("TENANT_SLUG_EXISTS", failure.error.code)
     }
 
+    @Test
+    fun `save wraps generic persistence exception`() {
+        every { entityManager.merge(any<TenantEntity>()) } throws PersistenceException("generic failure", RuntimeException("unexpected"))
+
+        val result = repository.save(sampleTenant())
+
+        assertTrue(result.isFailure())
+        val failure = result as com.erp.shared.types.results.Result.Failure
+        assertEquals("TENANT_REPOSITORY_ERROR", failure.error.code)
+    }
+
     private fun sampleTenant(): Tenant {
         val subscription =
             Subscription(

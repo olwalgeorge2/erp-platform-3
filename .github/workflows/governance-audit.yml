@@ -96,11 +96,13 @@ jobs:
             echo "✅ No business domain terms found"
           fi
 
-      - name: Generate audit report
+      - name: Generate audit summary
         if: always()
         run: |
           MODULE_COUNT=$(ls -d platform-shared/*/ 2>/dev/null | wc -l)
           ARCH_STATUS="${{ steps.arch-tests.outcome }}"
+          MODULE_STATUS=$([ ${MODULE_COUNT} -le 4 ] && echo "✅" || echo "❌")
+          ARCH_TEST_STATUS=$([ "${ARCH_STATUS}" == "success" ] && echo "✅" || echo "❌")
           
           cat > platform-shared-audit.md << EOF
           # Platform-Shared Governance Audit Report
@@ -112,8 +114,8 @@ jobs:
           
           | Metric | Value | Status |
           |--------|-------|--------|
-          | Module Count | ${MODULE_COUNT} / 4 | $([ ${MODULE_COUNT} -le 4 ] && echo "✅" || echo "❌") |
-          | Architecture Tests | ${ARCH_STATUS} | $([ "${ARCH_STATUS}" == "success" ] && echo "✅" || echo "❌") |
+          | Module Count | ${MODULE_COUNT} / 4 | ${MODULE_STATUS} |
+          | Architecture Tests | ${ARCH_STATUS} | ${ARCH_TEST_STATUS} |
           
           ## Module Breakdown
           

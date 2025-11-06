@@ -18,7 +18,12 @@ dependencies {
     implementation("de.mkammerer:argon2-jvm:2.11")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
+    testImplementation("io.quarkus:quarkus-junit5")
+    testImplementation("io.quarkus:quarkus-junit5-mockito")
+    testImplementation("io.rest-assured:rest-assured:5.4.0")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.3.1")
+    testImplementation("org.testcontainers:junit-jupiter:1.20.1")
+    testImplementation("org.testcontainers:postgresql:1.20.1")
 }
 
 tasks.withType<Test>().configureEach {

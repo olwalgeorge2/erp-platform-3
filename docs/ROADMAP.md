@@ -9,7 +9,7 @@
 |-------|--------|----------------|-------|
 | Phase 0 - Foundations | ⏸️ Ongoing | - | Discovery and planning in progress |
 | Phase 1 - Platform Bootstrap | ✅ Complete | 2025-11-05 | CI/CD pipeline operational |
-| Phase 2 - Cross-Cutting Services | 🔄 In Progress | - | Task 3.1: 80% complete (infrastructure + tests) |
+| Phase 2 - Cross-Cutting Services | 🔄 In Progress | - | Task 3.1: 85% complete (REST APIs + tests) |
 | Phase 3 - Data & Messaging | 📋 Planned | - | - |
 | Phase 4 - First Context Slice | 📋 Planned | - | - |
 | Phase 5 - Incremental Rollout | 📋 Planned | - | - |
@@ -64,11 +64,11 @@
 
 ## 3. Phase 2 - Cross-Cutting Services 🔄 IN PROGRESS
 
-### Task 3.1: Implement tenancy-identity services (80% complete)
+### Task 3.1: Implement tenancy-identity services (85% complete)
 **Status:** 🔄 In Progress  
-**Review:** See [REVIEWS_INDEX.md](REVIEWS_INDEX.md) - Batches 1-3 completed
+**Review:** See [REVIEWS_INDEX.md](REVIEWS_INDEX.md) - Batches 1-4 completed
 
-#### Completed Infrastructure (Batch 1-3):
+#### Completed Infrastructure (Batch 1-4):
 - ✅ Domain model: Tenant, User, Role aggregates with DDD tactical patterns
 - ✅ JPA repositories with transaction boundaries and unique constraints
 - ✅ Transactional outbox pattern with Kafka publisher (5s scheduled processing)
@@ -79,15 +79,19 @@
 - ✅ Prometheus metrics (@Counted, @Timed on services)
 - ✅ Unit tests for crypto adapter (3/3 passing)
 - ✅ Test infrastructure (convention-with-override pattern)
+- ✅ PostgreSQL connectivity with Quarkus datasource configuration
+- ✅ REST endpoints: AuthResource, TenantResource with ResultMapper
+- ✅ Tenant resolution middleware (TenantRequestContext)
+- ✅ Resource-level tests: AuthResourceTest, TenantResourceTest (mocked services)
+- ✅ Consistent error responses with Location headers
 
 #### Remaining Work:
 - 📋 Database indexes (query performance optimization) - Est: 1 hour
-- 📋 Expand unit test coverage (domain, services, repositories) - Est: 4-6 hours
-- 📋 Integration tests (end-to-end flows) - Est: 3-4 hours
-- 📋 OAuth2/OIDC integration (Keycloak adapter)
-- 📋 Tenant resolution middleware
+- 📋 Expand unit test coverage (domain, services, repositories) - Est: 3-4 hours
+- 📋 Integration tests with real database (end-to-end flows) - Est: 2-3 hours
+- 📋 OAuth2/OIDC integration (Keycloak adapter) - Deferred to Phase 3
 
-**Grade:** A- (93/100) | **Estimated Completion:** 8-11 hours remaining
+**Grade:** A- (93/100) → A (95/100) | **Estimated Completion:** 6-8 hours remaining
 
 3.2 Deliver the api-gateway/ for routing, authentication delegation, rate limiting, and centralized logging.
 3.3 Publish shared API contracts and error handling guidelines for downstream bounded contexts. (🔄 Started: error-responses.yaml completed)

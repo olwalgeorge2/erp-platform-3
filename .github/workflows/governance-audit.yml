@@ -1,0 +1,209 @@
+name: Platform-Shared Governance Audit
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: 'temurin'
+
+jobs:
+  audit-platform-shared:
+    name: Weekly Platform-Shared Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run architecture governance tests
+        id: arch-tests
+        run: |
+          echo "Running ArchUnit tests for ADR-006..."
+          ./gradlew :tests:arch:test --tests "*PlatformSharedGovernanceRules*" --no-daemon --stacktrace
+        continue-on-error: true
+
+      - name: Analyze platform-shared modules
+        id: audit
+        run: |
+          echo "=== Platform-Shared Module Analysis ==="
+          echo ""
+          
+          for module in platform-shared/*/; do
+            module_name=$(basename "$module")
+            echo "Module: $module_name"
+            
+            # Count Kotlin files
+            kt_count=$(find "$module/src/main/kotlin" -name "*.kt" 2>/dev/null | wc -l)
+            echo "  Kotlin files: $kt_count"
+            
+            # Check for forbidden patterns
+            if find "$module" -name "*Service.kt" | grep -q .; then
+              echo "  ⚠️  WARNING: Found Service classes"
+            fi
+            
+            if find "$module" -name "*Repository.kt" | grep -q .; then
+              echo "  ⚠️  WARNING: Found Repository classes"
+            fi
+            
+            if find "$module" -name "*Impl.kt" | grep -q .; then
+              echo "  ⚠️  WARNING: Found Implementation classes"
+            fi
+            
+            if find "$module" -name "*Utils.kt" | grep -q .; then
+              echo "  ⚠️  WARNING: Found Utility classes"
+            fi
+            
+            echo ""
+          done
+          
+          # Count total modules
+          module_count=$(ls -d platform-shared/*/ 2>/dev/null | wc -l)
+          echo "Total modules: $module_count / 4 (max)"
+          
+          if [ $module_count -gt 4 ]; then
+            echo "❌ CRITICAL: Exceeded maximum module count!"
+            exit 1
+          fi
+
+      - name: Check for business domain terms
+        run: |
+          echo "=== Scanning for Business Domain Terms ==="
+          echo ""
+          
+          business_terms="Customer|Order|Invoice|Product|Payment|Shipment|Inventory|Purchase|Sale"
+          
+          if grep -r -E "class ($business_terms)\b|data class ($business_terms)\b|interface ($business_terms)\b" \
+             platform-shared/*/src/main/kotlin/ 2>/dev/null; then
+            echo ""
+            echo "⚠️  WARNING: Found business domain terms in platform-shared"
+            echo "These should be moved to appropriate bounded contexts"
+          else
+            echo "✅ No business domain terms found"
+          fi
+
+      - name: Generate audit report
+        if: always()
+        run: |
+          MODULE_COUNT=$(ls -d platform-shared/*/ 2>/dev/null | wc -l)
+          ARCH_STATUS="${{ steps.arch-tests.outcome }}"
+          
+          cat > platform-shared-audit.md << EOF
+          # Platform-Shared Governance Audit Report
+          
+          **Date:** $(date -u +"%Y-%m-%d %H:%M UTC")
+          **ADR:** [ADR-006 Platform-Shared Governance](docs/adr/ADR-006-platform-shared-governance.md)
+          
+          ## Summary
+          
+          | Metric | Value | Status |
+          |--------|-------|--------|
+          | Module Count | ${MODULE_COUNT} / 4 | $([ ${MODULE_COUNT} -le 4 ] && echo "✅" || echo "❌") |
+          | Architecture Tests | ${ARCH_STATUS} | $([ "${ARCH_STATUS}" == "success" ] && echo "✅" || echo "❌") |
+          
+          ## Module Breakdown
+          
+          $(for module in platform-shared/*/; do
+            module_name=$(basename "$module")
+            kt_count=$(find "$module/src/main/kotlin" -name "*.kt" 2>/dev/null | wc -l)
+            echo "- **$module_name**: $kt_count files"
+          done)
+          
+          ## Recommendations
+          
+          - Review any warnings in the audit logs
+          - Ensure all new code follows ADR-006 guidelines
+          - Consider refactoring modules approaching 25 files
+          - Run \`./scripts/audit-platform-shared.ps1\` locally for detailed analysis
+          
+          ## Next Audit
+          
+          Next scheduled audit: $(date -u -d "next monday" +"%Y-%m-%d")
+          EOF
+          
+          cat platform-shared-audit.md
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-shared-audit-report
+          path: platform-shared-audit.md
+          retention-days: 90
+
+      - name: Create issue if violations found
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🚨 Platform-Shared Governance Violations Detected';
+            const body = `## Weekly Audit Alert
+            
+            The weekly platform-shared governance audit has detected violations of **ADR-006**.
+            
+            ### Details
+            - **Date:** ${new Date().toISOString().split('T')[0]}
+            - **Workflow Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            ### Action Required
+            1. Review the audit report in the workflow artifacts
+            2. Fix any violations (see [ADR-006](docs/adr/ADR-006-platform-shared-governance.md))
+            3. Run \`./scripts/audit-platform-shared.ps1\` locally to verify fixes
+            4. Ensure architecture tests pass: \`./gradlew :tests:arch:test --tests "*PlatformSharedGovernanceRules*"\`
+            
+            ### Resources
+            - [ADR-006 Platform-Shared Governance](docs/adr/ADR-006-platform-shared-governance.md)
+            - [Platform-Shared Guide](docs/PLATFORM_SHARED_GUIDE.md)
+            - [Architecture Documentation](docs/ARCHITECTURE.md)
+            
+            This issue will be automatically closed when violations are resolved.`;
+            
+            // Check if issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['governance', 'platform-shared'],
+              state: 'open'
+            });
+            
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['governance', 'platform-shared', 'architecture', 'adr-006']
+              });
+            }
+
+  verify-compliance:
+    name: Verify ADR-006 Compliance
+    runs-on: ubuntu-latest
+    needs: audit-platform-shared
+    if: always()
+
+    steps:
+      - name: Check compliance
+        run: |
+          if [[ "${{ needs.audit-platform-shared.result }}" == "success" ]]; then
+            echo "✅ Platform-shared is compliant with ADR-006"
+            exit 0
+          else
+            echo "❌ Platform-shared governance violations detected"
+            echo "See audit logs for details"
+            exit 1
+          fi

@@ -78,11 +78,14 @@ cp .env.example .env
 | `./gradlew ktlintFormat` | Auto-format Kotlin code |
 | `./gradlew projects` | List all modules |
 | `./gradlew build --scan` | Build with Gradle Build Scan |
+| `./scripts/audit-platform-shared.ps1` | Audit platform-shared governance (ADR-006) |
 
 ### Review Documentation
 - `docs/ROADMAP.md` - Implementation phases and milestones
 - `docs/ARCHITECTURE.md` - System design and bounded contexts
 - `docs/BUILD_SYSTEM_UPDATE.md` - Build tooling and conventions
+- `docs/PLATFORM_SHARED_GUIDE.md` - Governance rules for shared modules (Critical!)
+- `docs/adr/` - Architecture Decision Records
 
 
 ## 6. Documentation Guide

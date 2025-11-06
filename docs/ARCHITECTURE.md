@@ -214,12 +214,30 @@ Shared infrastructure components and patterns.
 ### Platform Shared (`platform-shared/`)
 Reusable cross-cutting concerns and utilities.
 
+**Governance:** Strictly controlled to prevent distributed monolith anti-pattern. See ADR-006 Platform-Shared Governance Rules.
+
 **Modules**:
 
 1. **common-messaging** - Message bus abstractions and implementations
 2. **common-observability** - OpenTelemetry integration, logging, tracing
 3. **common-security** - Security utilities, encryption, JWT handling
 4. **common-types** - Shared value objects, base entities, domain primitives
+
+**Allowed Content:**
+- ✅ Technical primitives (Result<T>, Command, Query, DomainEvent)
+- ✅ Framework integration contracts (CommandHandler, EventPublisher)
+- ✅ Observability infrastructure (CorrelationId, StructuredLogger)
+- ✅ Security primitives (AuthenticationPrincipal, JWT utilities)
+
+**Forbidden Content:**
+- ❌ Business domain models (Customer, Order, Invoice)
+- ❌ Business logic (TaxCalculator, DiscountPolicy)
+- ❌ Shared DTOs (API contracts belong in application layer)
+- ❌ Utility dumping grounds (StringUtils, DateUtils)
+
+**Enforcement:** ArchUnit tests in `tests/arch/PlatformSharedGovernanceRules.kt`
+
+**Related ADRs:** ADR-006 Platform-Shared Governance Rules
 
 ### Portal (`portal/`)
 Web-based user interface built with TypeScript.
@@ -420,6 +438,14 @@ For details on how bounded contexts interact with each other, see [CONTEXT_MAP.m
 ## Architecture Decision Records
 
 For detailed architectural decisions and their rationale, see the [ADR directory](adr/).
+
+**Key ADRs:**
+- **ADR-001:** Modular CQRS Implementation
+- **ADR-002:** Database Per Bounded Context
+- **ADR-003:** Event-Driven Integration Between Contexts
+- **ADR-004:** API Gateway Pattern
+- **ADR-005:** Multi-Tenancy Data Isolation Strategy
+- **ADR-006:** Platform-Shared Governance Rules *(Critical for preventing distributed monolith)*
 
 ## References
 

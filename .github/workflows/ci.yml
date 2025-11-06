@@ -38,8 +38,14 @@ jobs:
       - name: Check Kotlin code style
         run: ./gradlew ktlintCheck --no-daemon --stacktrace
 
+      - name: Architecture Tests - Platform Shared Governance (ADR-006)
+        run: ./gradlew test --tests "*PlatformSharedGovernanceRules*" --no-daemon --stacktrace
+
       - name: Build all modules
         run: ./gradlew build --no-daemon --stacktrace
+      
+      - name: Identity Infrastructure Tests
+        run: ./gradlew :bounded-contexts:tenancy-identity:identity-infrastructure:test --no-daemon --stacktrace
 
       - name: Upload test results
         if: always()
@@ -110,9 +116,25 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Run architecture tests
-        run: ./gradlew :tests:arch:test --no-daemon --stacktrace
+      - name: Run hexagonal architecture tests
+        run: ./gradlew :tests:arch:test --tests "*HexagonalArchitectureRules*" --no-daemon --stacktrace
         continue-on-error: true
+
+      - name: Run layering tests
+        run: ./gradlew :tests:arch:test --tests "*LayeringRules*" --no-daemon --stacktrace
+        continue-on-error: true
+
+      - name: Enforce platform-shared governance (ADR-006)
+        run: ./gradlew :tests:arch:test --tests "*PlatformSharedGovernanceRules*" --no-daemon --stacktrace
+        # This step MUST pass - fail the build if platform-shared violations exist
+
+      - name: Upload architecture test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-test-results
+          path: tests/arch/build/test-results/**/*.xml
+          retention-days: 7
 
   build-status:
     name: Build Status
@@ -123,10 +145,16 @@ jobs:
     steps:
       - name: Check build status
         run: |
-          if [[ "${{ needs.build.result }}" == "success" ]]; then
-            echo "✅ Build passed"
+          echo "=== Build Status Summary ==="
+          echo "Build: ${{ needs.build.result }}"
+          echo "Code Quality: ${{ needs.code-quality.result }}"
+          echo "Architecture Tests: ${{ needs.architecture-tests.result }}"
+          echo ""
+          
+          if [[ "${{ needs.build.result }}" == "success" && "${{ needs.architecture-tests.result }}" == "success" ]]; then
+            echo "✅ All required checks passed"
             exit 0
           else
-            echo "❌ Build failed"
+            echo "❌ Build or architecture tests failed"
             exit 1
           fi

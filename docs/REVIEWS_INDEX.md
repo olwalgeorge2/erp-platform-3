@@ -79,6 +79,32 @@ This document links all code reviews to the [Implementation Roadmap](ROADMAP.md)
 
 ---
 
+#### Batch 4: REST API Layer & Tenant Resolution
+**Focus:** Production-ready REST endpoints with consistent error handling  
+**Review Date:** November 6, 2025  
+**Grade:** A (95/100)  
+**Components:**
+- ✅ PostgreSQL connectivity (Quarkus datasource + Flyway)
+- ✅ REST endpoints: AuthResource.kt, TenantResource.kt
+- ✅ ResultMapper.kt for Result<T> → HTTP response translation
+- ✅ RestDtos.kt with request/response DTOs
+- ✅ Tenant resolution middleware (TenantRequestContext)
+- ✅ Resource tests: AuthResourceTest, TenantResourceTest (mocked services)
+- ✅ Updated JpaTenantRepositoryTest for slug conflict handling
+
+**Key Improvements:**
+1. **Consistent Error Handling** - ResultMapper translates Result.Failure → ErrorResponse
+2. **Location Headers** - Created resources return proper URI locations
+3. **Tenant Context** - TenantRequestContext available for middleware
+4. **Resource-Level Tests** - Direct endpoint testing with mocked dependencies
+
+**Files Changed:** 12 files, +1025/-7 lines
+
+**Status:** ✅ Complete (approved)  
+**Next Steps:** Database indexes, expand unit tests, integration tests with real database
+
+---
+
 ### Task 3.2: Deliver api-gateway
 **Status:** 📋 Planned  
 **Dependencies:** Task 3.1 (Identity services must be operational)

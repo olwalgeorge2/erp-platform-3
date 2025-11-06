@@ -14,6 +14,7 @@ import jakarta.persistence.PersistenceException
 import jakarta.transaction.Transactional
 import jakarta.transaction.Transactional.TxType
 import org.jboss.logging.Logger
+import org.hibernate.exception.ConstraintViolationException
 
 @ApplicationScoped
 @Transactional(TxType.MANDATORY)
@@ -93,13 +94,7 @@ class JpaTenantRepository(
         try {
             success(block())
         } catch (ex: PersistenceException) {
-            LOGGER.errorf(ex, "TenantRepository.%s failed", operation)
-            failure(
-                code = "TENANT_REPOSITORY_ERROR",
-                message = "Tenant repository operation failed",
-                details = mapOf("operation" to operation),
-                cause = ex,
-            )
+            mapPersistenceError(operation, ex)
         }
 
     private fun <T> runCommand(
@@ -107,7 +102,39 @@ class JpaTenantRepository(
         block: () -> T,
     ): Result<T> = runQuery(operation, block)
 
+    private fun mapPersistenceError(
+        operation: String,
+        ex: PersistenceException,
+    ): Result.Failure {
+        val root = ex.rootCause()
+        val constraintName =
+            (root as? ConstraintViolationException)
+                ?.constraintName
+                ?.lowercase()
+                ?: root.message?.lowercase().orEmpty()
+
+        if (constraintName.contains("uk_identity_tenants_slug")) {
+            return failure(
+                code = "TENANT_SLUG_EXISTS",
+                message = "Tenant slug already exists",
+                details = mapOf("operation" to operation),
+                cause = ex,
+            )
+        }
+
+        LOGGER.errorf(ex, "TenantRepository.%s failed", operation)
+        return failure(
+            code = "TENANT_REPOSITORY_ERROR",
+            message = "Tenant repository operation failed",
+            details = mapOf("operation" to operation),
+            cause = ex,
+        )
+    }
+
     companion object {
         private val LOGGER: Logger = Logger.getLogger(JpaTenantRepository::class.java)
     }
+
+    private fun Throwable.rootCause(): Throwable =
+        generateSequence(this) { it.cause }.last()
 }

@@ -14,6 +14,7 @@ import jakarta.persistence.PersistenceException
 import jakarta.transaction.Transactional
 import jakarta.transaction.Transactional.TxType
 import org.jboss.logging.Logger
+import org.hibernate.exception.ConstraintViolationException
 import java.util.UUID
 
 @ApplicationScoped
@@ -103,21 +104,15 @@ class JpaUserRepository(
         try {
             success(block())
         } catch (ex: PersistenceException) {
-            failure(
-                code = "USER_REPOSITORY_ERROR",
-                message = "User repository operation failed",
-                details = mapOf("operation" to operation),
-                cause = ex,
-            )
+            mapPersistenceError(operation, ex)
         }
 
     private fun Result<User>.recoverDuplicateConstraint(user: User): Result<User> =
         when (this) {
             is Result.Success -> this
-            is Result.Failure -> {
-                val causeMessage = error.cause?.message ?: ""
-                when {
-                    causeMessage.contains("username", ignoreCase = true) ->
+            is Result.Failure ->
+                when (error.code) {
+                    "USER_USERNAME_CONSTRAINT" ->
                         failure(
                             code = "USERNAME_IN_USE",
                             message = "Username already exists",
@@ -128,7 +123,7 @@ class JpaUserRepository(
                                 ),
                             cause = error.cause,
                         )
-                    causeMessage.contains("email", ignoreCase = true) ->
+                    "USER_EMAIL_CONSTRAINT" ->
                         failure(
                             code = "EMAIL_IN_USE",
                             message = "Email already exists",
@@ -141,7 +136,6 @@ class JpaUserRepository(
                         )
                     else -> this
                 }
-            }
         }
 
     private fun existsBy(
@@ -170,16 +164,48 @@ class JpaUserRepository(
         try {
             success(block())
         } catch (ex: PersistenceException) {
-            LOGGER.errorf(ex, "UserRepository.%s failed", operation)
-            failure(
-                code = "USER_REPOSITORY_ERROR",
-                message = "User repository operation failed",
-                details = mapOf("operation" to operation),
-                cause = ex,
-            )
+            mapPersistenceError(operation, ex)
         }
 
     companion object {
         private val LOGGER: Logger = Logger.getLogger(JpaUserRepository::class.java)
     }
+
+    private fun mapPersistenceError(
+        operation: String,
+        ex: PersistenceException,
+    ): Result.Failure {
+        val root = ex.rootCause()
+        val constraint =
+            (root as? ConstraintViolationException)?.constraintName?.lowercase()
+                ?: root.message?.lowercase().orEmpty()
+
+        if (constraint.contains("uk_identity_users_username")) {
+            return failure(
+                code = "USER_USERNAME_CONSTRAINT",
+                message = "Username constraint violation",
+                details = mapOf("operation" to operation),
+                cause = ex,
+            )
+        }
+        if (constraint.contains("uk_identity_users_email")) {
+            return failure(
+                code = "USER_EMAIL_CONSTRAINT",
+                message = "Email constraint violation",
+                details = mapOf("operation" to operation),
+                cause = ex,
+            )
+        }
+
+        LOGGER.errorf(ex, "UserRepository.%s failed", operation)
+        return failure(
+            code = "USER_REPOSITORY_ERROR",
+            message = "User repository operation failed",
+            details = mapOf("operation" to operation),
+            cause = ex,
+        )
+    }
+
+    private fun Throwable.rootCause(): Throwable =
+        generateSequence(this) { it.cause }.last()
 }

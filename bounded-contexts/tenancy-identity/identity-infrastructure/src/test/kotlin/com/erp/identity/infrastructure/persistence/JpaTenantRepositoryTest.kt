@@ -28,7 +28,7 @@ class JpaTenantRepositoryTest {
             "constraint violated",
             ConstraintViolationException(
                 "duplicate slug",
-                SQLException("duplicate key"),
+                SQLException("duplicate key uk_identity_tenants_slug"),
                 "INSERT ...",
                 "uk_identity_tenants_slug",
             ),

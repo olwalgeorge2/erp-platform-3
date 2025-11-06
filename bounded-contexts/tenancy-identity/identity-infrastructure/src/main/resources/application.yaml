@@ -1,0 +1,29 @@
+quarkus:
+  http:
+    port: ${QUARKUS_HTTP_PORT:8081}
+  datasource:
+    db-kind: postgresql
+    username: ${QUARKUS_DATASOURCE_USERNAME:erp_user}
+    password: ${QUARKUS_DATASOURCE_PASSWORD:erp_pass}
+    jdbc:
+      url: ${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://localhost:5432/erp_identity}
+      driver: org.postgresql.Driver
+    reactive: false
+  hibernate-orm:
+    database:
+      generation: validate
+  flyway:
+    migrate-at-start: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  jackson:
+    register-kotlin-module: true
+
+mp:
+  messaging:
+    outgoing:
+      identity-events-out:
+        connector: smallrye-kafka
+        topic: ${IDENTITY_EVENTS_TOPIC:identity.domain.events.v1}
+        bootstrap:
+          servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}

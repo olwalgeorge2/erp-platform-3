@@ -20,6 +20,7 @@ class RequestLoggingFilter : ContainerRequestFilter, ContainerResponseFilter {
         if (!tenantId.isNullOrBlank()) {
             MDC.put("tenantId", tenantId)
         }
+        TenantRequestContext.set(tenantId)
 
         requestContext.setProperty("traceId", traceId)
         requestContext.setProperty("startTimeNano", System.nanoTime())
@@ -47,6 +48,7 @@ class RequestLoggingFilter : ContainerRequestFilter, ContainerResponseFilter {
             )
         }
 
+        TenantRequestContext.clear()
         MDC.clear()
     }
 

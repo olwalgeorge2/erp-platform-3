@@ -10,7 +10,7 @@ interface CredentialCryptoPort : CredentialVerifier {
         tenantId: TenantId,
         userId: UserId?,
         rawPassword: String,
-        algorithm: HashAlgorithm = HashAlgorithm.BCRYPT,
+        algorithm: HashAlgorithm = HashAlgorithm.ARGON2,
     ): HashedCredential
 }
 

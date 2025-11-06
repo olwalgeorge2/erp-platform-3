@@ -12,4 +12,5 @@ dependencies {
     implementation("io.quarkus:quarkus-hibernate-validator")
     implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
     implementation("io.quarkus:quarkus-messaging-kafka")
+    implementation("de.mkammerer:argon2-jvm:2.11")
 }

@@ -8,7 +8,7 @@ import java.time.Instant
 data class Credential(
     val passwordHash: String,
     val salt: String,
-    val algorithm: HashAlgorithm = HashAlgorithm.BCRYPT,
+    val algorithm: HashAlgorithm = HashAlgorithm.ARGON2,
     val lastChangedAt: Instant = Instant.now(),
     val expiresAt: Instant? = null,
     val mustChangeOnNextLogin: Boolean = false,

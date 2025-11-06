@@ -52,79 +52,25 @@ curl http://localhost:8080/metrics | grep identity.outbox
 
 ## 🔒 Argon2id Crypto Upgrade
 
-### Current Implementation:
-- `Pbkdf2CredentialCryptoAdapter` with 10,000 iterations
+### Implementation Summary:
+- `Argon2idCredentialCryptoAdapter` now provides Argon2id hashing with secure defaults.
+- PBKDF2 hashing/verification is retained for legacy credentials with constant-time comparisons.
+- `UserCommandHandler` explicitly requests `HashAlgorithm.ARGON2` for new and reset passwords.
+- Unit coverage: `Argon2idCredentialCryptoAdapterTest` exercises Argon2 and PBKDF2 flows.
 
-### Recommended Implementation:
+### Migration Notes:
+- Existing PBKDF2 credentials continue to verify successfully and will be rehashed to Argon2id on next password change.
+- Once migration is complete, PBKDF2 support can be removed in a future iteration.
 
-**File:** `Argon2idCredentialCryptoAdapter.kt`
-
-```kotlin
-package com.erp.identity.infrastructure.crypto
-
-import com.erp.identity.application.port.output.CredentialCryptoPort
-import de.mkammerer.argon2.Argon2
-import de.mkammerer.argon2.Argon2Factory
-import jakarta.enterprise.context.ApplicationScoped
-import org.jboss.logging.Logger
-
-@ApplicationScoped
-class Argon2idCredentialCryptoAdapter : CredentialCryptoPort {
-    
-    private val argon2: Argon2 = Argon2Factory.create(
-        Argon2Factory.Argon2Types.ARGON2id,
-        SALT_LENGTH,
-        HASH_LENGTH
-    )
-    
-    override fun hashPassword(plainPassword: String): String {
-        return argon2.hash(
-            ITERATIONS,
-            MEMORY_KB,
-            PARALLELISM,
-            plainPassword.toCharArray()
-        )
-    }
-    
-    override fun verifyPassword(plainPassword: String, hashedPassword: String): Boolean {
-        return try {
-            argon2.verify(hashedPassword, plainPassword.toCharArray())
-        } catch (ex: Exception) {
-            LOGGER.warnf(ex, "Failed to verify password hash")
-            false
-        } finally {
-            // Clear sensitive data from memory
-            argon2.wipeArray(plainPassword.toCharArray())
-        }
-    }
-    
-    companion object {
-        private const val ITERATIONS = 2        // Time cost
-        private const val MEMORY_KB = 65536     // 64 MB memory cost
-        private const val PARALLELISM = 1       // Single thread (adjust for production)
-        private const val SALT_LENGTH = 16      // 16 bytes salt
-        private const val HASH_LENGTH = 32      // 32 bytes hash
-        
-        private val LOGGER = Logger.getLogger(Argon2idCredentialCryptoAdapter::class.java)
-    }
-}
-```
-
-### Add Dependency:
-
-```kotlin
-// build.gradle.kts
-dependencies {
-    // ... existing dependencies
-    implementation("de.mkammerer:argon2-jvm:2.11")
-}
-```
+### References:
+- Dependency: `de.mkammerer:argon2-jvm:2.11`
+- Implementation: `bounded-contexts/tenancy-identity/identity-infrastructure/src/main/kotlin/com.erp.identity.infrastructure/crypto/Argon2idCredentialCryptoAdapter.kt`
+- Tests: `bounded-contexts/tenancy-identity/identity-infrastructure/src/test/kotlin/com/erp/identity/infrastructure/crypto/Argon2idCredentialCryptoAdapterTest.kt`
 
 ### Migration Strategy:
-1. Keep `Pbkdf2CredentialCryptoAdapter` for backward compatibility
-2. Add version flag to `Credential` entity (`hashAlgorithm: String = "PBKDF2"`)
-3. On password update, rehash with Argon2id
-4. Verify checks algorithm and uses appropriate adapter
+1. `Credential.algorithm` persists the hashing scheme per record (existing PBKDF2 rows remain valid).
+2. Any password change invokes `HashAlgorithm.ARGON2`, transparently upgrading stored credentials.
+3. Monitor adoption and remove PBKDF2 fallback once all credentials rotate to Argon2id.
 
 ---
 
@@ -202,7 +148,7 @@ identity-domain/src/test/kotlin/
 identity-infrastructure/src/test/kotlin/
   ├── crypto/
   │   ├── Argon2idCredentialCryptoAdapterTest.kt
-  │   └── Pbkdf2CredentialCryptoAdapterTest.kt
+  │   └── Argon2idCredentialCryptoAdapterTest.kt
   ├── persistence/
   │   ├── JpaUserRepositoryTest.kt
   │   ├── JpaTenantRepositoryTest.kt
@@ -348,7 +294,7 @@ open build/reports/jacoco/test/html/index.html
 - [ ] PasswordPolicy tests
 - [ ] User/Tenant domain model tests
 - [ ] AuthenticationService tests
-- [ ] Crypto adapter tests (both PBKDF2 and Argon2id)
+- [x] Crypto adapter tests (Argon2id with PBKDF2 fallback)
 - [ ] Repository tests (using Testcontainers)
 - [ ] Outbox scheduler tests
 

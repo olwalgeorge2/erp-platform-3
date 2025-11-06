@@ -14,6 +14,7 @@ import com.erp.identity.domain.events.UserCreatedEvent
 import com.erp.identity.domain.events.UserUpdatedEvent
 import com.erp.identity.domain.exceptions.InvalidCredentialException
 import com.erp.identity.domain.model.identity.Credential
+import com.erp.identity.domain.model.identity.HashAlgorithm
 import com.erp.identity.domain.model.identity.PasswordPolicy
 import com.erp.identity.domain.model.identity.User
 import com.erp.identity.domain.model.tenant.TenantId
@@ -74,6 +75,7 @@ class UserCommandHandler(
                 tenantId = command.tenantId,
                 userId = null,
                 rawPassword = command.password,
+                algorithm = HashAlgorithm.ARGON2,
             )
 
         val credential =
@@ -192,6 +194,7 @@ class UserCommandHandler(
                 tenantId = command.tenantId,
                 userId = command.userId,
                 rawPassword = command.newPassword,
+                algorithm = HashAlgorithm.ARGON2,
             )
 
         val updateResult =

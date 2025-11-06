@@ -14,7 +14,7 @@ import java.util.UUID
 
 @ApplicationScoped
 class KafkaOutboxMessagePublisher(
-    @Channel("identity-events-out")
+    @param:Channel("identity-events-out")
     private val emitter: Emitter<String>,
 ) : OutboxMessagePublisher {
 
@@ -38,23 +38,25 @@ class KafkaOutboxMessagePublisher(
             // Generate message key for partition routing (use aggregateId for ordering)
             val messageKey = aggregateId ?: UUID.randomUUID().toString()
             
+            // Build headers list
+            val headers = mutableListOf<org.apache.kafka.common.header.internals.RecordHeader>()
+            headers.add(org.apache.kafka.common.header.internals.RecordHeader("event-type", eventType.toByteArray()))
+            headers.add(org.apache.kafka.common.header.internals.RecordHeader("trace-id", traceId.toByteArray()))
+            
+            // Add tenant-id if available in MDC
+            MDC.get("tenantId")?.toString()?.let { tenantId ->
+                headers.add(org.apache.kafka.common.header.internals.RecordHeader("tenant-id", tenantId.toByteArray()))
+            }
+            
+            // Add aggregate-id if present
+            aggregateId?.let { aggId ->
+                headers.add(org.apache.kafka.common.header.internals.RecordHeader("aggregate-id", aggId.toByteArray()))
+            }
+            
             // Create Kafka metadata with headers
             val metadata = OutgoingKafkaRecordMetadata.builder<String>()
                 .withKey(messageKey)
-                .withHeaders { headers ->
-                    headers.add("event-type", eventType.toByteArray())
-                    headers.add("trace-id", traceId.toByteArray())
-                    
-                    // Add tenant-id if available in MDC
-                    MDC.get("tenantId")?.toString()?.let { tenantId ->
-                        headers.add("tenant-id", tenantId.toByteArray())
-                    }
-                    
-                    // Add aggregate-id if present
-                    aggregateId?.let { aggId ->
-                        headers.add("aggregate-id", aggId.toByteArray())
-                    }
-                }
+                .withHeaders(headers)
                 .build()
             
             // Send message with metadata

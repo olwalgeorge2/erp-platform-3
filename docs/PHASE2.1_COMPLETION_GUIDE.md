@@ -279,24 +279,30 @@ open build/reports/jacoco/test/html/index.html
 
 ### Argon2id Upgrade (NEXT)
 - [ ] Add `argon2-jvm` dependency
-- [ ] Implement `Argon2idCredentialCryptoAdapter`
-- [ ] Add unit tests for Argon2id adapter
-- [ ] Add migration strategy for existing passwords
-- [ ] Update documentation
+- [x] Implement `Argon2idCredentialCryptoAdapter`
+- [x] Add unit tests for Argon2id adapter
+- [x] Add migration strategy for existing passwords
+- [x] Update documentation
 
 ### Database Indexes (AFTER ARGON2)
-- [ ] Create Flyway migration `V003__add_performance_indexes.sql`
+- [x] Create Flyway migration `V003__add_performance_indexes.sql`
 - [ ] Apply migration to dev database
 - [ ] Verify index usage with EXPLAIN ANALYZE
 - [ ] Document index strategy
 
 ### Unit Tests (PARALLEL)
-- [ ] PasswordPolicy tests
+- [x] PasswordPolicy tests
 - [ ] User/Tenant domain model tests
-- [ ] AuthenticationService tests
+- [x] AuthenticationService tests
 - [x] Crypto adapter tests (Argon2id with PBKDF2 fallback)
 - [ ] Repository tests (using Testcontainers)
 - [ ] Outbox scheduler tests
+
+**Current Coverage Snapshot**
+- `PasswordPolicyTest` verifies validation errors for weak passwords.
+- `AuthenticationServiceTest` confirms lockout counters and success path.
+- `Argon2idCredentialCryptoAdapterTest` exercises Argon2 hashing and PBKDF2 fallback verification.
+- `JpaTenantRepositoryTest` validates slug constraint failure mapping.
 
 ### Integration Tests (FINAL)
 - [ ] Command handler end-to-end tests

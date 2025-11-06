@@ -15,6 +15,11 @@ dependencies {
     implementation("de.mkammerer:argon2-jvm:2.11")
 }
 
+tasks.withType<Test>().configureEach {
+    enabled = true
+    useJUnitPlatform()
+}
+
 // Enable tests (override convention plugin's disabled state)
 tasks.named<Test>("test") {
     enabled = true

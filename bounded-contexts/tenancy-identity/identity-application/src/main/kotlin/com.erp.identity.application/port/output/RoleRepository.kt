@@ -9,4 +9,9 @@ interface RoleRepository {
         tenantId: TenantId,
         roleId: RoleId,
     ): Role?
+
+    fun findByIds(
+        tenantId: TenantId,
+        roleIds: Set<RoleId>,
+    ): List<Role>
 }

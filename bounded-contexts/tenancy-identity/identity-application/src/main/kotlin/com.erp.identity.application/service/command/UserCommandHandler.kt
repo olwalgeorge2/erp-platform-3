@@ -14,9 +14,7 @@ import com.erp.identity.domain.events.UserCreatedEvent
 import com.erp.identity.domain.events.UserUpdatedEvent
 import com.erp.identity.domain.exceptions.InvalidCredentialException
 import com.erp.identity.domain.model.identity.Credential
-import com.erp.identity.domain.model.identity.RoleId
 import com.erp.identity.domain.model.identity.User
-import com.erp.identity.domain.model.identity.UserStatus
 import com.erp.identity.domain.model.tenant.TenantId
 import com.erp.identity.domain.services.AuthenticationResult
 import com.erp.identity.domain.services.AuthenticationService
@@ -57,7 +55,8 @@ class UserCommandHandler(
             )
         }
 
-        val missingRoles = resolveMissingRoles(tenantId, command.roleIds)
+        val roles = roleRepository.findByIds(tenantId, command.roleIds)
+        val missingRoles = command.roleIds - roles.map { it.id }.toSet()
         if (missingRoles.isNotEmpty()) {
             return Result.failure(
                 code = "ROLE_NOT_FOUND",
@@ -87,7 +86,7 @@ class UserCommandHandler(
                 email = command.email,
                 fullName = command.fullName,
                 credential = credential,
-                roleIds = command.roleIds,
+                roleIds = roles.map { it.id }.toSet(),
                 metadata = command.metadata,
             )
 
@@ -219,12 +218,6 @@ class UserCommandHandler(
             }
         }
     }
-
-    private fun resolveMissingRoles(
-        tenantId: TenantId,
-        roleIds: Set<RoleId>,
-    ): List<RoleId> =
-        roleIds.filter { roleRepository.findById(tenantId, it) == null }
 
     private fun findUserByIdentifier(
         tenantId: TenantId,

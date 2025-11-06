@@ -10,27 +10,208 @@ import com.erp.identity.application.service.command.UserCommandHandler
 import com.erp.identity.domain.model.identity.User
 import com.erp.identity.domain.model.tenant.Tenant
 import com.erp.shared.types.results.Result
+import com.erp.shared.types.results.Result.Failure
+import com.erp.shared.types.results.Result.Success
+import io.micrometer.core.annotation.Counted
+import io.micrometer.core.annotation.Timed
+import io.quarkus.logging.Log
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.transaction.Transactional
 import jakarta.transaction.Transactional.TxType
+import jakarta.validation.Valid
+import org.jboss.logging.MDC
+import java.time.Duration
+import java.util.UUID
 
 @ApplicationScoped
 class IdentityCommandService(
     private val userCommandHandler: UserCommandHandler,
     private val tenantCommandHandler: TenantCommandHandler,
 ) {
+    @Counted(
+        value = "identity.user.creation.attempts",
+        description = "Total number of user creation attempts",
+    )
+    @Timed(
+        value = "identity.user.creation.duration",
+        description = "Duration of user creation command execution",
+        percentiles = [0.5, 0.95, 0.99],
+    )
     @Transactional(TxType.REQUIRED)
-    fun createUser(command: CreateUserCommand): Result<User> = userCommandHandler.createUser(command)
+    fun createUser(@Valid command: CreateUserCommand): Result<User> {
+        val traceId = ensureTraceId()
+        ensureTenantMdc(command.tenantId.toString())
+        Log.infof(
+            "[%s] createUser - tenant=%s, username=%s, email=%s",
+            traceId,
+            command.tenantId,
+            command.username,
+            command.email,
+        )
+        val start = System.nanoTime()
+        val result = userCommandHandler.createUser(command)
+        logResult(
+            traceId = traceId,
+            operation = "createUser",
+            startNano = start,
+            result = result,
+            successContext = { user ->
+                "tenant=${user.tenantId}, userId=${user.id}, status=${user.status}"
+            },
+            failureContext = {
+                "tenant=${command.tenantId}, username=${command.username}"
+            },
+        )
+        return result
+    }
 
     @Transactional(TxType.REQUIRED)
-    fun assignRole(command: AssignRoleCommand): Result<User> = userCommandHandler.assignRole(command)
+    fun assignRole(@Valid command: AssignRoleCommand): Result<User> {
+        val traceId = ensureTraceId()
+        ensureTenantMdc(command.tenantId.toString())
+        Log.infof(
+            "[%s] assignRole - tenant=%s, userId=%s, roleId=%s",
+            traceId,
+            command.tenantId,
+            command.userId,
+            command.roleId,
+        )
+        val start = System.nanoTime()
+        val result = userCommandHandler.assignRole(command)
+        logResult(
+            traceId = traceId,
+            operation = "assignRole",
+            startNano = start,
+            result = result,
+            successContext = { user ->
+                "tenant=${user.tenantId}, userId=${user.id}, roles=${user.roleIds.size}"
+            },
+            failureContext = {
+                "tenant=${command.tenantId}, userId=${command.userId}, roleId=${command.roleId}"
+            },
+        )
+        return result
+    }
 
     @Transactional(TxType.REQUIRED)
-    fun updateCredentials(command: UpdateCredentialsCommand): Result<User> = userCommandHandler.updateCredentials(command)
+    fun updateCredentials(@Valid command: UpdateCredentialsCommand): Result<User> {
+        val traceId = ensureTraceId()
+        ensureTenantMdc(command.tenantId.toString())
+        Log.infof(
+            "[%s] updateCredentials - tenant=%s, userId=%s",
+            traceId,
+            command.tenantId,
+            command.userId,
+        )
+        val start = System.nanoTime()
+        val result = userCommandHandler.updateCredentials(command)
+        logResult(
+            traceId = traceId,
+            operation = "updateCredentials",
+            startNano = start,
+            result = result,
+            successContext = { user ->
+                "tenant=${user.tenantId}, userId=${user.id}"
+            },
+            failureContext = {
+                "tenant=${command.tenantId}, userId=${command.userId}"
+            },
+        )
+        return result
+    }
 
     @Transactional(TxType.REQUIRED)
-    fun authenticate(command: AuthenticateUserCommand): Result<User> = userCommandHandler.authenticate(command)
+    fun authenticate(@Valid command: AuthenticateUserCommand): Result<User> {
+        val traceId = ensureTraceId()
+        ensureTenantMdc(command.tenantId.toString())
+        Log.infof(
+            "[%s] authenticate - tenant=%s, identifier=%s",
+            traceId,
+            command.tenantId,
+            command.usernameOrEmail,
+        )
+        val start = System.nanoTime()
+        val result = userCommandHandler.authenticate(command)
+        logResult(
+            traceId = traceId,
+            operation = "authenticate",
+            startNano = start,
+            result = result,
+            successContext = { user ->
+                "tenant=${user.tenantId}, userId=${user.id}, status=${user.status}"
+            },
+            failureContext = {
+                "tenant=${command.tenantId}, identifier=${command.usernameOrEmail}"
+            },
+        )
+        return result
+    }
 
     @Transactional(TxType.REQUIRED)
-    fun provisionTenant(command: ProvisionTenantCommand): Result<Tenant> = tenantCommandHandler.provisionTenant(command)
+    fun provisionTenant(@Valid command: ProvisionTenantCommand): Result<Tenant> {
+        val traceId = ensureTraceId()
+        Log.infof(
+            "[%s] provisionTenant - slug=%s, name=%s",
+            traceId,
+            command.slug,
+            command.name,
+        )
+        val start = System.nanoTime()
+        val result = tenantCommandHandler.provisionTenant(command)
+        logResult(
+            traceId = traceId,
+            operation = "provisionTenant",
+            startNano = start,
+            result = result,
+            successContext = { tenant ->
+                "tenant=${tenant.id}, slug=${tenant.slug}, status=${tenant.status}"
+            },
+            failureContext = {
+                "slug=${command.slug}, name=${command.name}"
+            },
+        )
+        return result
+    }
+
+    private fun ensureTraceId(): String {
+        val existing = MDC.get("traceId")?.toString()
+        return existing ?: UUID.randomUUID().toString().also { MDC.put("traceId", it) }
+    }
+
+    private fun ensureTenantMdc(tenantId: String?) {
+        if (!tenantId.isNullOrBlank() && MDC.get("tenantId") == null) {
+            MDC.put("tenantId", tenantId)
+        }
+    }
+
+    private fun <T> logResult(
+        traceId: String,
+        operation: String,
+        startNano: Long,
+        result: Result<T>,
+        successContext: (T) -> String,
+        failureContext: (Failure) -> String,
+    ) {
+        val durationMs = Duration.ofNanos(System.nanoTime() - startNano).toMillis()
+        when (result) {
+            is Success ->
+                Log.infof(
+                    "[%s] %s succeeded in %dms - %s",
+                    traceId,
+                    operation,
+                    durationMs,
+                    successContext(result.value),
+                )
+            is Failure ->
+                Log.warnf(
+                    "[%s] %s failed in %dms - code=%s message=%s context=%s",
+                    traceId,
+                    operation,
+                    durationMs,
+                    result.error.code,
+                    result.error.message,
+                    failureContext(result),
+                )
+        }
+    }
 }

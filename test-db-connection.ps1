@@ -5,7 +5,7 @@ Write-Host "Testing connection to erp-postgres on localhost:5432..." -Foreground
 
 try {
     # Use a disposable postgres container so we do not need local tools installed
-    docker run --rm --network host postgres:16-alpine `
+    docker run --rm --network host --env PGPASSWORD=$env:PGPASSWORD postgres:16-alpine `
         psql -h localhost -p 5432 -U erp_user -d erp_identity `
         -c "SELECT 'Connection successful!' AS status;"
 

@@ -74,11 +74,16 @@ cp .env.example .env
    ```bash
    docker compose -f docker-compose-kafka.yml up -d postgres kafka kafka-ui
    ```
-3. Verify the credentials with the helper script:
+3. Point Quarkus at the same Kafka listener you will test against:
+   ```powershell
+   $env:KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"   # host runtime
+   ```
+   > When the identity service runs inside Docker compose instead, set `KAFKA_BOOTSTRAP_SERVERS=kafka:29092` so it reaches the internal listener.
+4. Verify the credentials with the helper script:
    ```powershell
    .\test-db-connection.ps1
    ```
-4. Start the identity service after `erp-postgres` reports `healthy`:
+5. Start the identity service after `erp-postgres` reports `healthy`:
    ```bash
    ./gradlew :bounded-contexts:tenancy-identity:identity-infrastructure:quarkusDev
    ```

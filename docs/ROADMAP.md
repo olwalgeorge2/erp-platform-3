@@ -89,8 +89,23 @@
 - 📋 Database indexes (query performance optimization) - Est: 1 hour
 - 📋 Expand unit test coverage (domain, services, repositories) - Est: 3-4 hours
 - 📋 Integration tests with real database (end-to-end flows) - Est: 2-3 hours
-- 📋 OAuth2/OIDC integration (Keycloak adapter) - Deferred to Phase 3
+- ?? OAuth2/OIDC integration (Keycloak adapter) - Deferred to Phase 3
 
+#### Identity Capability Expansion (New)
+1. **Lifecycle Management**
+   - Tenant activate/suspend/resume endpoints plus metadata updates.
+   - User activation/suspension/delete flows exposed via admin APIs with audit events.
+   - Kafka events + scheduler to broadcast lifecycle transitions to other contexts.
+2. **Role & Permission Services**
+   - CRUD endpoints for tenant-scoped roles and permission bundles.
+   - Seed baseline roles, expose lookup APIs, enforce validation on assignment.
+3. **Runtime Authentication Enhancements**
+   - Successful login issuing JWT/opaque tokens (or delegating to OAuth2/OIDC).
+   - Password reset, email verification, MFA hooks, logout/revocation endpoints.
+   - Lockout & password policy configuration surfaced via admin APIs.
+4. **Self-Service & Observability**
+   - Tenant-scoped user listing/search, login history, failed-attempt audit endpoints.
+   - Structured Kafka events + Prometheus dashboards for lifecycle/auth flows, plus updated runbooks.
 **Grade:** A- (93/100) → A (95/100) | **Estimated Completion:** 6-8 hours remaining
 
 3.2 Deliver the api-gateway/ for routing, authentication delegation, rate limiting, and centralized logging.
@@ -162,3 +177,4 @@
 9.7 Confirm post-launch success metrics (e.g., p95 latency, support ticket volume, tenant onboarding time) and iterate on the backlog based on observed outcomes.
 9.8 Cross-links: docs/ARCHITECTURE.md#deployment-architecture, docs/ARCHITECTURE.md#future-enhancements, docs/ARCHITECTURE.md#architecture-decision-records.
 9.9 Related ADRs: ADR-004 API Gateway Pattern, ADR-005 Multi-Tenancy Data Isolation Strategy.
+

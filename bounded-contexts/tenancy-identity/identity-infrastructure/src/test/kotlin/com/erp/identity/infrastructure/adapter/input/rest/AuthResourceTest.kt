@@ -6,6 +6,7 @@ import com.erp.identity.domain.model.identity.User
 import com.erp.identity.domain.model.identity.UserId
 import com.erp.identity.domain.model.identity.UserStatus
 import com.erp.identity.domain.model.tenant.TenantId
+import com.erp.identity.infrastructure.adapter.input.rest.dto.ActivateUserRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.AuthenticateRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.CreateUserRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.UserResponse
@@ -69,6 +70,24 @@ class AuthResourceTest {
         assertTrue(response.location.toString().endsWith("/api/auth/users/${user.id}"))
         val body = response.entity as UserResponse
         assertEquals(user.email, body.email)
+    }
+
+    @Test
+    fun `activate user returns OK`() {
+        val user = sampleUser().copy(status = UserStatus.PENDING)
+        whenever(commandService.activateUser(any())).thenReturn(Result.success(user.copy(status = UserStatus.ACTIVE)))
+
+        val request =
+            ActivateUserRequest(
+                tenantId = user.tenantId.value,
+                requestedBy = "admin",
+            )
+
+        val response = resource.activateUser(user.id.toString(), request)
+
+        assertEquals(Response.Status.OK.statusCode, response.status)
+        val body = response.entity as UserResponse
+        assertEquals(user.id.toString(), body.id)
     }
 
     private fun sampleUser(): User {

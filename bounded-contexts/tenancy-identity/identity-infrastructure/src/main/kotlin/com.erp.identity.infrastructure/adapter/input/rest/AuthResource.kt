@@ -1,5 +1,6 @@
 package com.erp.identity.infrastructure.adapter.input.rest
 
+import com.erp.identity.infrastructure.adapter.input.rest.dto.ActivateUserRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.AssignRoleRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.AuthenticateRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.CreateUserRequest
@@ -68,6 +69,21 @@ class AuthResource
         ): Response =
             parseUuid(userIdRaw)
                 ?.let { userId -> commandService.assignRole(request.toCommand(userId)) }
+                ?.let { result ->
+                    when (result) {
+                        is Result.Success -> Response.ok(result.value.toResponse()).build()
+                        is Result.Failure -> result.failureResponse()
+                    }
+                } ?: invalidUuidResponse("userId", userIdRaw)
+
+        @POST
+        @Path("/users/{userId}/activate")
+        fun activateUser(
+            @PathParam("userId") userIdRaw: String,
+            request: ActivateUserRequest,
+        ): Response =
+            parseUuid(userIdRaw)
+                ?.let { userId -> commandService.activateUser(request.toCommand(userId)) }
                 ?.let { result ->
                     when (result) {
                         is Result.Success -> Response.ok(result.value.toResponse()).build()

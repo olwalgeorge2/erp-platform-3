@@ -1,5 +1,6 @@
 package com.erp.identity.infrastructure.service
 
+import com.erp.identity.application.port.input.command.ActivateUserCommand
 import com.erp.identity.application.port.input.command.AssignRoleCommand
 import com.erp.identity.application.port.input.command.CreateUserCommand
 import com.erp.identity.application.port.input.command.ProvisionTenantCommand
@@ -94,6 +95,23 @@ class IdentityCommandServiceTest {
 
         assertTrue(result is Result.Success<User>)
         verify(userHandler).assignRole(eq(command))
+    }
+
+    @Test
+    fun `activateUser delegates to handler`() {
+        val command =
+            ActivateUserCommand(
+                tenantId = TenantId.generate(),
+                userId = UserId.generate(),
+                requestedBy = "admin",
+            )
+        val user = sampleUser(command.tenantId)
+        whenever(userHandler.activateUser(eq(command))).thenReturn(Result.success(user))
+
+        val result = service.activateUser(command)
+
+        assertTrue(result is Result.Success<User>)
+        verify(userHandler).activateUser(eq(command))
     }
 
     @Test

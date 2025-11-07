@@ -1,5 +1,6 @@
 package com.erp.identity.infrastructure.service
 
+import com.erp.identity.application.port.input.command.ActivateUserCommand
 import com.erp.identity.application.port.input.command.AssignRoleCommand
 import com.erp.identity.application.port.input.command.AuthenticateUserCommand
 import com.erp.identity.application.port.input.command.CreateUserCommand
@@ -112,6 +113,33 @@ class IdentityCommandService(
             result = result,
             successContext = { user ->
                 "tenant=${user.tenantId}, userId=${user.id}"
+            },
+            failureContext = {
+                "tenant=${command.tenantId}, userId=${command.userId}"
+            },
+        )
+        return result
+    }
+
+    @Transactional(TxType.REQUIRED)
+    fun activateUser(@Valid command: ActivateUserCommand): Result<User> {
+        val traceId = ensureTraceId()
+        ensureTenantMdc(command.tenantId.toString())
+        Log.infof(
+            "[%s] activateUser - tenant=%s, userId=%s",
+            traceId,
+            command.tenantId,
+            command.userId,
+        )
+        val start = System.nanoTime()
+        val result = userCommandHandler.activateUser(command)
+        logResult(
+            traceId = traceId,
+            operation = "activateUser",
+            startNano = start,
+            result = result,
+            successContext = { user ->
+                "tenant=${user.tenantId}, userId=${user.id}, status=${user.status}"
             },
             failureContext = {
                 "tenant=${command.tenantId}, userId=${command.userId}"

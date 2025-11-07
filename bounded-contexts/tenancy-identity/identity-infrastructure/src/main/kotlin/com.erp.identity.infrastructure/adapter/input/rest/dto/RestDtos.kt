@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSetter
 import com.fasterxml.jackson.annotation.Nulls
+import com.erp.identity.application.port.input.command.ActivateUserCommand
 import com.erp.identity.domain.model.identity.RoleId
 import com.erp.identity.domain.model.identity.User
 import com.erp.identity.domain.model.identity.UserId
@@ -212,6 +213,22 @@ data class AssignRoleRequest
                 userId = UserId(userId),
                 roleId = RoleId(roleId),
                 assignedBy = assignedBy,
+            )
+    }
+
+data class ActivateUserRequest
+    @JsonCreator
+    constructor(
+        @JsonProperty("tenantId")
+        val tenantId: UUID,
+        @JsonProperty("requestedBy")
+        val requestedBy: String? = null,
+    ) {
+        fun toCommand(userId: UUID) =
+            ActivateUserCommand(
+                tenantId = TenantId(tenantId),
+                userId = UserId(userId),
+                requestedBy = requestedBy,
             )
     }
 

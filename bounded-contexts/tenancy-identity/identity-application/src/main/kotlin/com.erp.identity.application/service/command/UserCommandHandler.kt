@@ -1,5 +1,6 @@
 package com.erp.identity.application.service.command
 
+import com.erp.identity.application.port.input.command.ActivateUserCommand
 import com.erp.identity.application.port.input.command.AssignRoleCommand
 import com.erp.identity.application.port.input.command.AuthenticateUserCommand
 import com.erp.identity.application.port.input.command.CreateUserCommand
@@ -154,6 +155,45 @@ class UserCommandHandler(
                         tenantId = savedUser.tenantId,
                         userId = savedUser.id,
                         updatedFields = setOf("roleIds"),
+                        status = savedUser.status,
+                    ),
+                )
+            }
+    }
+
+    fun activateUser(command: ActivateUserCommand): Result<User> {
+        val user =
+            when (val result = userRepository.findById(command.tenantId, command.userId)) {
+                is Result.Success -> result.value
+                is Result.Failure -> return result
+            } ?: return failure(
+                code = "USER_NOT_FOUND",
+                message = "User not found for activation",
+                details = mapOf("userId" to command.userId.toString()),
+            )
+
+        val activatedUser =
+            try {
+                user.activate()
+            } catch (ex: IllegalArgumentException) {
+                return failure(
+                    code = "USER_STATE_INVALID",
+                    message = ex.message ?: "User cannot be activated in current state",
+                    details = mapOf(
+                        "userId" to user.id.toString(),
+                        "status" to user.status.name,
+                    ),
+                )
+            }
+
+        return userRepository
+            .save(activatedUser)
+            .onSuccess { savedUser ->
+                publishEvents(
+                    UserUpdatedEvent(
+                        tenantId = savedUser.tenantId,
+                        userId = savedUser.id,
+                        updatedFields = setOf("status"),
                         status = savedUser.status,
                     ),
                 )

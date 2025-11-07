@@ -1,10 +1,10 @@
 package com.erp.identity.infrastructure.adapter.input.rest.dto
 
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonSetter
-import com.fasterxml.jackson.annotation.Nulls
+import com.erp.identity.application.port.input.command.ActivateTenantCommand
 import com.erp.identity.application.port.input.command.ActivateUserCommand
+import com.erp.identity.domain.model.identity.Permission
+import com.erp.identity.domain.model.identity.PermissionScope
+import com.erp.identity.domain.model.identity.Role
 import com.erp.identity.domain.model.identity.RoleId
 import com.erp.identity.domain.model.identity.User
 import com.erp.identity.domain.model.identity.UserId
@@ -16,6 +16,10 @@ import com.erp.identity.domain.model.tenant.SubscriptionPlan
 import com.erp.identity.domain.model.tenant.Tenant
 import com.erp.identity.domain.model.tenant.TenantId
 import com.erp.identity.domain.model.tenant.TenantStatus
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
+import com.fasterxml.jackson.annotation.JsonSetter
+import com.fasterxml.jackson.annotation.Nulls
 import java.time.Instant
 import java.util.UUID
 
@@ -134,6 +138,91 @@ data class TenantResponse(
     val createdAt: Instant,
     val updatedAt: Instant,
     val metadata: Map<String, String>,
+)
+
+data class PermissionPayload
+    @JsonCreator
+    constructor(
+        @JsonProperty("resource")
+        val resource: String,
+        @JsonProperty("action")
+        val action: String,
+        @JsonProperty("scope")
+        val scope: PermissionScope = PermissionScope.TENANT,
+    ) {
+        fun toDomain(): Permission = Permission(resource = resource, action = action, scope = scope)
+    }
+
+data class CreateRoleRequest
+    @JsonCreator
+    constructor(
+        @JsonProperty("name")
+        val name: String,
+        @JsonProperty("description")
+        val description: String,
+        @JsonProperty("permissions")
+        @param:JsonSetter(nulls = Nulls.AS_EMPTY)
+        val permissions: Set<PermissionPayload> = emptySet(),
+        @JsonProperty("isSystem")
+        val isSystem: Boolean = false,
+        @JsonProperty("metadata")
+        @param:JsonSetter(nulls = Nulls.AS_EMPTY)
+        val metadata: Map<String, String> = emptyMap(),
+        @JsonProperty("createdBy")
+        val createdBy: String? = null,
+    ) {
+        fun toCommand(tenantId: TenantId) =
+            com.erp.identity.application.port.input.command.CreateRoleCommand(
+                tenantId = tenantId,
+                name = name,
+                description = description,
+                permissions = permissions.map { it.toDomain() }.toSet(),
+                isSystem = isSystem,
+                metadata = metadata,
+                createdBy = createdBy,
+            )
+    }
+
+data class UpdateRoleRequest
+    @JsonCreator
+    constructor(
+        @JsonProperty("name")
+        val name: String,
+        @JsonProperty("description")
+        val description: String,
+        @JsonProperty("permissions")
+        @param:JsonSetter(nulls = Nulls.AS_EMPTY)
+        val permissions: Set<PermissionPayload> = emptySet(),
+        @JsonProperty("metadata")
+        @param:JsonSetter(nulls = Nulls.AS_EMPTY)
+        val metadata: Map<String, String> = emptyMap(),
+        @JsonProperty("updatedBy")
+        val updatedBy: String? = null,
+    ) {
+        fun toCommand(
+            tenantId: TenantId,
+            roleId: RoleId,
+        ) = com.erp.identity.application.port.input.command.UpdateRoleCommand(
+            tenantId = tenantId,
+            roleId = roleId,
+            name = name,
+            description = description,
+            permissions = permissions.map { it.toDomain() }.toSet(),
+            metadata = metadata,
+            updatedBy = updatedBy,
+        )
+    }
+
+data class RoleResponse(
+    val id: String,
+    val tenantId: String,
+    val name: String,
+    val description: String,
+    val permissions: Set<PermissionPayload>,
+    val isSystem: Boolean,
+    val metadata: Map<String, String>,
+    val createdAt: Instant,
+    val updatedAt: Instant,
 )
 
 data class ActivateTenantRequest
@@ -394,4 +483,24 @@ fun User.toResponse(): UserResponse =
         metadata = metadata,
         createdAt = createdAt,
         updatedAt = updatedAt,
+    )
+
+fun Role.toResponse(): RoleResponse =
+    RoleResponse(
+        id = id.toString(),
+        tenantId = tenantId.toString(),
+        name = name,
+        description = description,
+        permissions = permissions.map { it.toPayload() }.toSet(),
+        isSystem = isSystem,
+        metadata = metadata,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+    )
+
+private fun Permission.toPayload(): PermissionPayload =
+    PermissionPayload(
+        resource = resource,
+        action = action,
+        scope = scope,
     )

@@ -67,12 +67,13 @@ class JpaOutboxRepository(
         block: (OutboxEventEntity) -> Unit,
     ): Result<Unit> =
         try {
-            val managed = entityManager.find(OutboxEventEntity::class.java, event.id)
-                ?: return failure(
-                    code = "OUTBOX_EVENT_NOT_FOUND",
-                    message = "Outbox event no longer exists",
-                    details = mapOf("eventId" to event.eventId.toString()),
-                )
+            val managed =
+                entityManager.find(OutboxEventEntity::class.java, event.id)
+                    ?: return failure(
+                        code = "OUTBOX_EVENT_NOT_FOUND",
+                        message = "Outbox event no longer exists",
+                        details = mapOf("eventId" to event.eventId.toString()),
+                    )
 
             block(managed)
             entityManager.merge(managed)

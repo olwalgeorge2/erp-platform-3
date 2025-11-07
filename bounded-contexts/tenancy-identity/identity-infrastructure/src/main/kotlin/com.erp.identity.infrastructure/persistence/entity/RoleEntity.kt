@@ -9,7 +9,6 @@ import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
 import jakarta.persistence.ElementCollection
 import jakarta.persistence.Embeddable
-import jakarta.persistence.Embedded
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -33,26 +32,20 @@ class RoleEntity(
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     var id: UUID = UUID.randomUUID(),
-
     @Column(name = "tenant_id", nullable = false)
     var tenantId: UUID = UUID.randomUUID(),
-
     @Column(name = "name", nullable = false, length = 100)
     var name: String = "",
-
     @Column(name = "description", nullable = false, length = 500)
     var description: String = "",
-
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
         name = "identity_role_permissions",
         joinColumns = [JoinColumn(name = "role_id")],
     )
     var permissions: MutableSet<PermissionEmbeddable> = mutableSetOf(),
-
     @Column(name = "is_system", nullable = false)
     var isSystem: Boolean = false,
-
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
         name = "identity_role_metadata",
@@ -61,10 +54,8 @@ class RoleEntity(
     @MapKeyColumn(name = "metadata_key", length = 100)
     @Column(name = "metadata_value", length = 500)
     var metadata: MutableMap<String, String> = mutableMapOf(),
-
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant = Instant.now(),
-
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant = Instant.now(),
 ) {
@@ -101,10 +92,8 @@ class RoleEntity(
 class PermissionEmbeddable(
     @Column(name = "resource", nullable = false, length = 100)
     var resource: String = "",
-
     @Column(name = "action", nullable = false, length = 50)
     var action: String = "",
-
     @Enumerated(EnumType.STRING)
     @Column(name = "scope", nullable = false, length = 16)
     var scope: PermissionScope = PermissionScope.TENANT,

@@ -55,13 +55,52 @@ class JpaRoleRepository(
             }
         }
 
-    fun save(role: Role): Result<Role> =
+    override fun list(
+        tenantId: TenantId,
+        limit: Int,
+        offset: Int,
+    ): Result<List<Role>> =
+        runQuery("list") {
+            entityManager
+                .createQuery(
+                    """
+                    SELECT r FROM RoleEntity r
+                    WHERE r.tenantId = :tenantId
+                    ORDER BY r.createdAt DESC
+                    """.trimIndent(),
+                    RoleEntity::class.java,
+                ).setParameter("tenantId", tenantId.value)
+                .setMaxResults(limit)
+                .setFirstResult(offset)
+                .resultList
+                .map(RoleEntity::toDomain)
+        }
+
+    override fun existsByName(
+        tenantId: TenantId,
+        name: String,
+    ): Result<Boolean> =
+        runQuery("existsByName") {
+            entityManager
+                .createQuery(
+                    """
+                    SELECT COUNT(r) FROM RoleEntity r
+                    WHERE r.tenantId = :tenantId AND LOWER(r.name) = LOWER(:name)
+                    """.trimIndent(),
+                    java.lang.Long::class.java,
+                ).setParameter("tenantId", tenantId.value)
+                .setParameter("name", name)
+                .singleResult > 0
+        }
+
+    override fun save(role: Role): Result<Role> =
         runQuery("save") {
             val existing = entityManager.find(RoleEntity::class.java, role.id.value)
             val managed =
                 if (existing != null) {
                     existing.permissions = role.permissions.map { PermissionEmbeddable.from(it) }.toMutableSet()
                     existing.description = role.description
+                    existing.name = role.name
                     existing.isSystem = role.isSystem
                     existing.metadata = role.metadata.toMutableMap()
                     existing.updatedAt = role.updatedAt
@@ -71,6 +110,18 @@ class JpaRoleRepository(
                 }
             entityManager.flush()
             managed.toDomain()
+        }
+
+    override fun delete(
+        tenantId: TenantId,
+        roleId: RoleId,
+    ): Result<Unit> =
+        runQuery("delete") {
+            val entity = entityManager.find(RoleEntity::class.java, roleId.value)
+            if (entity != null && entity.tenantId == tenantId.value) {
+                entityManager.remove(entity)
+                entityManager.flush()
+            }
         }
 
     private fun <T> runQuery(

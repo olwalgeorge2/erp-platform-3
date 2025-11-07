@@ -13,8 +13,8 @@ import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceException
 import jakarta.transaction.Transactional
 import jakarta.transaction.Transactional.TxType
-import org.jboss.logging.Logger
 import org.hibernate.exception.ConstraintViolationException
+import org.jboss.logging.Logger
 
 @ApplicationScoped
 @Transactional(TxType.MANDATORY)
@@ -135,6 +135,5 @@ class JpaTenantRepository(
         private val LOGGER: Logger = Logger.getLogger(JpaTenantRepository::class.java)
     }
 
-    private fun Throwable.rootCause(): Throwable =
-        generateSequence(this) { it.cause }.last()
+    private fun Throwable.rootCause(): Throwable = generateSequence(this) { it.cause }.last()
 }

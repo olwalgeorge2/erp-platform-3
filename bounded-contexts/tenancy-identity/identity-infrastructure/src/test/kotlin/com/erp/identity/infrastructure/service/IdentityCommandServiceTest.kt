@@ -3,14 +3,20 @@ package com.erp.identity.infrastructure.service
 import com.erp.identity.application.port.input.command.ActivateTenantCommand
 import com.erp.identity.application.port.input.command.ActivateUserCommand
 import com.erp.identity.application.port.input.command.AssignRoleCommand
+import com.erp.identity.application.port.input.command.CreateRoleCommand
 import com.erp.identity.application.port.input.command.CreateUserCommand
+import com.erp.identity.application.port.input.command.DeleteRoleCommand
 import com.erp.identity.application.port.input.command.ProvisionTenantCommand
 import com.erp.identity.application.port.input.command.ResumeTenantCommand
 import com.erp.identity.application.port.input.command.SuspendTenantCommand
+import com.erp.identity.application.port.input.command.UpdateRoleCommand
+import com.erp.identity.application.service.command.RoleCommandHandler
 import com.erp.identity.application.service.command.TenantCommandHandler
 import com.erp.identity.application.service.command.UserCommandHandler
 import com.erp.identity.domain.model.identity.Credential
 import com.erp.identity.domain.model.identity.HashAlgorithm
+import com.erp.identity.domain.model.identity.Permission
+import com.erp.identity.domain.model.identity.Role
 import com.erp.identity.domain.model.identity.RoleId
 import com.erp.identity.domain.model.identity.User
 import com.erp.identity.domain.model.identity.UserId
@@ -20,13 +26,10 @@ import com.erp.identity.domain.model.tenant.Subscription
 import com.erp.identity.domain.model.tenant.SubscriptionPlan
 import com.erp.identity.domain.model.tenant.Tenant
 import com.erp.identity.domain.model.tenant.TenantId
-import com.erp.identity.domain.model.tenant.TenantStatus
 import com.erp.shared.types.results.Result
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -37,7 +40,8 @@ import java.time.Instant
 class IdentityCommandServiceTest {
     private val userHandler: UserCommandHandler = mock()
     private val tenantHandler: TenantCommandHandler = mock()
-    private val service = IdentityCommandService(userHandler, tenantHandler)
+    private val roleHandler: RoleCommandHandler = mock()
+    private val service = IdentityCommandService(userHandler, tenantHandler, roleHandler)
 
     @AfterEach
     fun tearDown() {
@@ -209,6 +213,58 @@ class IdentityCommandServiceTest {
         verify(tenantHandler).resumeTenant(eq(command))
     }
 
+    @Test
+    fun `createRole delegates to handler`() {
+        val command =
+            CreateRoleCommand(
+                tenantId = TenantId.generate(),
+                name = "admin",
+                description = "Admin role",
+                permissions = setOf(Permission.create("user")),
+            )
+        val role = sampleRole(command.tenantId)
+        whenever(roleHandler.createRole(eq(command))).thenReturn(Result.success(role))
+
+        val result = service.createRole(command)
+
+        assertTrue(result is Result.Success<Role>)
+        verify(roleHandler).createRole(eq(command))
+    }
+
+    @Test
+    fun `updateRole delegates to handler`() {
+        val command =
+            UpdateRoleCommand(
+                tenantId = TenantId.generate(),
+                roleId = RoleId.generate(),
+                name = "admin",
+                description = "updated",
+                permissions = emptySet(),
+            )
+        val role = sampleRole(command.tenantId)
+        whenever(roleHandler.updateRole(eq(command))).thenReturn(Result.success(role))
+
+        val result = service.updateRole(command)
+
+        assertTrue(result is Result.Success<Role>)
+        verify(roleHandler).updateRole(eq(command))
+    }
+
+    @Test
+    fun `deleteRole delegates to handler`() {
+        val command =
+            DeleteRoleCommand(
+                tenantId = TenantId.generate(),
+                roleId = RoleId.generate(),
+            )
+        whenever(roleHandler.deleteRole(eq(command))).thenReturn(Result.success(Unit))
+
+        val result = service.deleteRole(command)
+
+        assertTrue(result is Result.Success<Unit>)
+        verify(roleHandler).deleteRole(eq(command))
+    }
+
     private fun sampleCreateUserCommand(): CreateUserCommand =
         CreateUserCommand(
             tenantId = TenantId.generate(),
@@ -259,4 +315,12 @@ class IdentityCommandServiceTest {
             organization = null,
         )
     }
+
+    private fun sampleRole(tenantId: TenantId): Role =
+        Role.create(
+            tenantId = tenantId,
+            name = "admin",
+            description = "Administrator",
+            permissions = setOf(Permission.create("user")),
+        )
 }

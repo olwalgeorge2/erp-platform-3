@@ -34,33 +34,24 @@ class TenantEntity(
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     var id: UUID = UUID.randomUUID(),
-
     @Column(name = "name", nullable = false, length = 200)
     var name: String = "",
-
     @Column(name = "slug", nullable = false, length = 50)
     var slug: String = "",
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 32)
     var status: TenantStatus = TenantStatus.PROVISIONING,
-
     @Enumerated(EnumType.STRING)
     @Column(name = "subscription_plan", nullable = false, length = 32)
     var subscriptionPlan: SubscriptionPlan = SubscriptionPlan.STARTER,
-
     @Column(name = "subscription_start_date", nullable = false)
     var subscriptionStartDate: Instant = Instant.now(),
-
     @Column(name = "subscription_end_date")
     var subscriptionEndDate: Instant? = null,
-
     @Column(name = "subscription_max_users", nullable = false)
     var subscriptionMaxUsers: Int = 1,
-
     @Column(name = "subscription_max_storage", nullable = false)
     var subscriptionMaxStorage: Long = 1024,
-
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
         name = "identity_tenant_features",
@@ -68,10 +59,8 @@ class TenantEntity(
     )
     @Column(name = "feature", nullable = false, length = 100)
     var subscriptionFeatures: MutableSet<String> = mutableSetOf(),
-
     @Embedded
     var organization: OrganizationEmbeddable? = null,
-
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
         name = "identity_tenant_metadata",
@@ -80,10 +69,8 @@ class TenantEntity(
     @MapKeyColumn(name = "metadata_key", length = 100)
     @Column(name = "metadata_value", length = 500)
     var metadata: MutableMap<String, String> = mutableMapOf(),
-
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant = Instant.now(),
-
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant = Instant.now(),
 ) {
@@ -133,19 +120,14 @@ class TenantEntity(
 class OrganizationEmbeddable(
     @Column(name = "organization_legal_name", length = 200)
     var legalName: String? = null,
-
     @Column(name = "organization_tax_id", length = 100)
     var taxId: String? = null,
-
     @Column(name = "organization_industry", length = 100)
     var industry: String? = null,
-
     @Embedded
     var address: AddressEmbeddable? = null,
-
     @Column(name = "organization_contact_email", length = 200)
     var contactEmail: String? = null,
-
     @Column(name = "organization_contact_phone", length = 50)
     var contactPhone: String? = null,
 ) {
@@ -176,16 +158,12 @@ class OrganizationEmbeddable(
 class AddressEmbeddable(
     @Column(name = "address_street", length = 200)
     var street: String? = null,
-
     @Column(name = "address_city", length = 100)
     var city: String? = null,
-
     @Column(name = "address_state", length = 100)
     var state: String? = null,
-
     @Column(name = "address_postal_code", length = 50)
     var postalCode: String? = null,
-
     @Column(name = "address_country", length = 2)
     var country: String? = null,
 ) {

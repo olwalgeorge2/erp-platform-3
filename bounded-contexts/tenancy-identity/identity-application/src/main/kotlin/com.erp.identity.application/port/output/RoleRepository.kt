@@ -15,4 +15,22 @@ interface RoleRepository {
         tenantId: TenantId,
         roleIds: Set<RoleId>,
     ): Result<List<Role>>
+
+    fun list(
+        tenantId: TenantId,
+        limit: Int,
+        offset: Int,
+    ): Result<List<Role>>
+
+    fun existsByName(
+        tenantId: TenantId,
+        name: String,
+    ): Result<Boolean>
+
+    fun save(role: Role): Result<Role>
+
+    fun delete(
+        tenantId: TenantId,
+        roleId: RoleId,
+    ): Result<Unit>
 }

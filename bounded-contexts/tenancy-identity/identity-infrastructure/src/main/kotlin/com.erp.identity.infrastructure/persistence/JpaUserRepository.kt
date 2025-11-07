@@ -13,8 +13,8 @@ import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceException
 import jakarta.transaction.Transactional
 import jakarta.transaction.Transactional.TxType
-import org.jboss.logging.Logger
 import org.hibernate.exception.ConstraintViolationException
+import org.jboss.logging.Logger
 import java.util.UUID
 
 @ApplicationScoped
@@ -74,14 +74,12 @@ class JpaUserRepository(
     override fun existsByUsername(
         tenantId: TenantId,
         username: String,
-    ): Result<Boolean> =
-        existsBy(tenantId.value, "username", username, "existsByUsername")
+    ): Result<Boolean> = existsBy(tenantId.value, "username", username, "existsByUsername")
 
     override fun existsByEmail(
         tenantId: TenantId,
         email: String,
-    ): Result<Boolean> =
-        existsBy(tenantId.value, "email", email, "existsByEmail")
+    ): Result<Boolean> = existsBy(tenantId.value, "email", email, "existsByEmail")
 
     override fun save(user: User): Result<User> =
         runCommand("save") {
@@ -206,6 +204,5 @@ class JpaUserRepository(
         )
     }
 
-    private fun Throwable.rootCause(): Throwable =
-        generateSequence(this) { it.cause }.last()
+    private fun Throwable.rootCause(): Throwable = generateSequence(this) { it.cause }.last()
 }

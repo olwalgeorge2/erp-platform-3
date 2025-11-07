@@ -37,7 +37,8 @@ fun <T, R> Result<T>.toResponse(
 ): Response =
     when (this) {
         is Result.Success ->
-            Response.status(successStatus)
+            Response
+                .status(successStatus)
                 .entity(transform(value))
                 .build()
         is Result.Failure -> failureResponse()
@@ -45,7 +46,8 @@ fun <T, R> Result<T>.toResponse(
 
 fun Result.Failure.failureResponse(): Response {
     val status = mapStatus(error.code, validationErrors.isNotEmpty())
-    return Response.status(status)
+    return Response
+        .status(status)
         .entity(
             ErrorResponse(
                 code = error.code,

@@ -5,8 +5,10 @@ import com.erp.identity.application.port.output.EventPublisherPort
 import com.erp.identity.application.port.output.RoleRepository
 import com.erp.identity.application.port.output.TenantRepository
 import com.erp.identity.application.port.output.UserRepository
+import com.erp.identity.application.service.command.RoleCommandHandler
 import com.erp.identity.application.service.command.TenantCommandHandler
 import com.erp.identity.application.service.command.UserCommandHandler
+import com.erp.identity.application.service.query.RoleQueryHandler
 import com.erp.identity.application.service.query.TenantQueryHandler
 import com.erp.identity.application.service.query.UserQueryHandler
 import com.erp.identity.domain.model.identity.PasswordPolicy
@@ -64,12 +66,14 @@ class IdentityApplicationConfiguration {
         )
 
     @Produces
-    fun tenantQueryHandler(
-        tenantRepository: TenantRepository,
-    ): TenantQueryHandler = TenantQueryHandler(tenantRepository)
+    fun tenantQueryHandler(tenantRepository: TenantRepository): TenantQueryHandler = TenantQueryHandler(tenantRepository)
 
     @Produces
-    fun userQueryHandler(
-        userRepository: UserRepository,
-    ): UserQueryHandler = UserQueryHandler(userRepository)
+    fun roleCommandHandler(roleRepository: RoleRepository): RoleCommandHandler = RoleCommandHandler(roleRepository)
+
+    @Produces
+    fun roleQueryHandler(roleRepository: RoleRepository): RoleQueryHandler = RoleQueryHandler(roleRepository)
+
+    @Produces
+    fun userQueryHandler(userRepository: UserRepository): UserQueryHandler = UserQueryHandler(userRepository)
 }

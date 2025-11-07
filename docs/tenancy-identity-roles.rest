@@ -1,0 +1,103 @@
+@host = http://localhost:8081
+@tenantName = Quarkus Test Tenant
+@tenantSlug = tenant-{{$randomInt 100000 999999}}
+@tenantId = 00000000-0000-0000-0000-000000000000
+@roleId = 00000000-0000-0000-0000-000000000000
+
+### Provision Tenant
+POST {{host}}/api/tenants
+Content-Type: application/json
+
+{
+  "name": "{{tenantName}}",
+  "slug": "{{tenantSlug}}",
+  "subscription": {
+    "plan": "STARTER",
+    "startDate": "{{$datetime rfc3339}}",
+    "maxUsers": 25,
+    "maxStorage": 5000,
+    "features": [
+      "rbac"
+    ]
+  },
+  "metadata": {
+    "env": "dev"
+  }
+}
+
+> {%
+  client.global.set("tenantId", response.body.id);
+%}
+
+###
+
+### Activate Tenant
+POST {{host}}/api/tenants/{{tenantId}}/activate
+Content-Type: application/json
+
+{
+  "requestedBy": "rest-client"
+}
+
+###
+
+@roleName = tenant-admin
+
+### Create Role
+POST {{host}}/api/tenants/{{tenantId}}/roles
+Content-Type: application/json
+
+{
+  "name": "{{roleName}}",
+  "description": "Tenant administrator role",
+  "permissions": [
+    { "resource": "users", "action": "manage", "scope": "TENANT" },
+    { "resource": "tenants", "action": "read", "scope": "TENANT" }
+  ],
+  "metadata": {
+    "createdBy": "rest-client"
+  }
+}
+
+> {%
+  client.global.set("roleId", response.body.id);
+%}
+
+###
+
+### List Roles
+GET {{host}}/api/tenants/{{tenantId}}/roles
+
+###
+
+### Update Role
+PUT {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
+Content-Type: application/json
+
+{
+  "name": "{{roleName}}",
+  "description": "Updated tenant administrator role",
+  "permissions": [
+    { "resource": "users", "action": "manage", "scope": "TENANT" },
+    { "resource": "tenants", "action": "read", "scope": "TENANT" },
+    { "resource": "roles", "action": "manage", "scope": "TENANT" }
+  ],
+  "metadata": {
+    "updatedBy": "rest-client"
+  }
+}
+
+###
+
+### Get Role
+GET {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
+
+###
+
+### Delete Role
+DELETE {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
+
+###
+
+### List Roles After Deletion
+GET {{host}}/api/tenants/{{tenantId}}/roles

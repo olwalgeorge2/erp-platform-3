@@ -3,9 +3,8 @@ package com.erp.identity.infrastructure.persistence
 import com.erp.identity.domain.model.tenant.Organization
 import com.erp.identity.domain.model.tenant.Subscription
 import com.erp.identity.domain.model.tenant.SubscriptionPlan
-import com.erp.identity.domain.model.tenant.TenantId
-import com.erp.identity.domain.model.tenant.TenantStatus
 import com.erp.identity.domain.model.tenant.Tenant
+import com.erp.identity.infrastructure.persistence.entity.TenantEntity
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.persistence.EntityManager
@@ -16,7 +15,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.sql.SQLException
 import java.time.Instant
-import com.erp.identity.infrastructure.persistence.entity.TenantEntity
 
 class JpaTenantRepositoryTest {
     private val entityManager = mockk<EntityManager>(relaxed = true)
@@ -24,15 +22,16 @@ class JpaTenantRepositoryTest {
 
     @Test
     fun `save returns tenant slug exists when unique constraint violated`() {
-        every { entityManager.merge(any<TenantEntity>()) } throws PersistenceException(
-            "constraint violated",
-            ConstraintViolationException(
-                "duplicate slug",
-                SQLException("duplicate key uk_identity_tenants_slug"),
-                "INSERT ...",
-                "uk_identity_tenants_slug",
-            ),
-        )
+        every { entityManager.merge(any<TenantEntity>()) } throws
+            PersistenceException(
+                "constraint violated",
+                ConstraintViolationException(
+                    "duplicate slug",
+                    SQLException("duplicate key uk_identity_tenants_slug"),
+                    "INSERT ...",
+                    "uk_identity_tenants_slug",
+                ),
+            )
 
         val result = repository.save(sampleTenant())
 

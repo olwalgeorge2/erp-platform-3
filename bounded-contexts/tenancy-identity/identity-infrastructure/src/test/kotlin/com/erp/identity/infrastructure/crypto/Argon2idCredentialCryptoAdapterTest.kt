@@ -33,12 +33,13 @@ class Argon2idCredentialCryptoAdapterTest {
 
     @Test
     fun `verify succeeds for PBKDF2 hash`() {
-        val hashed = adapter.hashPassword(
-            tenantId = tenantId,
-            userId = UserId.generate(),
-            rawPassword = STRONG_PASSWORD,
-            algorithm = HashAlgorithm.PBKDF2,
-        )
+        val hashed =
+            adapter.hashPassword(
+                tenantId = tenantId,
+                userId = UserId.generate(),
+                rawPassword = STRONG_PASSWORD,
+                algorithm = HashAlgorithm.PBKDF2,
+            )
         val credential = hashed.toCredential()
 
         assertEquals(HashAlgorithm.PBKDF2, credential.algorithm)

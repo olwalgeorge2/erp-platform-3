@@ -1,16 +1,21 @@
 package com.erp.identity.infrastructure.service
 
-import com.erp.identity.application.port.input.command.ActivateUserCommand
 import com.erp.identity.application.port.input.command.ActivateTenantCommand
+import com.erp.identity.application.port.input.command.ActivateUserCommand
 import com.erp.identity.application.port.input.command.AssignRoleCommand
 import com.erp.identity.application.port.input.command.AuthenticateUserCommand
+import com.erp.identity.application.port.input.command.CreateRoleCommand
 import com.erp.identity.application.port.input.command.CreateUserCommand
+import com.erp.identity.application.port.input.command.DeleteRoleCommand
 import com.erp.identity.application.port.input.command.ProvisionTenantCommand
 import com.erp.identity.application.port.input.command.ResumeTenantCommand
 import com.erp.identity.application.port.input.command.SuspendTenantCommand
 import com.erp.identity.application.port.input.command.UpdateCredentialsCommand
+import com.erp.identity.application.port.input.command.UpdateRoleCommand
+import com.erp.identity.application.service.command.RoleCommandHandler
 import com.erp.identity.application.service.command.TenantCommandHandler
 import com.erp.identity.application.service.command.UserCommandHandler
+import com.erp.identity.domain.model.identity.Role
 import com.erp.identity.domain.model.identity.User
 import com.erp.identity.domain.model.tenant.Tenant
 import com.erp.shared.types.results.Result
@@ -23,14 +28,15 @@ import jakarta.enterprise.context.ApplicationScoped
 import jakarta.transaction.Transactional
 import jakarta.transaction.Transactional.TxType
 import jakarta.validation.Valid
+import org.slf4j.MDC
 import java.time.Duration
 import java.util.UUID
-import org.slf4j.MDC
 
 @ApplicationScoped
 class IdentityCommandService(
     private val userCommandHandler: UserCommandHandler,
     private val tenantCommandHandler: TenantCommandHandler,
+    private val roleCommandHandler: RoleCommandHandler,
 ) {
     @Counted(
         value = "identity.user.creation.attempts",
@@ -42,7 +48,9 @@ class IdentityCommandService(
         percentiles = [0.5, 0.95, 0.99],
     )
     @Transactional(TxType.REQUIRED)
-    fun createUser(@Valid command: CreateUserCommand): Result<User> {
+    fun createUser(
+        @Valid command: CreateUserCommand,
+    ): Result<User> {
         val traceId = ensureTraceId()
         ensureTenantMdc(command.tenantId.toString())
         Log.infof(
@@ -62,7 +70,7 @@ class IdentityCommandService(
             successContext = { user ->
                 "tenant=${user.tenantId}, userId=${user.id}, status=${user.status}"
             },
-            failureContext = {
+            failureContext = { _ ->
                 "tenant=${command.tenantId}, username=${command.username}"
             },
         )
@@ -70,7 +78,9 @@ class IdentityCommandService(
     }
 
     @Transactional(TxType.REQUIRED)
-    fun assignRole(@Valid command: AssignRoleCommand): Result<User> {
+    fun assignRole(
+        @Valid command: AssignRoleCommand,
+    ): Result<User> {
         val traceId = ensureTraceId()
         ensureTenantMdc(command.tenantId.toString())
         Log.infof(
@@ -90,7 +100,7 @@ class IdentityCommandService(
             successContext = { user ->
                 "tenant=${user.tenantId}, userId=${user.id}, roles=${user.roleIds.size}"
             },
-            failureContext = {
+            failureContext = { _ ->
                 "tenant=${command.tenantId}, userId=${command.userId}, roleId=${command.roleId}"
             },
         )
@@ -98,7 +108,9 @@ class IdentityCommandService(
     }
 
     @Transactional(TxType.REQUIRED)
-    fun updateCredentials(@Valid command: UpdateCredentialsCommand): Result<User> {
+    fun updateCredentials(
+        @Valid command: UpdateCredentialsCommand,
+    ): Result<User> {
         val traceId = ensureTraceId()
         ensureTenantMdc(command.tenantId.toString())
         Log.infof(
@@ -117,7 +129,7 @@ class IdentityCommandService(
             successContext = { user ->
                 "tenant=${user.tenantId}, userId=${user.id}"
             },
-            failureContext = {
+            failureContext = { _ ->
                 "tenant=${command.tenantId}, userId=${command.userId}"
             },
         )
@@ -125,7 +137,9 @@ class IdentityCommandService(
     }
 
     @Transactional(TxType.REQUIRED)
-    fun activateUser(@Valid command: ActivateUserCommand): Result<User> {
+    fun activateUser(
+        @Valid command: ActivateUserCommand,
+    ): Result<User> {
         val traceId = ensureTraceId()
         ensureTenantMdc(command.tenantId.toString())
         Log.infof(
@@ -144,7 +158,7 @@ class IdentityCommandService(
             successContext = { user ->
                 "tenant=${user.tenantId}, userId=${user.id}, status=${user.status}"
             },
-            failureContext = {
+            failureContext = { _ ->
                 "tenant=${command.tenantId}, userId=${command.userId}"
             },
         )
@@ -152,7 +166,9 @@ class IdentityCommandService(
     }
 
     @Transactional(TxType.REQUIRED)
-    fun authenticate(@Valid command: AuthenticateUserCommand): Result<User> {
+    fun authenticate(
+        @Valid command: AuthenticateUserCommand,
+    ): Result<User> {
         val traceId = ensureTraceId()
         ensureTenantMdc(command.tenantId.toString())
         Log.infof(
@@ -171,7 +187,7 @@ class IdentityCommandService(
             successContext = { user ->
                 "tenant=${user.tenantId}, userId=${user.id}, status=${user.status}"
             },
-            failureContext = {
+            failureContext = { _ ->
                 "tenant=${command.tenantId}, identifier=${command.usernameOrEmail}"
             },
         )
@@ -179,7 +195,9 @@ class IdentityCommandService(
     }
 
     @Transactional(TxType.REQUIRED)
-    fun provisionTenant(@Valid command: ProvisionTenantCommand): Result<Tenant> {
+    fun provisionTenant(
+        @Valid command: ProvisionTenantCommand,
+    ): Result<Tenant> {
         val traceId = ensureTraceId()
         Log.infof(
             "[%s] provisionTenant - slug=%s, name=%s",
@@ -197,7 +215,7 @@ class IdentityCommandService(
             successContext = { tenant ->
                 "tenant=${tenant.id}, slug=${tenant.slug}, status=${tenant.status}"
             },
-            failureContext = {
+            failureContext = { _ ->
                 "slug=${command.slug}, name=${command.name}"
             },
         )
@@ -205,7 +223,9 @@ class IdentityCommandService(
     }
 
     @Transactional(TxType.REQUIRED)
-    fun activateTenant(@Valid command: ActivateTenantCommand): Result<Tenant> {
+    fun activateTenant(
+        @Valid command: ActivateTenantCommand,
+    ): Result<Tenant> {
         val traceId = ensureTraceId()
         Log.infof("[%s] activateTenant - tenant=%s", traceId, command.tenantId)
         val start = System.nanoTime()
@@ -216,13 +236,15 @@ class IdentityCommandService(
             startNano = start,
             result = result,
             successContext = { tenant -> "tenant=${tenant.id}, status=${tenant.status}" },
-            failureContext = { "tenant=${command.tenantId}" },
+            failureContext = { _ -> "tenant=${command.tenantId}" },
         )
         return result
     }
 
     @Transactional(TxType.REQUIRED)
-    fun suspendTenant(@Valid command: SuspendTenantCommand): Result<Tenant> {
+    fun suspendTenant(
+        @Valid command: SuspendTenantCommand,
+    ): Result<Tenant> {
         val traceId = ensureTraceId()
         Log.infof("[%s] suspendTenant - tenant=%s", traceId, command.tenantId)
         val start = System.nanoTime()
@@ -233,13 +255,15 @@ class IdentityCommandService(
             startNano = start,
             result = result,
             successContext = { tenant -> "tenant=${tenant.id}, status=${tenant.status}" },
-            failureContext = { "tenant=${command.tenantId}" },
+            failureContext = { _ -> "tenant=${command.tenantId}" },
         )
         return result
     }
 
     @Transactional(TxType.REQUIRED)
-    fun resumeTenant(@Valid command: ResumeTenantCommand): Result<Tenant> {
+    fun resumeTenant(
+        @Valid command: ResumeTenantCommand,
+    ): Result<Tenant> {
         val traceId = ensureTraceId()
         Log.infof("[%s] resumeTenant - tenant=%s", traceId, command.tenantId)
         val start = System.nanoTime()
@@ -250,7 +274,67 @@ class IdentityCommandService(
             startNano = start,
             result = result,
             successContext = { tenant -> "tenant=${tenant.id}, status=${tenant.status}" },
-            failureContext = { "tenant=${command.tenantId}" },
+            failureContext = { _ -> "tenant=${command.tenantId}" },
+        )
+        return result
+    }
+
+    @Transactional(TxType.REQUIRED)
+    fun createRole(
+        @Valid command: CreateRoleCommand,
+    ): Result<Role> {
+        val traceId = ensureTraceId()
+        ensureTenantMdc(command.tenantId.toString())
+        Log.infof("[%s] createRole - tenant=%s, name=%s", traceId, command.tenantId, command.name)
+        val start = System.nanoTime()
+        val result = roleCommandHandler.createRole(command)
+        logResult(
+            traceId = traceId,
+            operation = "createRole",
+            startNano = start,
+            result = result,
+            successContext = { role -> "tenant=${role.tenantId}, roleId=${role.id}" },
+            failureContext = { _ -> "tenant=${command.tenantId}" },
+        )
+        return result
+    }
+
+    @Transactional(TxType.REQUIRED)
+    fun updateRole(
+        @Valid command: UpdateRoleCommand,
+    ): Result<Role> {
+        val traceId = ensureTraceId()
+        ensureTenantMdc(command.tenantId.toString())
+        Log.infof("[%s] updateRole - tenant=%s, roleId=%s", traceId, command.tenantId, command.roleId)
+        val start = System.nanoTime()
+        val result = roleCommandHandler.updateRole(command)
+        logResult(
+            traceId = traceId,
+            operation = "updateRole",
+            startNano = start,
+            result = result,
+            successContext = { role -> "tenant=${role.tenantId}, roleId=${role.id}" },
+            failureContext = { _ -> "tenant=${command.tenantId}, roleId=${command.roleId}" },
+        )
+        return result
+    }
+
+    @Transactional(TxType.REQUIRED)
+    fun deleteRole(
+        @Valid command: DeleteRoleCommand,
+    ): Result<Unit> {
+        val traceId = ensureTraceId()
+        ensureTenantMdc(command.tenantId.toString())
+        Log.infof("[%s] deleteRole - tenant=%s, roleId=%s", traceId, command.tenantId, command.roleId)
+        val start = System.nanoTime()
+        val result = roleCommandHandler.deleteRole(command)
+        logResult(
+            traceId = traceId,
+            operation = "deleteRole",
+            startNano = start,
+            result = result,
+            successContext = { "tenant=${command.tenantId}, roleId=${command.roleId}" },
+            failureContext = { _ -> "tenant=${command.tenantId}, roleId=${command.roleId}" },
         )
         return result
     }

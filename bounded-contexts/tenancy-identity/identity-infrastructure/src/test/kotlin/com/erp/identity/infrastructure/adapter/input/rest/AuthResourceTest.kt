@@ -12,6 +12,7 @@ import com.erp.identity.infrastructure.adapter.input.rest.dto.CreateUserRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.UserResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.shared.types.results.Result
+import jakarta.ws.rs.core.MultivaluedHashMap
 import jakarta.ws.rs.core.MultivaluedMap
 import jakarta.ws.rs.core.PathSegment
 import jakarta.ws.rs.core.Response
@@ -160,6 +161,5 @@ class AuthResourceTest {
             override fun relativize(uri: URI?): URI = uri ?: base
         }
 
-    private fun emptyMultiMap(): MultivaluedMap<String, String> =
-        jakarta.ws.rs.core.MultivaluedHashMap()
+    private fun emptyMultiMap(): MultivaluedMap<String, String> = MultivaluedHashMap()
 }

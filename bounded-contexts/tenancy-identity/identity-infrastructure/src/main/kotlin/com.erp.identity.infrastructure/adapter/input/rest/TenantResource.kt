@@ -1,15 +1,14 @@
 package com.erp.identity.infrastructure.adapter.input.rest
 
+import com.erp.identity.application.port.input.query.GetTenantQuery
+import com.erp.identity.application.port.input.query.ListTenantsQuery
 import com.erp.identity.domain.model.tenant.Tenant
 import com.erp.identity.domain.model.tenant.TenantId
 import com.erp.identity.domain.model.tenant.TenantStatus
-import com.erp.identity.application.port.input.query.GetTenantQuery
-import com.erp.identity.application.port.input.query.ListTenantsQuery
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ActivateTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ProvisionTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ResumeTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.SuspendTenantRequest
-import com.erp.identity.infrastructure.adapter.input.rest.dto.TenantResponse
 import com.erp.identity.infrastructure.adapter.input.rest.dto.toResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.identity.infrastructure.service.IdentityQueryService
@@ -23,10 +22,10 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.QueryParam
+import jakarta.ws.rs.core.Context
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.UriInfo
-import jakarta.ws.rs.core.Context
 
 @ApplicationScoped
 @Path("/api/tenants")
@@ -52,7 +51,8 @@ class TenantResource
                             .path("tenants")
                             .path(tenant.id.toString())
                             .build()
-                    Response.created(location)
+                    Response
+                        .created(location)
                         .entity(tenant.toResponse())
                         .build()
                 }
@@ -148,7 +148,8 @@ class TenantResource
             field: String,
             value: String,
         ): Response =
-            Response.status(Response.Status.BAD_REQUEST)
+            Response
+                .status(Response.Status.BAD_REQUEST)
                 .entity(
                     ErrorResponse(
                         code = "INVALID_IDENTIFIER",
@@ -158,7 +159,8 @@ class TenantResource
                 ).build()
 
         private fun invalidQueryResponse(reason: String): Response =
-            Response.status(Response.Status.BAD_REQUEST)
+            Response
+                .status(Response.Status.BAD_REQUEST)
                 .entity(
                     ErrorResponse(
                         code = "INVALID_QUERY_PARAMETER",
@@ -167,7 +169,8 @@ class TenantResource
                 ).build()
 
         private fun notFoundResponse(tenantId: String): Response =
-            Response.status(Response.Status.NOT_FOUND)
+            Response
+                .status(Response.Status.NOT_FOUND)
                 .entity(
                     ErrorResponse(
                         code = "TENANT_NOT_FOUND",

@@ -17,7 +17,6 @@ class KafkaOutboxMessagePublisher(
     @param:Channel("identity-events-out")
     private val emitter: Emitter<String>,
 ) : OutboxMessagePublisher {
-
     @Counted(
         value = "identity.outbox.publish.attempts",
         description = "Total outbox event publish attempts",
@@ -33,72 +32,98 @@ class KafkaOutboxMessagePublisher(
         payload: String,
     ): Result<Unit> {
         val traceId = MDC.get("traceId")?.toString() ?: UUID.randomUUID().toString()
-        
+
         return try {
             // Generate message key for partition routing (use aggregateId for ordering)
             val messageKey = aggregateId ?: UUID.randomUUID().toString()
-            
+
             // Build headers list
             val headers = mutableListOf<org.apache.kafka.common.header.internals.RecordHeader>()
-            headers.add(org.apache.kafka.common.header.internals.RecordHeader("event-type", eventType.toByteArray()))
-            headers.add(org.apache.kafka.common.header.internals.RecordHeader("trace-id", traceId.toByteArray()))
-            
+            headers.add(
+                org.apache.kafka.common.header.internals
+                    .RecordHeader("event-type", eventType.toByteArray()),
+            )
+            headers.add(
+                org.apache.kafka.common.header.internals
+                    .RecordHeader("trace-id", traceId.toByteArray()),
+            )
+
             // Add tenant-id if available in MDC
             MDC.get("tenantId")?.toString()?.let { tenantId ->
-                headers.add(org.apache.kafka.common.header.internals.RecordHeader("tenant-id", tenantId.toByteArray()))
+                headers.add(
+                    org.apache.kafka.common.header.internals
+                        .RecordHeader("tenant-id", tenantId.toByteArray()),
+                )
             }
-            
+
             // Add aggregate-id if present
             aggregateId?.let { aggId ->
-                headers.add(org.apache.kafka.common.header.internals.RecordHeader("aggregate-id", aggId.toByteArray()))
+                headers.add(
+                    org.apache.kafka.common.header.internals
+                        .RecordHeader("aggregate-id", aggId.toByteArray()),
+                )
             }
-            
+
             // Create Kafka metadata with headers
-            val metadata = OutgoingKafkaRecordMetadata.builder<String>()
-                .withKey(messageKey)
-                .withHeaders(headers)
-                .build()
-            
+            val metadata =
+                OutgoingKafkaRecordMetadata
+                    .builder<String>()
+                    .withKey(messageKey)
+                    .withHeaders(headers)
+                    .build()
+
             // Send message with metadata
-            val message = Message.of(payload)
-                .addMetadata(metadata)
-                .withAck {
-                    Log.debugf(
-                        "[%s] Kafka ACK received for event-type=%s, key=%s",
-                        traceId, eventType, messageKey
-                    )
-                    java.util.concurrent.CompletableFuture.completedFuture(null)
-                }
-                .withNack { throwable ->
-                    Log.errorf(
-                        throwable,
-                        "[%s] Kafka NACK received for event-type=%s, key=%s",
-                        traceId, eventType, messageKey
-                    )
-                    java.util.concurrent.CompletableFuture.completedFuture(null)
-                }
-            
+            val message =
+                Message
+                    .of(payload)
+                    .addMetadata(metadata)
+                    .withAck {
+                        Log.debugf(
+                            "[%s] Kafka ACK received for event-type=%s, key=%s",
+                            traceId,
+                            eventType,
+                            messageKey,
+                        )
+                        java.util.concurrent.CompletableFuture
+                            .completedFuture(null)
+                    }.withNack { throwable ->
+                        Log.errorf(
+                            throwable,
+                            "[%s] Kafka NACK received for event-type=%s, key=%s",
+                            traceId,
+                            eventType,
+                            messageKey,
+                        )
+                        java.util.concurrent.CompletableFuture
+                            .completedFuture(null)
+                    }
+
             emitter.send(message)
-            
+
             Log.debugf(
                 "[%s] Published to Kafka: event-type=%s, key=%s, payload-size=%d bytes",
-                traceId, eventType, messageKey, payload.length
+                traceId,
+                eventType,
+                messageKey,
+                payload.length,
             )
-            
+
             Result.success(Unit)
         } catch (ex: Exception) {
             Log.errorf(
                 ex,
                 "[%s] Failed to publish to Kafka: event-type=%s",
-                traceId, eventType
+                traceId,
+                eventType,
             )
             Result.failure(
                 code = "KAFKA_PUBLISH_FAILED",
                 message = "Failed to publish event to Kafka",
-                details = mapOf(
-                    "eventType" to eventType,
-                    "aggregateId" to (aggregateId ?: "n/a"),
-                ),
+                details =
+                    mapOf(
+                        "eventType" to eventType,
+                        "aggregateId" to (aggregateId ?: "n/a"),
+                    ),
                 cause = ex,
             )
         }

@@ -17,19 +17,24 @@ class OutboxEventScheduler(
     private val messagePublisher: OutboxMessagePublisher,
     private val meterRegistry: MeterRegistry,
 ) {
-    private val publishedCounter: Counter = meterRegistry.counter(
-        "identity.outbox.events.published",
-        "outcome", "success"
-    )
-    
-    private val failedCounter: Counter = meterRegistry.counter(
-        "identity.outbox.events.published",
-        "outcome", "failure"
-    )
-    
-    private val batchTimer: Timer = meterRegistry.timer(
-        "identity.outbox.batch.duration"
-    )
+    private val publishedCounter: Counter =
+        meterRegistry.counter(
+            "identity.outbox.events.published",
+            "outcome",
+            "success",
+        )
+
+    private val failedCounter: Counter =
+        meterRegistry.counter(
+            "identity.outbox.events.published",
+            "outcome",
+            "failure",
+        )
+
+    private val batchTimer: Timer =
+        meterRegistry.timer(
+            "identity.outbox.batch.duration",
+        )
 
     @Scheduled(every = "5s", concurrentExecution = SKIP)
     @Transactional(TxType.REQUIRES_NEW)
@@ -41,7 +46,7 @@ class OutboxEventScheduler(
             }
 
             LOGGER.debugf("Dispatching %d outbox events", pendingEvents.size)
-            
+
             var successCount = 0
             var failureCount = 0
 
@@ -80,11 +85,13 @@ class OutboxEventScheduler(
                     )
                 }
             }
-            
+
             if (successCount > 0 || failureCount > 0) {
                 LOGGER.infof(
                     "Outbox batch complete: success=%d, failure=%d, total=%d",
-                    successCount, failureCount, pendingEvents.size
+                    successCount,
+                    failureCount,
+                    pendingEvents.size,
                 )
             }
         }

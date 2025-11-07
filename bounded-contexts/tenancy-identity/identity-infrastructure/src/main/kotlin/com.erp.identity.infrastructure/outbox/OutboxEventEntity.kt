@@ -23,47 +23,33 @@ class OutboxEventEntity(
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     var id: UUID = UUID.randomUUID(),
-
     @Column(name = "event_id", nullable = false, updatable = false)
     var eventId: UUID = UUID.randomUUID(),
-
     @Column(name = "event_type", nullable = false, length = 256)
     var eventType: String = "",
-
     @Column(name = "aggregate_type", length = 256)
     var aggregateType: String? = null,
-
     @Column(name = "aggregate_id", length = 64)
     var aggregateId: String? = null,
-
     @Column(name = "payload", nullable = false, columnDefinition = "TEXT")
     var payload: String = "",
-
     @Column(name = "occurred_at", nullable = false)
     var occurredAt: Instant = Instant.now(),
-
     @Column(name = "recorded_at", nullable = false)
     var recordedAt: Instant = Instant.now(),
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 16)
     var status: OutboxEventStatus = OutboxEventStatus.PENDING,
-
     @Column(name = "tenant_id")
     var tenantId: UUID? = null,
-
     @Column(name = "trace_id")
     var traceId: UUID? = null,
-
     @Column(name = "published_at")
     var publishedAt: Instant? = null,
-
     @Column(name = "last_attempt_at")
     var lastAttemptAt: Instant? = null,
-
     @Column(name = "failure_count", nullable = false)
     var failureCount: Int = 0,
-
     @Column(name = "last_error", length = 2000)
     var lastError: String? = null,
 ) {
@@ -114,7 +100,10 @@ class OutboxEventEntity(
             candidateNames.forEach { property ->
                 val value =
                     runCatching {
-                        val method = event.javaClass.methods.firstOrNull { it.name.equals("get${property.replaceFirstChar { it.uppercase() }}", ignoreCase = false) }
+                        val method =
+                            event.javaClass.methods.firstOrNull {
+                                it.name.equals("get${property.replaceFirstChar { it.uppercase() }}", ignoreCase = false)
+                            }
                         method?.invoke(event)
                     }.getOrNull()
 

@@ -7,8 +7,8 @@ import com.erp.identity.domain.model.tenant.TenantStatus
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ActivateTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ProvisionTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ResumeTenantRequest
-import com.erp.identity.infrastructure.adapter.input.rest.dto.SuspendTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.SubscriptionPayload
+import com.erp.identity.infrastructure.adapter.input.rest.dto.SuspendTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.TenantResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.identity.infrastructure.service.IdentityQueryService
@@ -20,9 +20,11 @@ import jakarta.ws.rs.core.UriBuilder
 import jakarta.ws.rs.core.UriInfo
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.reset
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.net.URI
@@ -32,6 +34,11 @@ class TenantResourceTest {
     private val commandService: IdentityCommandService = mock()
     private val queryService: IdentityQueryService = mock()
     private val resource = TenantResource(commandService, queryService)
+
+    @BeforeEach
+    fun resetMocks() {
+        reset(commandService, queryService)
+    }
 
     @Test
     fun `provision tenant returns created response`() {
@@ -150,14 +157,15 @@ class TenantResourceTest {
                 maxStorage = 5_000,
                 features = setOf("rbac"),
             )
-        return Tenant.provision(
-            name = "Acme Inc",
-            slug = "acme-inc",
-            subscription = subscription,
-            organization = null,
-        ).copy(
-            status = TenantStatus.ACTIVE,
-        )
+        return Tenant
+            .provision(
+                name = "Acme Inc",
+                slug = "acme-inc",
+                subscription = subscription,
+                organization = null,
+            ).copy(
+                status = TenantStatus.ACTIVE,
+            )
     }
 
     private fun simpleUriInfo(): UriInfo =
@@ -195,11 +203,15 @@ class TenantResourceTest {
             override fun getMatchedURIs(decode: Boolean): MutableList<String> = mutableListOf()
 
             override fun getMatchedResources(): MutableList<Any> = mutableListOf()
+
             override fun getPathSegments(): MutableList<PathSegment> = mutableListOf()
+
             override fun resolve(uri: URI?): URI = uri ?: base
+
             override fun relativize(uri: URI?): URI = uri ?: base
         }
 
     private fun emptyMultiMap(): MultivaluedMap<String, String> =
-        jakarta.ws.rs.core.MultivaluedHashMap()
+        jakarta.ws.rs.core
+            .MultivaluedHashMap()
 }

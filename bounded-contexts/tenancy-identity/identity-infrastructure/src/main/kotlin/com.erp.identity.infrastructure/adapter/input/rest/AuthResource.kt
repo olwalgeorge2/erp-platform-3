@@ -46,7 +46,8 @@ class AuthResource
                             .path("users")
                             .path(user.id.toString())
                             .build()
-                    Response.created(location)
+                    Response
+                        .created(location)
                         .entity(user.toResponse())
                         .build()
                 }
@@ -117,7 +118,8 @@ class AuthResource
             field: String,
             value: String,
         ): Response =
-            Response.status(Response.Status.BAD_REQUEST)
+            Response
+                .status(Response.Status.BAD_REQUEST)
                 .entity(
                     ErrorResponse(
                         code = "INVALID_IDENTIFIER",

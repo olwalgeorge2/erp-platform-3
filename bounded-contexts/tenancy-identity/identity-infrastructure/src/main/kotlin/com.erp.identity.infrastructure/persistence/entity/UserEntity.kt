@@ -38,42 +38,30 @@ class UserEntity(
     @Id
     @Column(name = "id", nullable = false, updatable = false)
     var id: UUID = UUID.randomUUID(),
-
     @Column(name = "tenant_id", nullable = false)
     var tenantId: UUID = UUID.randomUUID(),
-
     @Column(name = "username", nullable = false, length = 50)
     var username: String = "",
-
     @Column(name = "email", nullable = false, length = 200)
     var email: String = "",
-
     @Column(name = "full_name", nullable = false, length = 200)
     var fullName: String = "",
-
     @Column(name = "password_hash", nullable = false, length = 512)
     var passwordHash: String = "",
-
     @Column(name = "password_salt", nullable = false, length = 512)
     var passwordSalt: String = "",
-
     @Enumerated(EnumType.STRING)
     @Column(name = "hash_algorithm", nullable = false, length = 16)
     var hashAlgorithm: HashAlgorithm = HashAlgorithm.PBKDF2,
-
     @Column(name = "password_last_changed_at", nullable = false)
     var passwordLastChangedAt: Instant = Instant.now(),
-
     @Column(name = "password_expires_at")
     var passwordExpiresAt: Instant? = null,
-
     @Column(name = "must_change_on_next_login", nullable = false)
     var mustChangeOnNextLogin: Boolean = false,
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 16)
     var status: UserStatus = UserStatus.PENDING,
-
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
         name = "identity_user_roles",
@@ -81,7 +69,6 @@ class UserEntity(
     )
     @Column(name = "role_id", nullable = false)
     var roleIds: MutableSet<UUID> = mutableSetOf(),
-
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
         name = "identity_user_metadata",
@@ -90,19 +77,14 @@ class UserEntity(
     @MapKeyColumn(name = "metadata_key", length = 100)
     @Column(name = "metadata_value", length = 500)
     var metadata: MutableMap<String, String> = mutableMapOf(),
-
     @Column(name = "last_login_at")
     var lastLoginAt: Instant? = null,
-
     @Column(name = "failed_login_attempts", nullable = false)
     var failedLoginAttempts: Int = 0,
-
     @Column(name = "locked_until")
     var lockedUntil: Instant? = null,
-
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant = Instant.now(),
-
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant = Instant.now(),
 ) {

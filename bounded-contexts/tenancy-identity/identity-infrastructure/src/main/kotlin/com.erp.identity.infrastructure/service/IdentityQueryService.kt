@@ -17,12 +17,12 @@ class IdentityQueryService(
     private val tenantQueryHandler: TenantQueryHandler,
     private val userQueryHandler: UserQueryHandler,
 ) {
-    @Transactional(TxType.SUPPORTS)
+    @Transactional(TxType.REQUIRED)
     fun getTenant(query: GetTenantQuery): Result<Tenant?> = tenantQueryHandler.handle(query)
 
-    @Transactional(TxType.SUPPORTS)
+    @Transactional(TxType.REQUIRED)
     fun listTenants(query: ListTenantsQuery): Result<List<Tenant>> = tenantQueryHandler.handle(query)
 
-    @Transactional(TxType.SUPPORTS)
+    @Transactional(TxType.REQUIRED)
     fun getUser(query: GetUserQuery): Result<User?> = userQueryHandler.handle(query)
 }

@@ -1,10 +1,13 @@
 package com.erp.identity.infrastructure.service
 
 import com.erp.identity.application.port.input.command.ActivateUserCommand
+import com.erp.identity.application.port.input.command.ActivateTenantCommand
 import com.erp.identity.application.port.input.command.AssignRoleCommand
 import com.erp.identity.application.port.input.command.AuthenticateUserCommand
 import com.erp.identity.application.port.input.command.CreateUserCommand
 import com.erp.identity.application.port.input.command.ProvisionTenantCommand
+import com.erp.identity.application.port.input.command.ResumeTenantCommand
+import com.erp.identity.application.port.input.command.SuspendTenantCommand
 import com.erp.identity.application.port.input.command.UpdateCredentialsCommand
 import com.erp.identity.application.service.command.TenantCommandHandler
 import com.erp.identity.application.service.command.UserCommandHandler
@@ -197,6 +200,57 @@ class IdentityCommandService(
             failureContext = {
                 "slug=${command.slug}, name=${command.name}"
             },
+        )
+        return result
+    }
+
+    @Transactional(TxType.REQUIRED)
+    fun activateTenant(@Valid command: ActivateTenantCommand): Result<Tenant> {
+        val traceId = ensureTraceId()
+        Log.infof("[%s] activateTenant - tenant=%s", traceId, command.tenantId)
+        val start = System.nanoTime()
+        val result = tenantCommandHandler.activateTenant(command)
+        logResult(
+            traceId = traceId,
+            operation = "activateTenant",
+            startNano = start,
+            result = result,
+            successContext = { tenant -> "tenant=${tenant.id}, status=${tenant.status}" },
+            failureContext = { "tenant=${command.tenantId}" },
+        )
+        return result
+    }
+
+    @Transactional(TxType.REQUIRED)
+    fun suspendTenant(@Valid command: SuspendTenantCommand): Result<Tenant> {
+        val traceId = ensureTraceId()
+        Log.infof("[%s] suspendTenant - tenant=%s", traceId, command.tenantId)
+        val start = System.nanoTime()
+        val result = tenantCommandHandler.suspendTenant(command)
+        logResult(
+            traceId = traceId,
+            operation = "suspendTenant",
+            startNano = start,
+            result = result,
+            successContext = { tenant -> "tenant=${tenant.id}, status=${tenant.status}" },
+            failureContext = { "tenant=${command.tenantId}" },
+        )
+        return result
+    }
+
+    @Transactional(TxType.REQUIRED)
+    fun resumeTenant(@Valid command: ResumeTenantCommand): Result<Tenant> {
+        val traceId = ensureTraceId()
+        Log.infof("[%s] resumeTenant - tenant=%s", traceId, command.tenantId)
+        val start = System.nanoTime()
+        val result = tenantCommandHandler.resumeTenant(command)
+        logResult(
+            traceId = traceId,
+            operation = "resumeTenant",
+            startNano = start,
+            result = result,
+            successContext = { tenant -> "tenant=${tenant.id}, status=${tenant.status}" },
+            failureContext = { "tenant=${command.tenantId}" },
         )
         return result
     }

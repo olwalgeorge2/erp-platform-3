@@ -4,7 +4,10 @@ import com.erp.identity.domain.model.tenant.Subscription
 import com.erp.identity.domain.model.tenant.SubscriptionPlan
 import com.erp.identity.domain.model.tenant.Tenant
 import com.erp.identity.domain.model.tenant.TenantStatus
+import com.erp.identity.infrastructure.adapter.input.rest.dto.ActivateTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ProvisionTenantRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.ResumeTenantRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.SuspendTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.SubscriptionPayload
 import com.erp.identity.infrastructure.adapter.input.rest.dto.TenantResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
@@ -94,6 +97,47 @@ class TenantResourceTest {
         val error = response.entity as ErrorResponse
         assertEquals("TENANT_SLUG_EXISTS", error.code)
         verify(commandService).provisionTenant(any())
+    }
+
+    @Test
+    fun `activate tenant returns ok`() {
+        val tenant = sampleTenant()
+        whenever(commandService.activateTenant(any())).thenReturn(Result.success(tenant))
+
+        val response = resource.activateTenant(tenant.id.toString(), ActivateTenantRequest())
+
+        assertEquals(Response.Status.OK.statusCode, response.status)
+        verify(commandService).activateTenant(any())
+    }
+
+    @Test
+    fun `suspend tenant returns ok`() {
+        val suspended = sampleTenant().copy(status = TenantStatus.SUSPENDED)
+        whenever(commandService.suspendTenant(any())).thenReturn(Result.success(suspended))
+
+        val response =
+            resource.suspendTenant(
+                suspended.id.toString(),
+                SuspendTenantRequest(reason = "Non-payment"),
+            )
+
+        assertEquals(Response.Status.OK.statusCode, response.status)
+        verify(commandService).suspendTenant(any())
+    }
+
+    @Test
+    fun `resume tenant returns ok`() {
+        val tenant = sampleTenant()
+        whenever(commandService.resumeTenant(any())).thenReturn(Result.success(tenant))
+
+        val response =
+            resource.resumeTenant(
+                tenant.id.toString(),
+                ResumeTenantRequest(),
+            )
+
+        assertEquals(Response.Status.OK.statusCode, response.status)
+        verify(commandService).resumeTenant(any())
     }
 
     private fun sampleTenant(): Tenant {

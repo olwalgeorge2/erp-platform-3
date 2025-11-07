@@ -1,10 +1,14 @@
 package com.erp.identity.infrastructure.adapter.input.rest
 
+import com.erp.identity.domain.model.tenant.Tenant
 import com.erp.identity.domain.model.tenant.TenantId
 import com.erp.identity.domain.model.tenant.TenantStatus
 import com.erp.identity.application.port.input.query.GetTenantQuery
 import com.erp.identity.application.port.input.query.ListTenantsQuery
+import com.erp.identity.infrastructure.adapter.input.rest.dto.ActivateTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ProvisionTenantRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.ResumeTenantRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.SuspendTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.TenantResponse
 import com.erp.identity.infrastructure.adapter.input.rest.dto.toResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
@@ -94,6 +98,45 @@ class TenantResource
                 invalidQueryResponse(ex.message ?: "Invalid query parameters")
             }
 
+        @POST
+        @Path("/{tenantId}/activate")
+        fun activateTenant(
+            @PathParam("tenantId") tenantIdRaw: String,
+            request: ActivateTenantRequest,
+        ): Response =
+            parseTenantId(tenantIdRaw)
+                ?.let { tenantId ->
+                    commandService.activateTenant(
+                        request.toCommand(tenantId.value),
+                    )
+                }?.toTenantResponse() ?: invalidIdentifierResponse("tenantId", tenantIdRaw)
+
+        @POST
+        @Path("/{tenantId}/suspend")
+        fun suspendTenant(
+            @PathParam("tenantId") tenantIdRaw: String,
+            request: SuspendTenantRequest,
+        ): Response =
+            parseTenantId(tenantIdRaw)
+                ?.let { tenantId ->
+                    commandService.suspendTenant(
+                        request.toCommand(tenantId.value),
+                    )
+                }?.toTenantResponse() ?: invalidIdentifierResponse("tenantId", tenantIdRaw)
+
+        @POST
+        @Path("/{tenantId}/resume")
+        fun resumeTenant(
+            @PathParam("tenantId") tenantIdRaw: String,
+            request: ResumeTenantRequest,
+        ): Response =
+            parseTenantId(tenantIdRaw)
+                ?.let { tenantId ->
+                    commandService.resumeTenant(
+                        request.toCommand(tenantId.value),
+                    )
+                }?.toTenantResponse() ?: invalidIdentifierResponse("tenantId", tenantIdRaw)
+
         private fun parseTenantId(raw: String): TenantId? =
             try {
                 TenantId.from(raw)
@@ -132,4 +175,10 @@ class TenantResource
                         details = mapOf("tenantId" to tenantId),
                     ),
                 ).build()
+
+        private fun Result<Tenant>.toTenantResponse(): Response =
+            when (this) {
+                is Result.Success -> Response.ok(value.toResponse()).build()
+                is Result.Failure -> this.failureResponse()
+            }
     }

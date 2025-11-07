@@ -1,9 +1,12 @@
 package com.erp.identity.infrastructure.service
 
+import com.erp.identity.application.port.input.command.ActivateTenantCommand
 import com.erp.identity.application.port.input.command.ActivateUserCommand
 import com.erp.identity.application.port.input.command.AssignRoleCommand
 import com.erp.identity.application.port.input.command.CreateUserCommand
 import com.erp.identity.application.port.input.command.ProvisionTenantCommand
+import com.erp.identity.application.port.input.command.ResumeTenantCommand
+import com.erp.identity.application.port.input.command.SuspendTenantCommand
 import com.erp.identity.application.service.command.TenantCommandHandler
 import com.erp.identity.application.service.command.UserCommandHandler
 import com.erp.identity.domain.model.identity.Credential
@@ -157,6 +160,55 @@ class IdentityCommandServiceTest {
         verify(tenantHandler).provisionTenant(eq(command))
     }
 
+    @Test
+    fun `activateTenant delegates to tenant handler`() {
+        val command =
+            ActivateTenantCommand(
+                tenantId = TenantId.generate(),
+                requestedBy = null,
+            )
+        val tenant = sampleTenant()
+        whenever(tenantHandler.activateTenant(eq(command))).thenReturn(Result.success(tenant))
+
+        val result = service.activateTenant(command)
+
+        assertTrue(result is Result.Success<Tenant>)
+        verify(tenantHandler).activateTenant(eq(command))
+    }
+
+    @Test
+    fun `suspendTenant delegates to tenant handler`() {
+        val command =
+            SuspendTenantCommand(
+                tenantId = TenantId.generate(),
+                reason = "Billing",
+                requestedBy = null,
+            )
+        val tenant = sampleTenant()
+        whenever(tenantHandler.suspendTenant(eq(command))).thenReturn(Result.success(tenant))
+
+        val result = service.suspendTenant(command)
+
+        assertTrue(result is Result.Success<Tenant>)
+        verify(tenantHandler).suspendTenant(eq(command))
+    }
+
+    @Test
+    fun `resumeTenant delegates to tenant handler`() {
+        val command =
+            ResumeTenantCommand(
+                tenantId = TenantId.generate(),
+                requestedBy = null,
+            )
+        val tenant = sampleTenant()
+        whenever(tenantHandler.resumeTenant(eq(command))).thenReturn(Result.success(tenant))
+
+        val result = service.resumeTenant(command)
+
+        assertTrue(result is Result.Success<Tenant>)
+        verify(tenantHandler).resumeTenant(eq(command))
+    }
+
     private fun sampleCreateUserCommand(): CreateUserCommand =
         CreateUserCommand(
             tenantId = TenantId.generate(),
@@ -189,4 +241,22 @@ class IdentityCommandServiceTest {
             createdAt = Instant.now(),
             updatedAt = Instant.now(),
         )
+
+    private fun sampleTenant(): Tenant {
+        val subscription =
+            Subscription(
+                plan = SubscriptionPlan.STARTER,
+                startDate = Instant.now(),
+                endDate = null,
+                maxUsers = 25,
+                maxStorage = 10_000,
+                features = setOf("rbac"),
+            )
+        return Tenant.provision(
+            name = "Acme Corp",
+            slug = "acme-corp",
+            subscription = subscription,
+            organization = null,
+        )
+    }
 }

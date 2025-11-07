@@ -136,6 +136,48 @@ data class TenantResponse(
     val metadata: Map<String, String>,
 )
 
+data class ActivateTenantRequest
+    @JsonCreator
+    constructor(
+        @JsonProperty("requestedBy")
+        val requestedBy: String? = null,
+    ) {
+        fun toCommand(tenantId: UUID) =
+            com.erp.identity.application.port.input.command.ActivateTenantCommand(
+                tenantId = TenantId(tenantId),
+                requestedBy = requestedBy,
+            )
+    }
+
+data class SuspendTenantRequest
+    @JsonCreator
+    constructor(
+        @JsonProperty("reason")
+        val reason: String,
+        @JsonProperty("requestedBy")
+        val requestedBy: String? = null,
+    ) {
+        fun toCommand(tenantId: UUID) =
+            com.erp.identity.application.port.input.command.SuspendTenantCommand(
+                tenantId = TenantId(tenantId),
+                reason = reason,
+                requestedBy = requestedBy,
+            )
+    }
+
+data class ResumeTenantRequest
+    @JsonCreator
+    constructor(
+        @JsonProperty("requestedBy")
+        val requestedBy: String? = null,
+    ) {
+        fun toCommand(tenantId: UUID) =
+            com.erp.identity.application.port.input.command.ResumeTenantCommand(
+                tenantId = TenantId(tenantId),
+                requestedBy = requestedBy,
+            )
+    }
+
 data class SubscriptionResponse(
     val plan: SubscriptionPlan,
     val startDate: Instant,

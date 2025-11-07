@@ -5,11 +5,13 @@ import com.erp.identity.domain.model.identity.PermissionScope
 import com.erp.identity.domain.model.identity.Role
 import com.erp.identity.domain.model.identity.RoleId
 import com.erp.identity.domain.model.tenant.TenantId
+import com.erp.identity.infrastructure.adapter.input.rest.ErrorResponse
 import com.erp.identity.infrastructure.adapter.input.rest.dto.CreateRoleRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.PermissionPayload
 import com.erp.identity.infrastructure.adapter.input.rest.dto.UpdateRoleRequest
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.identity.infrastructure.service.IdentityQueryService
+import com.erp.identity.infrastructure.service.security.AuthorizationService
 import com.erp.shared.types.results.Result
 import jakarta.ws.rs.core.MultivaluedHashMap
 import jakarta.ws.rs.core.MultivaluedMap
@@ -34,11 +36,15 @@ import java.time.Instant
 class RoleResourceTest {
     private val commandService: IdentityCommandService = mock()
     private val queryService: IdentityQueryService = mock()
-    private val resource = RoleResource(commandService, queryService)
+    private val authorizationService: AuthorizationService = mock()
+    private val resource = RoleResource(commandService, queryService, authorizationService)
 
     @BeforeEach
     fun resetMocks() {
         reset(commandService, queryService)
+        reset(authorizationService)
+        whenever(authorizationService.requireRoleManagement(any())).thenReturn(null)
+        whenever(authorizationService.requireRoleRead(any())).thenReturn(null)
     }
 
     @Test
@@ -117,6 +123,30 @@ class RoleResourceTest {
 
         assertEquals(Response.Status.BAD_REQUEST.statusCode, response.status)
         verify(commandService, never()).deleteRole(any())
+    }
+
+    @Test
+    fun `create role fails when authorization denies`() {
+        val tenantId = TenantId.generate()
+        val forbiddenResponse =
+            Response
+                .status(Response.Status.FORBIDDEN)
+                .entity(ErrorResponse("ACCESS_DENIED", "Missing permission"))
+                .build()
+        whenever(authorizationService.requireRoleManagement(any())).thenReturn(forbiddenResponse)
+
+        val response =
+            resource.createRole(
+                tenantId.toString(),
+                CreateRoleRequest(
+                    name = "reader",
+                    description = "desc",
+                ),
+                simpleUriInfo(),
+            )
+
+        assertEquals(Response.Status.FORBIDDEN.statusCode, response.status)
+        verifyNoInteractions(commandService)
     }
 
     private fun sampleRole(tenantId: TenantId): Role =

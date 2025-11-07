@@ -153,11 +153,88 @@ class IdentityIntegrationTest {
             pendingEvents >= 1,
             "Expected at least one pending outbox event, but found $pendingEvents",
         )
+
+        val roleId =
+            RestAssured
+                .given()
+                .headers(adminHeaders(tenantId))
+                .contentType(ContentType.JSON)
+                .body(
+                    """
+                    {
+                      "name": "tenant-admin",
+                      "description": "Tenant administrator role",
+                      "permissions": [
+                        { "resource": "users", "action": "manage", "scope": "TENANT" },
+                        { "resource": "roles", "action": "manage", "scope": "TENANT" }
+                      ],
+                      "metadata": { "createdBy": "integration-test" }
+                    }
+                    """.trimIndent(),
+                ).post("/api/tenants/$tenantId/roles")
+                .then()
+                .statusCode(201)
+                .extract()
+                .path<String>("id")
+
+        RestAssured
+            .given()
+            .headers(adminHeaders(tenantId))
+            .contentType(ContentType.JSON)
+            .body(
+                """
+                {
+                  "name": "tenant-admin",
+                  "description": "Updated role via integration test",
+                  "permissions": [
+                    { "resource": "users", "action": "manage", "scope": "TENANT" },
+                    { "resource": "roles", "action": "manage", "scope": "TENANT" },
+                    { "resource": "tenants", "action": "read", "scope": "TENANT" }
+                  ],
+                  "metadata": { "updatedBy": "integration-test" }
+                }
+                """.trimIndent(),
+            ).put("/api/tenants/$tenantId/roles/$roleId")
+            .then()
+            .statusCode(200)
+            .body("permissions.size()", equalTo(3))
+            .body("description", equalTo("Updated role via integration test"))
+
+        RestAssured
+            .given()
+            .headers(adminHeaders(tenantId))
+            .get("/api/tenants/$tenantId/roles")
+            .then()
+            .statusCode(200)
+            .body("size()", equalTo(1))
+
+        RestAssured
+            .given()
+            .headers(adminHeaders(tenantId))
+            .delete("/api/tenants/$tenantId/roles/$roleId")
+            .then()
+            .statusCode(204)
+
+        RestAssured
+            .given()
+            .headers(adminHeaders(tenantId))
+            .get("/api/tenants/$tenantId/roles")
+            .then()
+            .statusCode(200)
+            .body("size()", equalTo(0))
     }
 
     companion object {
         init {
             RestAssured.enableLoggingOfRequestAndResponseIfValidationFails()
         }
+
+        private fun adminHeaders(tenantId: String): Map<String, String> =
+            mapOf(
+                "X-User-Id" to "integration-admin",
+                "X-User-Roles" to "TENANT_ADMIN",
+                "X-User-Permissions" to "roles:manage,roles:read",
+                "X-Tenant-ID" to tenantId,
+            )
     }
 }

@@ -9,6 +9,7 @@ import com.erp.identity.infrastructure.adapter.input.rest.dto.UpdateRoleRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.toResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.identity.infrastructure.service.IdentityQueryService
+import com.erp.identity.infrastructure.service.security.AuthorizationService
 import com.erp.shared.types.results.Result
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -36,6 +37,7 @@ class RoleResource
     constructor(
         private val commandService: IdentityCommandService,
         private val queryService: IdentityQueryService,
+        private val authorizationService: AuthorizationService,
     ) {
         @POST
         fun createRole(
@@ -44,6 +46,7 @@ class RoleResource
             @Context uriInfo: UriInfo,
         ): Response =
             withTenant(tenantIdRaw) { tenantId ->
+                authorizationService.requireRoleManagement(tenantId)?.let { return@withTenant it }
                 when (val result = commandService.createRole(request.toCommand(tenantId))) {
                     is Result.Success -> {
                         val role = result.value
@@ -72,6 +75,7 @@ class RoleResource
             request: UpdateRoleRequest,
         ): Response =
             withTenantAndRole(tenantIdRaw, roleIdRaw) { tenantId, roleId ->
+                authorizationService.requireRoleManagement(tenantId)?.let { return@withTenantAndRole it }
                 when (val result = commandService.updateRole(request.toCommand(tenantId, roleId))) {
                     is Result.Success -> Response.ok(result.value.toResponse()).build()
                     is Result.Failure -> result.failureResponse()
@@ -85,6 +89,7 @@ class RoleResource
             @PathParam("roleId") roleIdRaw: String,
         ): Response =
             withTenantAndRole(tenantIdRaw, roleIdRaw) { tenantId, roleId ->
+                authorizationService.requireRoleManagement(tenantId)?.let { return@withTenantAndRole it }
                 val command =
                     DeleteRoleCommand(
                         tenantId = tenantId,
@@ -103,6 +108,7 @@ class RoleResource
             @QueryParam("offset") offset: Int?,
         ): Response =
             withTenant(tenantIdRaw) { tenantId ->
+                authorizationService.requireRoleRead(tenantId)?.let { return@withTenant it }
                 val safeLimit = limit?.coerceIn(1, 200) ?: 50
                 val safeOffset = offset?.let { max(0, it) } ?: 0
                 val query =
@@ -124,6 +130,7 @@ class RoleResource
             @PathParam("roleId") roleIdRaw: String,
         ): Response =
             withTenantAndRole(tenantIdRaw, roleIdRaw) { tenantId, roleId ->
+                authorizationService.requireRoleRead(tenantId)?.let { return@withTenantAndRole it }
                 when (val result = queryService.getRole(tenantId, roleId)) {
                     is Result.Success -> {
                         val role = result.value ?: return@withTenantAndRole notFoundResponse(roleId.toString())

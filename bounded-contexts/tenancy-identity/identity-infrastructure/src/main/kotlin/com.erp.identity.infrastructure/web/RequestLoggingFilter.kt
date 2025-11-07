@@ -23,6 +23,14 @@ class RequestLoggingFilter :
             MDC.put("tenantId", tenantId)
         }
         TenantRequestContext.set(tenantId)
+        RequestPrincipalContext.set(
+            RequestPrincipal(
+                userId = requestContext.getHeaderString(USER_ID_HEADER),
+                tenantId = tenantId,
+                roles = parseDelimitedHeader(requestContext.getHeaderString(USER_ROLES_HEADER)),
+                permissions = parseDelimitedHeader(requestContext.getHeaderString(USER_PERMISSIONS_HEADER)),
+            ),
+        )
 
         requestContext.setProperty("traceId", traceId)
         requestContext.setProperty("startTimeNano", System.nanoTime())
@@ -51,11 +59,23 @@ class RequestLoggingFilter :
         }
 
         TenantRequestContext.clear()
+        RequestPrincipalContext.clear()
         MDC.clear()
     }
 
     companion object {
         private const val TRACE_ID_HEADER = "X-Trace-ID"
         private const val TENANT_ID_HEADER = "X-Tenant-ID"
+        private const val USER_ID_HEADER = "X-User-Id"
+        private const val USER_ROLES_HEADER = "X-User-Roles"
+        private const val USER_PERMISSIONS_HEADER = "X-User-Permissions"
+
+        private fun parseDelimitedHeader(raw: String?): Set<String> =
+            raw
+                ?.split(",")
+                ?.map { it.trim() }
+                ?.filter { it.isNotEmpty() }
+                ?.toSet()
+                ?: emptySet()
     }
 }

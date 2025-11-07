@@ -3,6 +3,9 @@
 @tenantSlug = tenant-{{$randomInt 100000 999999}}
 @tenantId = 00000000-0000-0000-0000-000000000000
 @roleId = 00000000-0000-0000-0000-000000000000
+@userId = rest-client-admin
+@userRoles = TENANT_ADMIN
+@userPermissions = roles:manage,roles:read
 
 ### Provision Tenant
 POST {{host}}/api/tenants
@@ -46,6 +49,10 @@ Content-Type: application/json
 ### Create Role
 POST {{host}}/api/tenants/{{tenantId}}/roles
 Content-Type: application/json
+X-User-Id: {{userId}}
+X-User-Roles: {{userRoles}}
+X-User-Permissions: {{userPermissions}}
+X-Tenant-ID: {{tenantId}}
 
 {
   "name": "{{roleName}}",
@@ -67,12 +74,20 @@ Content-Type: application/json
 
 ### List Roles
 GET {{host}}/api/tenants/{{tenantId}}/roles
+X-User-Id: {{userId}}
+X-User-Roles: {{userRoles}}
+X-User-Permissions: roles:read
+X-Tenant-ID: {{tenantId}}
 
 ###
 
 ### Update Role
 PUT {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
 Content-Type: application/json
+X-User-Id: {{userId}}
+X-User-Roles: {{userRoles}}
+X-User-Permissions: {{userPermissions}}
+X-Tenant-ID: {{tenantId}}
 
 {
   "name": "{{roleName}}",
@@ -91,13 +106,30 @@ Content-Type: application/json
 
 ### Get Role
 GET {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
+X-User-Id: {{userId}}
+X-User-Roles: {{userRoles}}
+X-User-Permissions: roles:read
+X-Tenant-ID: {{tenantId}}
 
 ###
 
 ### Delete Role
 DELETE {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
+X-User-Id: {{userId}}
+X-User-Roles: {{userRoles}}
+X-User-Permissions: {{userPermissions}}
+X-Tenant-ID: {{tenantId}}
 
 ###
 
 ### List Roles After Deletion
 GET {{host}}/api/tenants/{{tenantId}}/roles
+X-User-Id: {{userId}}
+X-User-Roles: {{userRoles}}
+X-User-Permissions: roles:read
+X-Tenant-ID: {{tenantId}}
+
+###
+
+### Fetch Built-in Role Templates
+GET {{host}}/api/roles/templates

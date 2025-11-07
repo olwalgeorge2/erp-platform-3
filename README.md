@@ -68,6 +68,21 @@ cp .env.example .env
 ./gradlew ktlintFormat
 ```
 
+### Run Local Infrastructure
+1. Ensure no other PostgreSQL instance is bound to port `5432`. On Windows, stop the bundled service with `Stop-Service postgresql-x64-17 -Force`.
+2. Bring up the developer data services:
+   ```bash
+   docker compose -f docker-compose-kafka.yml up -d postgres kafka kafka-ui
+   ```
+3. Verify the credentials with the helper script:
+   ```powershell
+   .\test-db-connection.ps1
+   ```
+4. Start the identity service after `erp-postgres` reports `healthy`:
+   ```bash
+   ./gradlew :bounded-contexts:tenancy-identity:identity-infrastructure:quarkusDev
+   ```
+
 ### Build Commands
 | Command | Description |
 |---------|-------------|
@@ -120,11 +135,11 @@ cp .env.example .env
 
 ### CI/CD Pipeline
 All pull requests trigger automated checks:
-- ✅ Kotlin code style verification (ktlint)
-- ✅ Unit and integration tests
-- ✅ Build verification across all modules
-- ✅ Architecture tests (boundary enforcement)
-- ✅ Static analysis and security checks
+- Kotlin code style verification (ktlint)
+- Unit and integration tests
+- Build verification across all modules
+- Architecture tests (boundary enforcement)
+- Static analysis and security checks
 
 See `.github/workflows/ci.yml` for the complete pipeline configuration.
 

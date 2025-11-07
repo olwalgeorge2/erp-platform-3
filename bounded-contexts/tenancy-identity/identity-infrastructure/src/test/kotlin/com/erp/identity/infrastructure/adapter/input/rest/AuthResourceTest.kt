@@ -81,6 +81,7 @@ class AuthResourceTest {
             ActivateUserRequest(
                 tenantId = user.tenantId.value,
                 requestedBy = "admin",
+                requirePasswordReset = false,
             )
 
         val response = resource.activateUser(user.id.toString(), request)

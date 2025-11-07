@@ -186,8 +186,15 @@ class UserCommandHandler(
                 )
             }
 
+        val finalUser =
+            if (command.requirePasswordReset) {
+                activatedUser
+            } else {
+                activatedUser.clearPasswordChangeRequirement()
+            }
+
         return userRepository
-            .save(activatedUser)
+            .save(finalUser)
             .onSuccess { savedUser ->
                 publishEvents(
                     UserUpdatedEvent(

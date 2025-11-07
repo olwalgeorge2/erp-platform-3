@@ -177,4 +177,10 @@ data class User(
     fun requiresPasswordChange(): Boolean = credential.requiresChange()
 
     fun hasRole(roleId: RoleId): Boolean = roleIds.contains(roleId)
+
+    fun clearPasswordChangeRequirement(): User =
+        copy(
+            credential = credential.copy(mustChangeOnNextLogin = false),
+            updatedAt = Instant.now(),
+        )
 }

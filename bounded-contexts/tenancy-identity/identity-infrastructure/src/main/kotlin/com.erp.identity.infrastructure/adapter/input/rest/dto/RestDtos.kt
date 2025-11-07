@@ -223,12 +223,15 @@ data class ActivateUserRequest
         val tenantId: UUID,
         @JsonProperty("requestedBy")
         val requestedBy: String? = null,
+        @JsonProperty("requirePasswordReset")
+        val requirePasswordReset: Boolean? = true,
     ) {
         fun toCommand(userId: UUID) =
             ActivateUserCommand(
                 tenantId = TenantId(tenantId),
                 userId = UserId(userId),
                 requestedBy = requestedBy,
+                requirePasswordReset = requirePasswordReset ?: true,
             )
     }
 

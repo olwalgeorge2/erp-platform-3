@@ -10,4 +10,5 @@ data class ActivateUserCommand(
     @field:NotNull(message = "User ID is required")
     val userId: UserId,
     val requestedBy: String? = null,
+    val requirePasswordReset: Boolean = true,
 )

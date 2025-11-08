@@ -70,13 +70,14 @@ object ErrorSanitizer {
             message = error.message,
             errorId = UUID.randomUUID().toString(),
             timestamp = Instant.now(),
-            validationErrors = validationErrors.map {
-                SanitizedValidationError(
-                    field = it.field,
-                    message = it.message,
-                    code = it.code,
-                )
-            },
+            validationErrors =
+                validationErrors.map {
+                    SanitizedValidationError(
+                        field = it.field,
+                        message = it.message,
+                        code = it.code,
+                    )
+                },
             details = error.details,
         )
 
@@ -89,15 +90,14 @@ object ErrorSanitizer {
     private fun getGenericMessage(code: String): String =
         when (code) {
             "USERNAME_IN_USE",
-            "EMAIL_IN_USE" ->
-                "We couldn't complete your registration. Please try again or contact support."
+            "EMAIL_IN_USE",
+            -> "We couldn't complete your registration. Please try again or contact support."
             "USER_NOT_FOUND",
-            "TENANT_NOT_FOUND" ->
-                "We couldn't find that resource."
-            "TENANT_SLUG_EXISTS" ->
-                "That organization name is not available."
-            else ->
-                "We couldn't complete your request. Please try again later."
+            "TENANT_NOT_FOUND",
+            -> "We couldn't find that resource."
+            "TENANT_SLUG_EXISTS",
+            -> "That organization name is not available."
+            else -> "We couldn't complete your request. Please try again later."
         }
 
     private fun getUserFriendlyMessage(

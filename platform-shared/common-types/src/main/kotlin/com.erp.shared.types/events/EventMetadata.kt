@@ -15,6 +15,5 @@ data class EventMetadata(
         require(additional.size == additional.keys.size) { "Additional metadata keys must be unique" }
     }
 
-    fun withAdditional(entries: Map<String, String>): EventMetadata =
-        copy(additional = additional + entries)
+    fun withAdditional(entries: Map<String, String>): EventMetadata = copy(additional = additional + entries)
 }

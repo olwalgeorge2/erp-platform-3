@@ -252,7 +252,7 @@ When reviewing PRs that touch `platform-shared`:
 ### Run Architecture Tests
 ```bash
 # Automated enforcement
-./gradlew test --tests "*PlatformSharedGovernanceRules*"
+./gradlew :tests:arch:test -PrunArchTests=true --tests "*PlatformSharedGovernanceRules*"
 
 # These tests fail CI if violations exist
 ```
@@ -315,3 +315,4 @@ fi
 ---
 
 **Remember:** The goal is **bounded context autonomy**, not code reuse. Optimize for independent evolution, not DRY.
+

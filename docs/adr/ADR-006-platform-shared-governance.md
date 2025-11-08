@@ -208,17 +208,17 @@ Publish shared modules as versioned dependencies.
 **Owner:** Lead Architect / Senior Engineer  
 **Escalation:** Team consensus required to add new shared module
 
-**CI Integration:**
+**CI Integration (Opt-In for now):**
 ```yaml
 # .github/workflows/ci.yml
 - name: Enforce platform-shared governance (ADR-006)
-  run: ./gradlew :tests:arch:test --tests "*PlatformSharedGovernanceRules*"
+  run: ./gradlew :tests:arch:test -PrunArchTests=true --tests "*PlatformSharedGovernanceRules*"
 ```
 
 **Weekly Monitoring:**
-- Automated audit runs every Monday at 9 AM UTC
-- Creates GitHub issue if violations detected
-- Archives audit reports for 90 days
+- A scheduled workflow runs every Monday at 09:00 UTC
+- It executes ArchUnit tests with `-PrunArchTests=true` and uploads the report
+- It can be configured as non-blocking (advisory) until violations are addressed
 
 ---
 

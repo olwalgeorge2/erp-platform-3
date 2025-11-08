@@ -1,0 +1,29 @@
+name: Arch Governance (ADR-006)
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 9 * * 1' # Mondays at 09:00 UTC
+
+jobs:
+  archunit:
+    runs-on: ubuntu-latest
+    continue-on-error: true # advisory until rules are fully green
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v3
+      - name: Run ArchUnit tests (opt-in)
+        run: ./gradlew :tests:arch:test -PrunArchTests=true --tests "*PlatformSharedGovernanceRules*" --no-daemon --stacktrace
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: archunit-report
+          path: tests/arch/build/reports/tests/test

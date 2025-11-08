@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch: {}
   push:
     branches: [ main, develop ]
   pull_request:
@@ -140,4 +141,5 @@ jobs:
             echo "Build or architecture tests failed"
             exit 1
           fi
+
 

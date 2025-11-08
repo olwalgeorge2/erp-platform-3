@@ -48,11 +48,12 @@ class RoleCommandHandler(
         val role =
             when (existing) {
                 is Result.Failure -> return existing
-                is Result.Success -> existing.value ?: return failure(
-                    code = "ROLE_NOT_FOUND",
-                    message = "Role not found",
-                    details = mapOf("roleId" to command.roleId.toString()),
-                )
+                is Result.Success ->
+                    existing.value ?: return failure(
+                        code = "ROLE_NOT_FOUND",
+                        message = "Role not found",
+                        details = mapOf("roleId" to command.roleId.toString()),
+                    )
             }
 
         if (role.isSystem) {
@@ -78,11 +79,12 @@ class RoleCommandHandler(
         val role =
             when (existing) {
                 is Result.Failure -> return existing
-                is Result.Success -> existing.value ?: return failure(
-                    code = "ROLE_NOT_FOUND",
-                    message = "Role not found",
-                    details = mapOf("roleId" to command.roleId.toString()),
-                )
+                is Result.Success ->
+                    existing.value ?: return failure(
+                        code = "ROLE_NOT_FOUND",
+                        message = "Role not found",
+                        details = mapOf("roleId" to command.roleId.toString()),
+                    )
             }
 
         if (role.isSystem) {
@@ -100,6 +102,5 @@ class RoleCommandHandler(
         tenantId: TenantId,
         limit: Int,
         offset: Int,
-    ): Result<List<Role>> =
-        roleRepository.list(tenantId, limit, offset)
+    ): Result<List<Role>> = roleRepository.list(tenantId, limit, offset)
 }

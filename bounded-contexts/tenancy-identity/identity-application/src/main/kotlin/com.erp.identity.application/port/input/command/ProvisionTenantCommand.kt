@@ -2,10 +2,10 @@ package com.erp.identity.application.port.input.command
 
 import com.erp.identity.domain.model.tenant.Organization
 import com.erp.identity.domain.model.tenant.Subscription
-import java.util.UUID
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import java.util.UUID
 
 data class ProvisionTenantCommand(
     @field:NotBlank

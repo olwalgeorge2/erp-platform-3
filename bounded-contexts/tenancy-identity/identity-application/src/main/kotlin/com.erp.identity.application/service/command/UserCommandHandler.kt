@@ -21,10 +21,10 @@ import com.erp.identity.domain.model.identity.User
 import com.erp.identity.domain.model.tenant.TenantId
 import com.erp.identity.domain.services.AuthenticationResult
 import com.erp.identity.domain.services.AuthenticationService
+import com.erp.shared.types.events.DomainEvent
 import com.erp.shared.types.results.Result
 import com.erp.shared.types.results.Result.Companion.failure
 import com.erp.shared.types.results.Result.Companion.success
-import com.erp.shared.types.events.DomainEvent
 
 class UserCommandHandler(
     private val tenantRepository: TenantRepository,
@@ -179,10 +179,11 @@ class UserCommandHandler(
                 return failure(
                     code = "USER_STATE_INVALID",
                     message = ex.message ?: "User cannot be activated in current state",
-                    details = mapOf(
-                        "userId" to user.id.toString(),
-                        "status" to user.status.name,
-                    ),
+                    details =
+                        mapOf(
+                            "userId" to user.id.toString(),
+                            "status" to user.status.name,
+                        ),
                 )
             }
 

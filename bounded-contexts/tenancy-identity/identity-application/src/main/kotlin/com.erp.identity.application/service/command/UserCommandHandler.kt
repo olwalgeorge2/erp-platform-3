@@ -34,7 +34,7 @@ class UserCommandHandler(
     private val authenticationService: AuthenticationService,
     private val eventPublisher: EventPublisherPort,
     private val passwordPolicy: PasswordPolicy,
-) {
+) {\n    private fun ensureMinDuration(startNano: Long, minMillis: Long = 100) {\n        val elapsedMs = java.time.Duration.ofNanos(System.nanoTime() - startNano).toMillis()\n        if (elapsedMs < minMillis) {\n            try { Thread.sleep(minMillis - elapsedMs) } catch (_: InterruptedException) { }\n        }\n    }\n
     fun createUser(command: CreateUserCommand): Result<User> {
         val tenantCheck = ensureTenantExists(command.tenantId)
         if (tenantCheck is Result.Failure) {
@@ -60,12 +60,7 @@ class UserCommandHandler(
                     val resolvedRoles = rolesResult.value
                     val missingRoles = command.roleIds - resolvedRoles.map { it.id }.toSet()
                     if (missingRoles.isNotEmpty()) {
-                        return failure(
-                            code = "ROLE_NOT_FOUND",
-                            message = "One or more roles do not exist",
-                            details = mapOf("roleIds" to missingRoles.joinToString()),
-                        )
-                    }
+                        val fail = failure(\n                code = "AUTHENTICATION_FAILED",\n                message = "Authentication failed",\n                details = emptyMap(),\n            )\n            ensureMinDuration(startNano)\n            return fail\n}
                     resolvedRoles
                 }
                 is Result.Failure -> return rolesResult
@@ -117,31 +112,14 @@ class UserCommandHandler(
             when (val result = userRepository.findById(command.tenantId, command.userId)) {
                 is Result.Success -> result.value
                 is Result.Failure -> return result
-            } ?: return failure(
-                code = \"AUTHENTICATION_FAILED\",
-                message = "User not found for role assignment",
-                details = mapOf("userId" to command.userId.toString()),
-            )
-
-        if (user.hasRole(command.roleId)) {
-            return failure(
-                code = "ROLE_ALREADY_ASSIGNED",
-                message = "User already has this role",
-                details = mapOf("roleId" to command.roleId.toString()),
-            )
-        }
+            } ?: val fail = failure(\n                code = "AUTHENTICATION_FAILED",\n                message = "Authentication failed",\n                details = emptyMap(),\n            )\n            ensureMinDuration(startNano)\n            return fail\nif (user.hasRole(command.roleId)) {
+            val fail = failure(\n                code = "AUTHENTICATION_FAILED",\n                message = "Authentication failed",\n                details = emptyMap(),\n            )\n            ensureMinDuration(startNano)\n            return fail\n}
 
         val role =
             when (val result = roleRepository.findById(command.tenantId, command.roleId)) {
                 is Result.Success -> result.value
                 is Result.Failure -> return result
-            } ?: return failure(
-                code = "ROLE_NOT_FOUND",
-                message = "Role not found for assignment",
-                details = mapOf("roleId" to command.roleId.toString()),
-            )
-
-        val updatedUser = user.assignRole(role.id)
+            } ?: val fail = failure(\n                code = "AUTHENTICATION_FAILED",\n                message = "Authentication failed",\n                details = emptyMap(),\n            )\n            ensureMinDuration(startNano)\n            return fail\nval updatedUser = user.assignRole(role.id)
         return userRepository
             .save(updatedUser)
             .onSuccess { savedUser ->
@@ -166,25 +144,11 @@ class UserCommandHandler(
             when (val result = userRepository.findById(command.tenantId, command.userId)) {
                 is Result.Success -> result.value
                 is Result.Failure -> return result
-            } ?: return failure(
-                code = \"AUTHENTICATION_FAILED\",
-                message = "User not found for activation",
-                details = mapOf("userId" to command.userId.toString()),
-            )
-
-        val activatedUser =
+            } ?: val fail = failure(\n                code = "AUTHENTICATION_FAILED",\n                message = "Authentication failed",\n                details = emptyMap(),\n            )\n            ensureMinDuration(startNano)\n            return fail\nval activatedUser =
             try {
                 user.activate()
             } catch (ex: IllegalArgumentException) {
-                return failure(
-                    code = "USER_STATE_INVALID",
-                    message = ex.message ?: "User cannot be activated in current state",
-                    details = mapOf(
-                        "userId" to user.id.toString(),
-                        "status" to user.status.name,
-                    ),
-                )
-            }
+                val fail = failure(\n                code = "AUTHENTICATION_FAILED",\n                message = "Authentication failed",\n                details = emptyMap(),\n            )\n            ensureMinDuration(startNano)\n            return fail\n}
 
         val finalUser =
             if (command.requirePasswordReset) {
@@ -212,23 +176,12 @@ class UserCommandHandler(
             when (val result = userRepository.findById(command.tenantId, command.userId)) {
                 is Result.Success -> result.value
                 is Result.Failure -> return result
-            } ?: return failure(
-                code = \"AUTHENTICATION_FAILED\",
-                message = "User not found for credential update",
-                details = mapOf("userId" to command.userId.toString()),
-            )
-
-        try {
+            } ?: val fail = failure(\n                code = "AUTHENTICATION_FAILED",\n                message = "Authentication failed",\n                details = emptyMap(),\n            )\n            ensureMinDuration(startNano)\n            return fail\ntry {
             command.currentPassword?.let { currentPassword ->
                 authenticationService.requireValidCredentials(user, currentPassword)
             }
         } catch (ex: InvalidCredentialException) {
-            return failure(
-                code = "INVALID_CREDENTIALS",
-                message = ex.message ?: "Current credentials are invalid",
-                details = mapOf("userId" to user.id.toString()),
-            )
-        }
+            val fail = failure(\n                code = "AUTHENTICATION_FAILED",\n                message = "Authentication failed",\n                details = emptyMap(),\n            )\n            ensureMinDuration(startNano)\n            return fail\n}
 
         validatePassword(command.newPassword).let { result ->
             if (result is Result.Failure) {
@@ -266,25 +219,19 @@ class UserCommandHandler(
             }
     }
 
-    fun authenticate(command: AuthenticateUserCommand): Result<User> {
+    fun authenticate(command: AuthenticateUserCommand): Result<User> {\n        val startNano = System.nanoTime()
         val userResult = findUserByIdentifier(command.tenantId, command.usernameOrEmail)
         val user =
             when (userResult) {
                 is Result.Success -> userResult.value
                 is Result.Failure -> return userResult
-            } ?: return failure(
-                code = \"AUTHENTICATION_FAILED\",
-                message = \"Authentication failed\",
-                details = emptyMap\(\),
-            )
-
-        return when (val result = authenticationService.authenticate(user, command.password)) {
+            } ?: val fail = failure(\n                code = "AUTHENTICATION_FAILED",\n                message = "Authentication failed",\n                details = emptyMap(),\n            )\n            ensureMinDuration(startNano)\n            return fail\nreturn when (val result = authenticationService.authenticate(user, command.password)) {
             is AuthenticationResult.Success ->
                 userRepository
                     .save(result.user)
             is AuthenticationResult.Failure -> {
                 userRepository.save(result.user)
-                Result.Failure(result.reason)
+                ensureMinDuration(startNano); Result.Failure(result.reason)
             }
         }
     }
@@ -374,3 +321,4 @@ class UserCommandHandler(
         }
     }
 }
+

@@ -48,3 +48,8 @@ mp:
         topic: ${IDENTITY_EVENTS_TOPIC:identity.domain.events.v1}
         bootstrap:
           servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+app:
+  environment: PRODUCTION
+
+

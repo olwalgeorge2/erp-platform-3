@@ -118,7 +118,7 @@ class UserCommandHandler(
                 is Result.Success -> result.value
                 is Result.Failure -> return result
             } ?: return failure(
-                code = "USER_NOT_FOUND",
+                code = \"AUTHENTICATION_FAILED\",
                 message = "User not found for role assignment",
                 details = mapOf("userId" to command.userId.toString()),
             )
@@ -167,7 +167,7 @@ class UserCommandHandler(
                 is Result.Success -> result.value
                 is Result.Failure -> return result
             } ?: return failure(
-                code = "USER_NOT_FOUND",
+                code = \"AUTHENTICATION_FAILED\",
                 message = "User not found for activation",
                 details = mapOf("userId" to command.userId.toString()),
             )
@@ -213,7 +213,7 @@ class UserCommandHandler(
                 is Result.Success -> result.value
                 is Result.Failure -> return result
             } ?: return failure(
-                code = "USER_NOT_FOUND",
+                code = \"AUTHENTICATION_FAILED\",
                 message = "User not found for credential update",
                 details = mapOf("userId" to command.userId.toString()),
             )
@@ -273,9 +273,9 @@ class UserCommandHandler(
                 is Result.Success -> userResult.value
                 is Result.Failure -> return userResult
             } ?: return failure(
-                code = "USER_NOT_FOUND",
-                message = "User not found for authentication",
-                details = mapOf("identifier" to command.usernameOrEmail),
+                code = \"AUTHENTICATION_FAILED\",
+                message = \"Authentication failed\",
+                details = emptyMap\(\),
             )
 
         return when (val result = authenticationService.authenticate(user, command.password)) {

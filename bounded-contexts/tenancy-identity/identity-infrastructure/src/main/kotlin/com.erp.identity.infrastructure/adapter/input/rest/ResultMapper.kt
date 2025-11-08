@@ -1,35 +1,13 @@
 package com.erp.identity.infrastructure.adapter.input.rest
 
+import com.erp.shared.types.errors.Environment
+import com.erp.shared.types.errors.ErrorSanitizer
 import com.erp.shared.types.results.Result
-import com.erp.shared.types.results.ValidationError
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.Response.Status
 import jakarta.ws.rs.core.Response.Status.Family
 import jakarta.ws.rs.core.Response.StatusType
-
-data class ErrorResponse(
-    val code: String,
-    val message: String,
-    val details: Map<String, String> = emptyMap(),
-    val validationErrors: List<ValidationErrorResponse> = emptyList(),
-)
-
-data class ValidationErrorResponse(
-    val field: String,
-    val code: String,
-    val message: String,
-    val rejectedValue: String?,
-) {
-    companion object {
-        fun from(error: ValidationError): ValidationErrorResponse =
-            ValidationErrorResponse(
-                field = error.field,
-                code = error.code,
-                message = error.message,
-                rejectedValue = error.rejectedValue,
-            )
-    }
-}
+import org.eclipse.microprofile.config.ConfigProvider
 
 fun <T, R> Result<T>.toResponse(
     successStatus: Status = Status.OK,
@@ -46,16 +24,16 @@ fun <T, R> Result<T>.toResponse(
 
 fun Result.Failure.failureResponse(): Response {
     val status = mapStatus(error.code, validationErrors.isNotEmpty())
+    val sanitized =
+        ErrorSanitizer.sanitize(
+            error = error,
+            validationErrors = validationErrors,
+            environment = currentEnvironment(),
+        )
     return Response
         .status(status)
-        .entity(
-            ErrorResponse(
-                code = error.code,
-                message = error.message,
-                details = error.details,
-                validationErrors = validationErrors.map(ValidationErrorResponse::from),
-            ),
-        ).build()
+        .entity(sanitized)
+        .build()
 }
 
 private fun mapStatus(
@@ -85,3 +63,30 @@ private val UNPROCESSABLE_ENTITY: StatusType =
 
         override fun getFamily(): Family = Family.CLIENT_ERROR
     }
+
+private val environment: Environment by lazy {
+    val configured =
+        ConfigProvider
+            .getConfig()
+            .getOptionalValue("app.environment", String::class.java)
+            .orElse("PRODUCTION")
+
+    runCatching { Environment.valueOf(configured.trim().uppercase()) }
+        .getOrDefault(Environment.PRODUCTION)
+}
+
+private fun currentEnvironment(): Environment = environment
+
+data class ErrorResponse(
+    val code: String,
+    val message: String,
+    val details: Map<String, String> = emptyMap(),
+    val validationErrors: List<ValidationErrorResponse> = emptyList(),
+)
+
+data class ValidationErrorResponse(
+    val field: String,
+    val code: String,
+    val message: String,
+    val rejectedValue: String?,
+)

@@ -150,3 +150,16 @@ See `.github/workflows/ci.yml` for the complete pipeline configuration.
 
 7.4 Add tests alongside features and update relevant runbooks or documentation.
 7.5 Open a pull request with a concise summary, testing notes, and links to related tickets.
+
+### Git Hooks (Optional but Recommended)
+- Enable project hooks:
+  - `git config core.hooksPath scripts/hooks`
+- On Windows, you can use either:
+  - Git Bash to run the bash hook: `scripts/hooks/pre-commit`
+  - PowerShell hook: `scripts/hooks/pre-commit.ps1`
+- What the pre-commit does:
+  - Runs architecture governance tests (`:tests:arch:test`) before committing
+  - Fails the commit if architecture rules fail (same suites CI enforces)
+ - Behavior controls:
+   - Skips when only docs/markdown files are staged
+   - Skips when `SKIP_ARCH_HOOK=1` is set in the environment (emergency bypass)

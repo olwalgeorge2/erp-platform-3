@@ -15,6 +15,12 @@
 3.2 Consumes provisioning events from Corporate Services and customer onboarding workflows.
 3.3 Emits audit trails and security telemetry to platform observability stacks.
 
+## 4. Authentication Behavior
+4.1 Anti-enumeration: authentication failures (unknown user or bad credentials) return a generic `401 AUTHENTICATION_FAILED` without disclosing user existence.
+4.2 Timing guard: a minimum response budget is applied to normalize successful vs failed attempts and reduce timing side-channels.
+4.3 Lockout & throttling: successive failures increment counters for lockout/throttle policies (see application configuration for thresholds).
+4.4 Multi-tenant context: tenant is resolved from the request context (gateway header), and auth decisions are scoped per-tenant.
+
 ## 4. Reference
 4.1 `docs/ARCHITECTURE.md` (Tenancy & Identity) details the security model and integration points.
 4.2 Rollout strategy appears in `docs/ROADMAP.md` Phases 2 and 3.

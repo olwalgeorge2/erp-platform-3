@@ -106,7 +106,7 @@ class PlatformSharedGovernanceRules {
         // Finance must not depend on other contexts
         val financeRule: ArchRule =
             noClasses()
-                .that().resideInAPackage("com.erp.finance..")
+                .that().resideInAnyPackage("com.erp.finance..", "com.erp.financial..")
                 .should().dependOnClassesThat().resideInAnyPackage(
                 "com.erp.identity..",
                 "com.erp.commerce..",

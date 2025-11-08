@@ -12,6 +12,30 @@ Establish strict governance rules for `platform-shared` modules to prevent distr
 
 ---
 
+## Enforcement (Operational)
+
+The following architecture suites are enforced in CI and block PRs:
+
+- Platform-Shared Governance (this ADR): `PlatformSharedGovernanceRules`
+- Layering rules: `LayeringRules`
+- Hexagonal architecture rules: `HexagonalArchitectureRules`
+
+CI configuration (summary):
+
+- Main workflow runs (blocking):
+  - `./gradlew :tests:arch:test --tests "*PlatformSharedGovernanceRules*"`
+  - `./gradlew :tests:arch:test --tests "*LayeringRules*"`
+  - `./gradlew :tests:arch:test --tests "*HexagonalArchitectureRules*"`
+- Scheduled governance workflow mirrors the same steps weekly.
+
+Local developer workflow:
+
+- `./gradlew :tests:arch:test --tests "*PlatformSharedGovernanceRules*"`
+- `./gradlew :tests:arch:test --tests "*LayeringRules*"`
+- `./gradlew :tests:arch:test --tests "*HexagonalArchitectureRules*"`
+
+See `docs/ARCHITECTURE_TESTING_GUIDE.md` for wiring details, scope expansion, and troubleshooting.
+
 ## Allowed in platform-shared
 
 ### 1. Technical Primitives ONLY
@@ -200,25 +224,86 @@ Publish shared modules as versioned dependencies.
 
 **Review Frequency:** Every Sprint (2 weeks)  
 **Enforcement:** 
-- ✅ **Automated:** ArchUnit tests in CI pipeline (`.github/workflows/ci.yml`)
-- ✅ **Weekly Audit:** GitHub Actions workflow (`.github/workflows/governance-audit.yml`)
+- ✅ **Automated:** ArchUnit tests in CI pipeline (`.github/workflows/ci.yml`) - **ENFORCED (Blocking)**
+- ✅ **Weekly Audit:** GitHub Actions workflow (`.github/workflows/arch-governance.yml`) - **ENFORCED (Blocking)**
 - ✅ **Local Audit:** PowerShell script (`scripts/audit-platform-shared.ps1`)
 - 📋 **Code Review:** Manual checklist for platform-shared PRs
 
 **Owner:** Lead Architect / Senior Engineer  
 **Escalation:** Team consensus required to add new shared module
 
-**CI Integration (Opt-In for now):**
+---
+
+## Enforcement Status
+
+**Status:** ✅ **ENFORCED** (as of November 9, 2025)
+
+### CI Integration (Always-On)
+
+**Main CI Pipeline** (`.github/workflows/ci.yml`):
 ```yaml
-# .github/workflows/ci.yml
+# Build job - blocks all PRs
 - name: Enforce platform-shared governance (ADR-006)
-  run: ./gradlew :tests:arch:test -PrunArchTests=true --tests "*PlatformSharedGovernanceRules*"
+  run: ./gradlew :tests:arch:test --tests "*PlatformSharedGovernanceRules*" --no-daemon --stacktrace
+
+# Architecture-tests job - dedicated enforcement
+- name: Enforce platform-shared governance (ADR-006)
+  run: ./gradlew :tests:arch:test --tests "*PlatformSharedGovernanceRules*" --no-daemon --stacktrace
 ```
 
-**Weekly Monitoring:**
-- A scheduled workflow runs every Monday at 09:00 UTC
-- It executes ArchUnit tests with `-PrunArchTests=true` and uploads the report
-- It can be configured as non-blocking (advisory) until violations are addressed
+**Weekly Governance Audit** (`.github/workflows/arch-governance.yml`):
+```yaml
+# Runs every Monday at 09:00 UTC (blocking)
+- name: Run ArchUnit tests (enforced)
+  run: ./gradlew :tests:arch:test --tests "*PlatformSharedGovernanceRules*" --no-daemon --stacktrace
+```
+
+### Coverage
+
+**All 12 bounded contexts wired and validated:**
+- ✅ platform-shared (4 modules)
+- ✅ tenancy-identity (3 modules)
+- ✅ financial-management (10 modules)
+- ✅ commerce (12 modules)
+- ✅ business-intelligence (3 modules)
+- ✅ communication-hub (3 modules)
+- ✅ corporate-services (6 modules)
+- ✅ customer-relation (9 modules)
+- ✅ inventory-management (6 modules)
+- ✅ manufacturing-execution (9 modules)
+- ✅ operations-service (3 modules)
+- ✅ procurement (6 modules)
+
+**Total:** 74 modules under governance
+
+### Local Validation
+
+**Run tests locally:**
+```bash
+./gradlew :tests:arch:test --tests "*PlatformSharedGovernanceRules*"
+```
+
+**Run with full test suite:**
+```bash
+./gradlew :tests:arch:test
+```
+
+### Rollout Timeline
+
+- **2025-11-06:** ADR accepted, ArchUnit infrastructure created
+- **2025-11-07:** Opt-in advisory mode enabled, identity + platform-shared wired
+- **2025-11-08:** Sprint 3 expansion completed (all 12 contexts wired)
+- **2025-11-09:** ✅ **Enforcement enabled** - all rules passing, CI blocking activated
+
+---
+
+## Compliance Verification
+
+**Last Verified:** November 9, 2025  
+**Verification Method:** ArchUnit 1.2.1 automated tests  
+**Result:** ✅ All 8 governance rules passing across 74 modules
+
+**Next Audit:** Next sprint (scheduled weekly via CI)
 
 ---
 

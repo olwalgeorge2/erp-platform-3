@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "[pre-commit] Running architecture governance suites (ADR-006, Layering, Hexagonal)"
+
+# Allow bypass via environment variable
+if [[ "${SKIP_ARCH_HOOK:-}" == "1" ]]; then
+  echo "[pre-commit] SKIP_ARCH_HOOK=1 set. Skipping architecture tests."
+  exit 0
+fi
+
+if [[ ! -x "./gradlew" ]]; then
+  echo "[pre-commit] gradlew not found or not executable. Aborting." >&2
+  exit 1
+fi
+
+# Skip when only docs/markdown files are staged
+changed_files=$(git diff --cached --name-only --diff-filter=ACMRTUXB)
+if [[ -z "$changed_files" ]]; then
+  echo "[pre-commit] No staged changes. Skipping."
+  exit 0
+fi
+
+non_docs=$(echo "$changed_files" | grep -vE '^(docs/|README.md|CONTRIBUTING.md|.*\.md$)' || true)
+# Further narrow to relevant code files/paths that can affect ArchUnit
+code_changes=$(echo "$non_docs" | grep -E '^(bounded-contexts/|platform-shared/|platform-infrastructure/|api-gateway/|tests/arch/|buildSrc/|build.gradle.kts$|settings.gradle.kts$)|\.(kt|kts|java|gradle(\.kts)?)$' || true)
+if [[ -z "$code_changes" ]]; then
+  echo "[pre-commit] No relevant code changes for architecture tests. Skipping."
+  exit 0
+fi
+
+# Run the entire arch test suite once for speed
+./gradlew :tests:arch:test --no-daemon --stacktrace
+
+echo "[pre-commit] Architecture tests passed"

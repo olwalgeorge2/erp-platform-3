@@ -231,6 +231,30 @@ What are the implications?
 
 ## Pull Request Process
 
+### Pull Request Checklist
+
+- Code style
+  - `./gradlew ktlintFormat` (fix) and `./gradlew ktlintCheck` (verify)
+- Unit/integration tests
+  - `./gradlew test` (module) or `./gradlew build` (root)
+- Architecture tests (enforced in CI)
+  - Run locally before pushing: `./gradlew :tests:arch:test`
+  - CI requires both build and architecture-tests to pass; the final gate job is `build-status`.
+- Documentation
+  - Update ADRs if architectural decisions are affected (`docs/adr/`)
+  - Update module README if public behavior changes (e.g., identity auth behavior)
+- Security & tenancy
+  - For identity changes, ensure anti-enumeration and timing guards remain intact
+  - Confirm multi-tenant scoping and tenant headers in any new endpoints
+
+### Pre-commit Hook Policy and Bypass
+- Hooks run architecture tests before committing to catch violations early.
+- Bypass only for exceptional cases (e.g., urgent hotfix workflow issues or known false positives):
+  - Bash/Git Bash: `SKIP_ARCH_HOOK=1 git commit -m "hotfix: ..."`
+  - PowerShell: `$env:SKIP_ARCH_HOOK='1'; git commit -m "hotfix: ..."; Remove-Item Env:SKIP_ARCH_HOOK`
+- CI still enforces architecture tests; bypassing the hook does not bypass CI gates.
+- After any bypass, run `./gradlew :tests:arch:test` locally and ensure a green CI build.
+
 ### Before Submitting
 - [ ] Code follows style guidelines (ktlint passes)
 - [ ] All tests pass locally

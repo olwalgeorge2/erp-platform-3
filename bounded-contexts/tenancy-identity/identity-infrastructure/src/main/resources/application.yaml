@@ -42,6 +42,14 @@ quarkus:
       database:
         generation: validate
 
+"%test":
+  quarkus:
+    http:
+      # Use an ephemeral port during @QuarkusTest to avoid clashes with a running dev server
+      test-port: 0
+    log:
+      level: WARN
+
 mp:
   messaging:
     outgoing:

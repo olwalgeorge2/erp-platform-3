@@ -25,11 +25,12 @@ class AuthorizationService {
         tenantId: TenantId,
         requiredPermission: PermissionDescriptor,
     ): Response? {
-        val principal = RequestPrincipalContext.get()
-            ?: return forbidden(
-                code = "AUTHENTICATION_REQUIRED",
-                message = "Authentication is required to access this resource.",
-            )
+        val principal =
+            RequestPrincipalContext.get()
+                ?: return forbidden(
+                    code = "AUTHENTICATION_REQUIRED",
+                    message = "Authentication is required to access this resource.",
+                )
 
         val principalTenantId = principal.tenantId
         val tenantValue = tenantId.value.toString()

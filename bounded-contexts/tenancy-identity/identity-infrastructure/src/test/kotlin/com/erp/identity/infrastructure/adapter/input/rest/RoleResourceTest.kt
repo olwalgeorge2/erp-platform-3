@@ -5,13 +5,14 @@ import com.erp.identity.domain.model.identity.PermissionScope
 import com.erp.identity.domain.model.identity.Role
 import com.erp.identity.domain.model.identity.RoleId
 import com.erp.identity.domain.model.tenant.TenantId
-import com.erp.identity.infrastructure.adapter.input.rest.ErrorResponse
 import com.erp.identity.infrastructure.adapter.input.rest.dto.CreateRoleRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.PermissionPayload
 import com.erp.identity.infrastructure.adapter.input.rest.dto.UpdateRoleRequest
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.identity.infrastructure.service.IdentityQueryService
 import com.erp.identity.infrastructure.service.security.AuthorizationService
+import com.erp.identity.infrastructure.web.RequestPrincipal
+import com.erp.identity.infrastructure.web.RequestPrincipalContext
 import com.erp.shared.types.results.Result
 import jakarta.ws.rs.core.MultivaluedHashMap
 import jakarta.ws.rs.core.MultivaluedMap
@@ -36,15 +37,21 @@ import java.time.Instant
 class RoleResourceTest {
     private val commandService: IdentityCommandService = mock()
     private val queryService: IdentityQueryService = mock()
-    private val authorizationService: AuthorizationService = mock()
+    private val authorizationService: AuthorizationService = AuthorizationService()
     private val resource = RoleResource(commandService, queryService, authorizationService)
 
     @BeforeEach
     fun resetMocks() {
         reset(commandService, queryService)
-        reset(authorizationService)
-        whenever(authorizationService.requireRoleManagement(any())).thenReturn(null)
-        whenever(authorizationService.requireRoleRead(any())).thenReturn(null)
+        // Default: system admin to bypass auth in tests unless overridden
+        RequestPrincipalContext.set(
+            RequestPrincipal(
+                userId = "test-user",
+                tenantId = null,
+                roles = setOf("SYSTEM_ADMIN"),
+                permissions = emptySet(),
+            ),
+        )
     }
 
     @Test
@@ -128,12 +135,15 @@ class RoleResourceTest {
     @Test
     fun `create role fails when authorization denies`() {
         val tenantId = TenantId.generate()
-        val forbiddenResponse =
-            Response
-                .status(Response.Status.FORBIDDEN)
-                .entity(ErrorResponse("ACCESS_DENIED", "Missing permission"))
-                .build()
-        whenever(authorizationService.requireRoleManagement(any())).thenReturn(forbiddenResponse)
+        // Override principal to simulate denial
+        RequestPrincipalContext.set(
+            RequestPrincipal(
+                userId = "user",
+                tenantId = tenantId.value.toString(),
+                roles = emptySet(),
+                permissions = emptySet(),
+            ),
+        )
 
         val response =
             resource.createRole(

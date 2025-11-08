@@ -272,11 +272,17 @@ class UserCommandHandler(
             when (userResult) {
                 is Result.Success -> userResult.value
                 is Result.Failure -> return userResult
-            } ?: return failure(
-                code = "USER_NOT_FOUND",
-                message = "User not found for authentication",
-                details = mapOf("identifier" to command.usernameOrEmail),
-            )
+            } ?: run {
+                // Anti-enumeration: keep response generic and add a small constant-time guard
+                try {
+                    Thread.sleep(100)
+                } catch (_: InterruptedException) {
+                }
+                return failure(
+                    code = "AUTHENTICATION_FAILED",
+                    message = "Authentication failed",
+                )
+            }
 
         return when (val result = authenticationService.authenticate(user, command.password)) {
             is AuthenticationResult.Success ->

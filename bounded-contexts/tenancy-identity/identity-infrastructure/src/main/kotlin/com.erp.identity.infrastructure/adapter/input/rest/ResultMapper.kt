@@ -45,6 +45,7 @@ private fun mapStatus(
         hasValidationErrors -> UNPROCESSABLE_ENTITY
         code.equals("TENANT_NOT_FOUND", ignoreCase = true) -> Status.NOT_FOUND
         code.equals("USER_NOT_FOUND", ignoreCase = true) -> Status.NOT_FOUND
+        code.equals("AUTHENTICATION_FAILED", ignoreCase = true) -> Status.UNAUTHORIZED
         code.equals("TENANT_SLUG_EXISTS", ignoreCase = true) -> Status.CONFLICT
         code.equals("USERNAME_IN_USE", ignoreCase = true) -> Status.CONFLICT
         code.equals("EMAIL_IN_USE", ignoreCase = true) -> Status.CONFLICT

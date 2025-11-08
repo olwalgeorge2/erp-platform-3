@@ -12,6 +12,7 @@ import com.erp.identity.infrastructure.adapter.input.rest.dto.SuspendTenantReque
 import com.erp.identity.infrastructure.adapter.input.rest.dto.TenantResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.identity.infrastructure.service.IdentityQueryService
+import com.erp.shared.types.errors.SanitizedError
 import com.erp.shared.types.results.Result
 import jakarta.ws.rs.core.MultivaluedMap
 import jakarta.ws.rs.core.PathSegment
@@ -101,8 +102,8 @@ class TenantResourceTest {
         val response = resource.provisionTenant(request, simpleUriInfo())
 
         assertEquals(Response.Status.CONFLICT.statusCode, response.status)
-        val error = response.entity as ErrorResponse
-        assertEquals("TENANT_SLUG_EXISTS", error.code)
+        val error = response.entity as SanitizedError
+        assertEquals("That organization name is not available.", error.message)
         verify(commandService).provisionTenant(any())
     }
 

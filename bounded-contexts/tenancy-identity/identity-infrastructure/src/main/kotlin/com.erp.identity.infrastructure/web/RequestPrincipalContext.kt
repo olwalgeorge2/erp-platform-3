@@ -11,7 +11,10 @@ data class RequestPrincipal(
 ) {
     fun hasRole(role: String): Boolean = roles.any { it.equals(role, ignoreCase = true) }
 
-    fun hasPermission(resource: String, action: String): Boolean =
+    fun hasPermission(
+        resource: String,
+        action: String,
+    ): Boolean =
         permissions.any { perm ->
             val normalized = perm.lowercase()
             normalized == "${resource.lowercase()}:${action.lowercase()}" || normalized == "${resource.lowercase()}:*"

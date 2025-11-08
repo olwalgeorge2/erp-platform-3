@@ -2,6 +2,13 @@ plugins {
     id("erp.quarkus-conventions")
 }
 
+// Ensure IDEs honor the same JVM bytecode target as the toolchain
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+    }
+}
+
 dependencies {
     implementation(project(":bounded-contexts:tenancy-identity:identity-application"))
     implementation(project(":bounded-contexts:tenancy-identity:identity-domain"))

@@ -15,8 +15,9 @@ class AuthenticationService(
         user: User,
         rawPassword: String,
     ): AuthenticationResult {
+        val startNano = System.nanoTime()
         if (!user.canLogin()) {
-            return AuthenticationResult.Failure(
+            val result = AuthenticationResult.Failure(
                 user = user,
                 reason =
                     domainError(
@@ -29,12 +30,14 @@ class AuthenticationService(
                             ),
                     ),
             )
+            ensureMinimumDuration(startNano)
+            return result
         }
 
         if (!credentialVerifier.verify(rawPassword, user.credential)) {
             val updatedUser = user.recordFailedLogin()
             if (updatedUser.isLocked()) {
-                return AuthenticationResult.Failure(
+                val result = AuthenticationResult.Failure(
                     user = updatedUser,
                     reason =
                         domainError(
@@ -47,9 +50,11 @@ class AuthenticationService(
                                 ),
                         ),
                 )
+                ensureMinimumDuration(startNano)
+                return result
             }
 
-            return AuthenticationResult.Failure(
+            val result = AuthenticationResult.Failure(
                 user = updatedUser,
                 reason =
                     domainError(
@@ -62,10 +67,14 @@ class AuthenticationService(
                             ),
                     ),
             )
+            ensureMinimumDuration(startNano)
+            return result
         }
 
         val authenticatedUser = user.recordSuccessfulLogin()
-        return AuthenticationResult.Success(authenticatedUser)
+        val success = AuthenticationResult.Success(authenticatedUser)
+        ensureMinimumDuration(startNano)
+        return success
     }
 
     fun updatePassword(
@@ -93,6 +102,17 @@ class AuthenticationService(
         val result = authenticate(user, rawPassword)
         if (result is AuthenticationResult.Failure) {
             throw InvalidCredentialException(result.reason.message)
+        }
+    }
+
+    private fun ensureMinimumDuration(startNano: Long, minMillis: Long = 100) {
+        val elapsedMs = java.time.Duration.ofNanos(System.nanoTime() - startNano).toMillis()
+        if (elapsedMs < minMillis) {
+            try {
+                Thread.sleep(minMillis - elapsedMs)
+            } catch (_: InterruptedException) {
+                // ignore
+            }
         }
     }
 

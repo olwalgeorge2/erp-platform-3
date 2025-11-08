@@ -32,6 +32,7 @@ fun Result.Failure.failureResponse(): Response {
         )
     return Response
         .status(status)
+        .header("X-Error-ID", sanitized.errorId)
         .entity(sanitized)
         .build()
 }

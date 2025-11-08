@@ -17,19 +17,20 @@ class AuthenticationService(
     ): AuthenticationResult {
         val startNano = System.nanoTime()
         if (!user.canLogin()) {
-            val result = AuthenticationResult.Failure(
-                user = user,
-                reason =
-                    domainError(
-                        code = "USER_NOT_ALLOWED",
-                        message = "User cannot login in current state",
-                        details =
-                            mapOf(
-                                "status" to user.status.name,
-                                "userId" to user.id.toString(),
-                            ),
-                    ),
-            )
+            val result =
+                AuthenticationResult.Failure(
+                    user = user,
+                    reason =
+                        domainError(
+                            code = "USER_NOT_ALLOWED",
+                            message = "User cannot login in current state",
+                            details =
+                                mapOf(
+                                    "status" to user.status.name,
+                                    "userId" to user.id.toString(),
+                                ),
+                        ),
+                )
             ensureMinimumDuration(startNano)
             return result
         }
@@ -37,12 +38,31 @@ class AuthenticationService(
         if (!credentialVerifier.verify(rawPassword, user.credential)) {
             val updatedUser = user.recordFailedLogin()
             if (updatedUser.isLocked()) {
-                val result = AuthenticationResult.Failure(
+                val result =
+                    AuthenticationResult.Failure(
+                        user = updatedUser,
+                        reason =
+                            domainError(
+                                code = "ACCOUNT_LOCKED",
+                                message = "Account is locked due to repeated failures",
+                                details =
+                                    mapOf(
+                                        "userId" to updatedUser.id.toString(),
+                                        "failedAttempts" to updatedUser.failedLoginAttempts.toString(),
+                                    ),
+                            ),
+                    )
+                ensureMinimumDuration(startNano)
+                return result
+            }
+
+            val result =
+                AuthenticationResult.Failure(
                     user = updatedUser,
                     reason =
                         domainError(
-                            code = "ACCOUNT_LOCKED",
-                            message = "Account is locked due to repeated failures",
+                            code = "INVALID_CREDENTIALS",
+                            message = "Credentials are invalid",
                             details =
                                 mapOf(
                                     "userId" to updatedUser.id.toString(),
@@ -50,23 +70,6 @@ class AuthenticationService(
                                 ),
                         ),
                 )
-                ensureMinimumDuration(startNano)
-                return result
-            }
-
-            val result = AuthenticationResult.Failure(
-                user = updatedUser,
-                reason =
-                    domainError(
-                        code = "INVALID_CREDENTIALS",
-                        message = "Credentials are invalid",
-                        details =
-                            mapOf(
-                                "userId" to updatedUser.id.toString(),
-                                "failedAttempts" to updatedUser.failedLoginAttempts.toString(),
-                            ),
-                    ),
-            )
             ensureMinimumDuration(startNano)
             return result
         }
@@ -105,8 +108,14 @@ class AuthenticationService(
         }
     }
 
-    private fun ensureMinimumDuration(startNano: Long, minMillis: Long = 100) {
-        val elapsedMs = java.time.Duration.ofNanos(System.nanoTime() - startNano).toMillis()
+    private fun ensureMinimumDuration(
+        startNano: Long,
+        minMillis: Long = 100,
+    ) {
+        val elapsedMs =
+            java.time.Duration
+                .ofNanos(System.nanoTime() - startNano)
+                .toMillis()
         if (elapsedMs < minMillis) {
             try {
                 Thread.sleep(minMillis - elapsedMs)
@@ -136,7 +145,9 @@ fun interface CredentialVerifier {
 }
 
 sealed class AuthenticationResult {
-    data class Success(val user: User) : AuthenticationResult()
+    data class Success(
+        val user: User,
+    ) : AuthenticationResult()
 
     data class Failure(
         val user: User,

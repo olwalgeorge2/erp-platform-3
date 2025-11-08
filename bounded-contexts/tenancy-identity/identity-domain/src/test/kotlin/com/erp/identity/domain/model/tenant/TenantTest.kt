@@ -138,12 +138,13 @@ class TenantTest {
     fun `provision merges provided metadata`() {
         val subscription = baseSubscription
         val reactivated =
-            Tenant.provision(
-                name = "Meta",
-                slug = "meta",
-                subscription = subscription,
-                organization = null,
-            ).copy(metadata = mapOf("existing" to "value"))
+            Tenant
+                .provision(
+                    name = "Meta",
+                    slug = "meta",
+                    subscription = subscription,
+                    organization = null,
+                ).copy(metadata = mapOf("existing" to "value"))
                 .activate()
                 .suspend("maintenance")
                 .reactivate()

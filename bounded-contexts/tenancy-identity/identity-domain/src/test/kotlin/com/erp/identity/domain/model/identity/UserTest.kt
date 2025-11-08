@@ -1,7 +1,6 @@
 package com.erp.identity.domain.model.identity
 
 import com.erp.identity.domain.model.tenant.TenantId
-import com.erp.identity.domain.model.identity.RoleId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -180,7 +179,8 @@ class UserTest {
     @Test
     fun `reactivate clears suspension reason and resets counters`() {
         val suspended =
-            User.create(tenantId, "suspended", "suspended@example.com", "Suspended User", credential())
+            User
+                .create(tenantId, "suspended", "suspended@example.com", "Suspended User", credential())
                 .activate()
                 .suspend("audit")
                 .copy(

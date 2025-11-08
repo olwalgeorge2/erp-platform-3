@@ -99,6 +99,7 @@ cp .env.example .env
 | `./gradlew projects` | List all modules |
 | `./gradlew build --scan` | Build with Gradle Build Scan |
 | `./scripts/audit-platform-shared.ps1` | Audit platform-shared governance (ADR-006) |
+| `./gradlew smokeIdentity` | Run tenancy-identity + Kafka smoke checks |
 
 ### Review Documentation
 - `docs/ROADMAP.md` - Implementation phases and milestones

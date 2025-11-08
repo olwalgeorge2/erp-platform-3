@@ -38,3 +38,19 @@ subprojects {
         this.filter.isFailOnNoMatchingTests = false
     }
 }
+// --- Smoke test helper -------------------------------------------------------
+import java.util.Locale
+
+tasks.register<Exec>("smokeIdentity") {
+    group = "verification"
+    description = "Runs tenancy-identity + Kafka smoke checks"
+
+    val osName = System.getProperty("os.name").lowercase(Locale.getDefault())
+    if (osName.contains("windows")) {
+        commandLine("pwsh", "-NoLogo", "-File", "scripts/smoke/smoke-identity.ps1")
+    } else {
+        commandLine("bash", "scripts/smoke/smoke-identity.sh")
+    }
+    // inherit environment (IDENTITY_BASE_URL if set)
+    environment(System.getenv())
+}

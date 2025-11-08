@@ -15,7 +15,7 @@ This document lists all port mappings for the ERP platform services to avoid con
 
 | Port | Service | Module | Description |
 |------|---------|--------|-------------|
-| 8081 | Identity Service | identity-infrastructure | Tenancy & Identity bounded context |
+| 8181 (dev) | Identity Service | identity-infrastructure | Tenancy & Identity bounded context (tests use ephemeral port) |
 | TBD | API Gateway | api-gateway | Main entry point |
 | TBD | Other Services | - | To be configured |
 
@@ -48,6 +48,7 @@ This document lists all port mappings for the ERP platform services to avoid con
 - All ports can be overridden using environment variables
 - In production, use proper secrets management
 - Ensure PostgreSQL is running before starting application services
+ - Dev server script auto-selects a free port starting at 8181: `scripts/dev-identity.ps1`
 
 ## Local Infrastructure Startup
 

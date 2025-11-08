@@ -24,7 +24,9 @@ quarkus:
 "%dev":
   quarkus:
     http:
-      port: ${QUARKUS_HTTP_PORT:8081}
+      port: ${QUARKUS_HTTP_PORT:8181}
+    analytics:
+      disabled: true
     datasource:
       username: ${QUARKUS_DATASOURCE_USERNAME:erp_user}
       password: ${QUARKUS_DATASOURCE_PASSWORD:erp_pass}

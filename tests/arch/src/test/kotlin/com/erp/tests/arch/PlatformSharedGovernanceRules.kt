@@ -137,23 +137,20 @@ class PlatformSharedGovernanceRules {
 
     @Test
     fun `platform-shared modules should only contain allowed types`() {
-        // common-types should only contain technical abstractions
+        // common-types should only contain technical abstractions (no Services/Repositories/"Business" types)
         noClasses()
             .that().resideInAPackage("com.erp.shared.types..")
-            .and().haveSimpleNameEndingWith("Service")
-            .should().exist()
+            .should().haveSimpleNameEndingWith("Service")
             .because("platform-shared/common-types should not contain business services (ADR-006)")
 
         noClasses()
             .that().resideInAPackage("com.erp.shared.types..")
-            .and().haveSimpleNameEndingWith("Repository")
-            .should().exist()
+            .should().haveSimpleNameEndingWith("Repository")
             .because("platform-shared/common-types should not contain repositories (ADR-006)")
 
         noClasses()
             .that().resideInAPackage("com.erp.shared.types..")
-            .and().haveSimpleNameContaining("Business")
-            .should().exist()
+            .should().haveSimpleNameContaining("Business")
             .because("platform-shared/common-types should not contain business logic (ADR-006)")
     }
 
@@ -161,15 +158,13 @@ class PlatformSharedGovernanceRules {
     fun `common-types should only contain abstractions not implementations`() {
         noClasses()
             .that().resideInAPackage("com.erp.shared.types..")
-            .and().haveSimpleNameEndingWith("Impl")
-            .should().exist()
+            .should().haveSimpleNameEndingWith("Impl")
             .because("platform-shared/common-types should contain interfaces and abstractions, " +
                     "not concrete implementations (ADR-006)")
 
         noClasses()
             .that().resideInAPackage("com.erp.shared.types..")
-            .and().haveSimpleNameEndingWith("Adapter")
-            .should().exist()
+            .should().haveSimpleNameEndingWith("Adapter")
             .because("platform-shared/common-types should not contain adapters " +
                     "(those belong in infrastructure layer) (ADR-006)")
     }

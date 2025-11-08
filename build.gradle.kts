@@ -30,3 +30,11 @@ subprojects {
         }
     }
 }
+
+// Make filtered test runs not fail tasks when no tests match in a given subproject
+subprojects {
+    tasks.withType<Test>().configureEach {
+        // keep JUnit platform default from conventions; only adjust filter behavior
+        this.filter.isFailOnNoMatchingTests = false
+    }
+}

@@ -1,36 +1,37 @@
 @host = http://localhost:8081
-@tenantName = Quarkus Test Tenant
-@tenantSlug = tenant-{{$randomInt 100000 999999}}
 
-# Will be set by the Provision Tenant response handler below.
+# These will be set during the flow
 @tenantId = 00000000-0000-0000-0000-000000000000
-
-# Will be set by the Create Role response handler below.
 @roleId = 00000000-0000-0000-0000-000000000000
 
 # Simulated gateway-provided principal headers
 @userId = rest-client-admin
-@userRoles = TENANT_ADMIN
+@userRoles = SYSTEM_ADMIN
 @userPermissions = roles:manage,roles:read
 
-### Provision Tenant
+### Auth: expect 401 for unknown user (sanitized)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "tenantId": "{{$guid}}",
+  "usernameOrEmail": "unknown.user@example.com",
+  "password": "WrongPass123!"
+}
+
+### Provision tenant
 POST {{host}}/api/tenants
 Content-Type: application/json
 
 {
-  "name": "{{tenantName}}",
-  "slug": "{{tenantSlug}}",
+  "name": "Smoke Tenant {{$randomInt 1000 9999}}",
+  "slug": "smoke-{{$randomInt 100000 999999}}",
   "subscription": {
     "plan": "STARTER",
     "startDate": "{{$datetime rfc3339}}",
-    "maxUsers": 25,
-    "maxStorage": 5000,
-    "features": [
-      "rbac"
-    ]
-  },
-  "metadata": {
-    "env": "dev"
+    "maxUsers": 10,
+    "maxStorage": 1000,
+    "features": ["rbac"]
   }
 }
 
@@ -40,21 +41,13 @@ Content-Type: application/json
   }
 %}
 
-###
-
-### Activate Tenant
+### Activate tenant
 POST {{host}}/api/tenants/{{tenantId}}/activate
 Content-Type: application/json
 
-{
-  "requestedBy": "rest-client"
-}
+{}
 
-###
-
-@roleName = tenant-admin
-
-### Create Role
+### Create role
 POST {{host}}/api/tenants/{{tenantId}}/roles
 Content-Type: application/json
 X-User-Id: {{userId}}
@@ -63,15 +56,11 @@ X-User-Permissions: {{userPermissions}}
 X-Tenant-ID: {{tenantId}}
 
 {
-  "name": "{{roleName}}",
-  "description": "Tenant administrator role",
+  "name": "reader",
+  "description": "Reader role",
   "permissions": [
-    { "resource": "users", "action": "manage", "scope": "TENANT" },
     { "resource": "tenants", "action": "read", "scope": "TENANT" }
-  ],
-  "metadata": {
-    "createdBy": "rest-client"
-  }
+  ]
 }
 
 > {%
@@ -80,18 +69,14 @@ X-Tenant-ID: {{tenantId}}
   }
 %}
 
-###
-
-### List Roles
-GET {{host}}/api/tenants/{{tenantId}}/roles
+### List roles
+GET {{host}}/api/tenants/{{tenantId}}/roles?limit=10&offset=0
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
 X-User-Permissions: roles:read
 X-Tenant-ID: {{tenantId}}
 
-###
-
-### Update Role
+### Update role
 PUT {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
 Content-Type: application/json
 X-User-Id: {{userId}}
@@ -100,46 +85,18 @@ X-User-Permissions: {{userPermissions}}
 X-Tenant-ID: {{tenantId}}
 
 {
-  "name": "{{roleName}}",
-  "description": "Updated tenant administrator role",
+  "name": "reader",
+  "description": "Updated reader",
   "permissions": [
-    { "resource": "users", "action": "manage", "scope": "TENANT" },
     { "resource": "tenants", "action": "read", "scope": "TENANT" },
-    { "resource": "roles", "action": "manage", "scope": "TENANT" }
-  ],
-  "metadata": {
-    "updatedBy": "rest-client"
-  }
+    { "resource": "roles", "action": "read", "scope": "TENANT" }
+  ]
 }
 
-###
-
-### Get Role
-GET {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
-X-User-Id: {{userId}}
-X-User-Roles: {{userRoles}}
-X-User-Permissions: roles:read
-X-Tenant-ID: {{tenantId}}
-
-###
-
-### Delete Role
+### Delete role
 DELETE {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
 X-User-Permissions: {{userPermissions}}
 X-Tenant-ID: {{tenantId}}
 
-###
-
-### List Roles After Deletion
-GET {{host}}/api/tenants/{{tenantId}}/roles
-X-User-Id: {{userId}}
-X-User-Roles: {{userRoles}}
-X-User-Permissions: roles:read
-X-Tenant-ID: {{tenantId}}
-
-###
-
-### Fetch Built-in Role Templates
-GET {{host}}/api/roles/templates

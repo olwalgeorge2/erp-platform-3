@@ -1,7 +1,9 @@
 package com.erp.apigateway.proxy
 
+import com.erp.apigateway.metrics.GatewayMetrics
 import com.erp.apigateway.routing.ServiceRoute
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
 import jakarta.ws.rs.core.MultivaluedMap
 import jakarta.ws.rs.core.Response
 import java.net.URI
@@ -12,6 +14,8 @@ import java.time.Duration
 
 @ApplicationScoped
 class ProxyService {
+    @Inject
+    lateinit var metrics: GatewayMetrics
     private val hopByHopHeaders =
         setOf(
             "connection",
@@ -81,6 +85,7 @@ class ProxyService {
         incomingHeaders: MultivaluedMap<String, String>,
         body: ByteArray?,
     ): Response {
+        val start = System.nanoTime()
         val base = route.target.baseUrl.trimEnd('/')
         val path = if (incomingPath.startsWith("/")) incomingPath else "/$incomingPath"
         val query = buildQueryString(queryParams)
@@ -115,16 +120,26 @@ class ProxyService {
         }
 
         val request = builder.build()
-        val upstream = client.send(request, HttpResponse.BodyHandlers.ofByteArray())
+        return try {
+            val upstream = client.send(request, HttpResponse.BodyHandlers.ofByteArray())
+            val durationMs = (System.nanoTime() - start) / 1_000_000
 
-        val responseBuilder = Response.status(upstream.statusCode())
-        upstream.headers().map().forEach { (name, values) ->
-            val lower = name.lowercase()
-            if (!hopByHopHeaders.contains(lower)) {
-                values.forEach { v -> responseBuilder.header(name, v) }
+            val responseBuilder = Response.status(upstream.statusCode())
+            upstream.headers().map().forEach { (name, values) ->
+                val lower = name.lowercase()
+                if (!hopByHopHeaders.contains(lower)) {
+                    values.forEach { v -> responseBuilder.header(name, v) }
+                }
             }
+            val resp = responseBuilder.entity(upstream.body()).build()
+            metrics.recordRequest(method, path, upstream.statusCode(), durationMs)
+            resp
+        } catch (e: Exception) {
+            val durationMs = (System.nanoTime() - start) / 1_000_000
+            metrics.markError("proxy_exception")
+            metrics.recordRequest(method, path, 500, durationMs)
+            Response.status(502).entity(byteArrayOf()).build()
         }
-        return responseBuilder.entity(upstream.body()).build()
     }
 
     private fun buildQueryString(params: MultivaluedMap<String, String>): String {

@@ -151,6 +151,12 @@ jobs:
       - name: Run Identity Infrastructure Tests
         run: ./gradlew :bounded-contexts:tenancy-identity:identity-infrastructure:test --no-daemon --stacktrace
       
+      - name: Run log gate
+        if: always()
+        run: |
+          chmod +x scripts/ci/log-gate.sh
+          scripts/ci/log-gate.sh scripts/ci/error-allowlist.txt
+      
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -184,6 +190,12 @@ jobs:
       
       - name: Run ArchUnit tests
         run: ./gradlew :tests:arch:test --no-daemon --stacktrace
+      
+      - name: Run log gate
+        if: always()
+        run: |
+          chmod +x scripts/ci/log-gate.sh
+          scripts/ci/log-gate.sh scripts/ci/error-allowlist.txt
       
       - name: Upload ArchUnit report
         if: always()

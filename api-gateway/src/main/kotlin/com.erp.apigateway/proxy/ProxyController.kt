@@ -6,8 +6,11 @@ import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
+import jakarta.ws.rs.core.Context
+import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import jakarta.ws.rs.core.UriInfo
 
 @Path("/")
 @Produces(MediaType.APPLICATION_JSON)
@@ -15,20 +18,21 @@ class ProxyController
     @Inject
     constructor(
         private val routeResolver: RouteResolver,
+        private val proxyService: ProxyService,
     ) {
         @GET
         @Path("{path: .+}")
         fun proxyGet(
             @PathParam("path") subPath: String,
+            @Context uriInfo: UriInfo,
+            @Context headers: HttpHeaders,
         ): Response {
             val resolved = routeResolver.resolve("/" + subPath)
-            val body =
-                mapOf(
-                    "status" to "stub",
-                    "targetBaseUrl" to resolved.target.baseUrl,
-                    "matchedPattern" to resolved.pattern,
-                    "requestedPath" to "/" + subPath,
-                )
-            return Response.ok(body).build()
+            return proxyService.forwardGet(
+                route = resolved,
+                incomingPath = "/" + subPath,
+                queryParams = uriInfo.queryParameters,
+                incomingHeaders = headers.requestHeaders,
+            )
         }
     }

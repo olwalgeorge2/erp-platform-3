@@ -509,16 +509,74 @@ requestContext.headers.add("X-Trace-Id", traceId)
 
 ---
 
+## Architecture & Request Flow
+
+### Filter Chain Execution Order
+```
+Incoming Request
+  ↓
+1. AuthenticationFilter (Priority: AUTHENTICATION)
+   - Validates JWT Bearer token via SmallRye JWT
+   - Creates SecurityContext with principal and roles
+   - Returns 401 for invalid/missing tokens
+   - Bypasses public endpoints (/health/*, /metrics, /api/v1/identity/auth/*)
+  ↓
+2. TenantContextFilter (Priority: AUTHENTICATION+10)
+   - Extracts tenantId, userId from JWT claims or headers
+   - Populates request-scoped TenantContext CDI bean
+   - Injects X-Tenant-Id, X-User-Id headers for downstream services
+  ↓
+3. RateLimitFilter (Priority: USER)
+   - Checks Redis for request count: ratelimit:{tenantId}:{endpoint}:{windowStart}
+   - Allows 100 req/min default (configurable via gateway.rate-limits.default.requests-per-minute)
+   - Returns HTTP 429 with X-RateLimit-* headers if exceeded
+   - Uses sliding window algorithm via RedisService
+  ↓
+4. TracingFilter (Priority: USER)
+   - Generates UUID for X-Trace-Id if not present
+   - Propagates traceId to downstream services
+   - Enables distributed tracing across microservices
+  ↓
+5. RequestLoggingFilter (Priority: USER)
+   - Logs structured request/response: method, path, status, duration_ms, traceId
+   - PII-free logging (no credentials, tokens, usernames)
+  ↓
+6. ProxyController (JAX-RS Resource)
+   - Routes GET/POST/PUT/PATCH/DELETE to ProxyService
+   - Uses RouteResolver to match path to backend service URL
+  ↓
+7. ProxyService
+   - Forwards HTTP request via JDK HttpClient (non-reactive)
+   - Propagates headers (excluding hop-by-hop headers)
+   - Copies query parameters and request body
+   - Returns response with status, headers, and body
+  ↓
+Response to Client
+```
+
+### Key Components
+- **RouteConfiguration.kt**: CDI producer creating RouteResolver from application.yml
+- **RouteResolver.kt**: Pattern-based routing with wildcard support
+- **RedisService.kt**: Redis wrapper using modern Quarkus `redis.value()` API
+- **RateLimiter.kt**: Sliding window rate limiting algorithm
+- **JwtValidator.kt**: SmallRye JWT token parser wrapper
+- **GatewaySecurityContext.kt**: JAX-RS SecurityContext implementation
+
+---
+
 ## Support & Contribution
 
 **Documentation:**
 - Sprint plan: `docs/SPRINT3_API_GATEWAY_PLAN.md`
 - Architecture decisions: `docs/adr/ADR-004-api-gateway-pattern.md`
 - Security patterns: `docs/DEVELOPER_ADVISORY.md`
-
-**Team:**
-- Developer 1: Core infrastructure, authentication
-- Developer 2: Rate limiting, observability
+- Error handling: `docs/ERROR_HANDLING_ANALYSIS_AND_POLICY.md`
 
 **Review Process:**
 Following tenancy-identity review patterns (achieved Grade A- through 4 review cycles).
+
+**Contributing:**
+1. Follow ktlint formatting: `./gradlew :api-gateway:ktlintFormat`
+2. Ensure tests pass: `./gradlew :api-gateway:test`
+3. Verify build: `./gradlew :api-gateway:build --warning-mode all`
+4. Follow security patterns from DEVELOPER_ADVISORY.md (anti-enumeration, PII-free logging)

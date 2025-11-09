@@ -10,6 +10,8 @@ import jakarta.ws.rs.container.ContainerRequestContext
 import jakarta.ws.rs.container.ContainerRequestFilter
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.ext.Provider
+import org.eclipse.microprofile.config.Config
+import java.time.Duration
 
 @Provider
 @Priority(Priorities.AUTHENTICATION + 100)
@@ -23,12 +25,16 @@ class RateLimitFilter : ContainerRequestFilter {
     @Inject
     lateinit var metrics: GatewayMetrics
 
+    @Inject
+    lateinit var config: Config
+
     override fun filter(requestContext: ContainerRequestContext) {
         val tenant = tenantContext.tenantId ?: "default"
         val endpointKey = requestContext.method + ":" + requestContext.uriInfo.path
 
-        val limit = 100
-        val windowSeconds = 60
+        val limit = config.getValue("gateway.rate-limits.default.requests-per-minute", Int::class.java)
+        val window: Duration = config.getValue("gateway.rate-limits.default.window", Duration::class.java)
+        val windowSeconds = window.seconds.toInt()
         val result = rateLimiter.checkLimit(tenant, endpointKey, limit, windowSeconds)
 
         requestContext.headers.add("X-RateLimit-Limit", limit.toString())

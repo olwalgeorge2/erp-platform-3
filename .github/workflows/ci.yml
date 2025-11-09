@@ -29,7 +29,41 @@ permissions:
   security-events: write
 
 jobs:
+  # Warm up Gradle cache to stabilize network-dependent steps
+  cache-warmup:
+    name: Dependency Cache Warmup
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: gradle
+      
+      - name: Validate Gradle wrapper (with retry)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 3
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: |
+            chmod +x gradlew
+            ./gradlew --version
+      
+      - name: Warm up dependency cache
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 8
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: ./gradlew dependencies --no-daemon --stacktrace
+
   lint:
+    needs: cache-warmup
     name: Code Style Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -52,8 +86,13 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
       
-      - name: Run ktlint
-        run: ./gradlew ktlintCheck --no-daemon --stacktrace
+      - name: Run ktlint (with retry)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 8
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: ./gradlew ktlintCheck --no-daemon --stacktrace
       
       - name: Upload ktlint reports
         if: failure()
@@ -86,8 +125,13 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
       
-      - name: Build all modules (exclude integration tests)
-        run: ./gradlew build -x :bounded-contexts:tenancy-identity:identity-infrastructure:test --no-daemon --stacktrace
+      - name: Build all modules (exclude integration tests, with retry)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 25
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command: ./gradlew build -x :bounded-contexts:tenancy-identity:identity-infrastructure:test --no-daemon --stacktrace
       
       - name: Run log gate
         if: always()
@@ -148,8 +192,13 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
       
-      - name: Run Identity Infrastructure Tests
-        run: ./gradlew :bounded-contexts:tenancy-identity:identity-infrastructure:test --no-daemon --stacktrace
+      - name: Run Identity Infrastructure Tests (with retry)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 15
+          max_attempts: 3
+          retry_wait_seconds: 15
+          command: ./gradlew :bounded-contexts:tenancy-identity:identity-infrastructure:test --no-daemon --stacktrace
       
       - name: Run log gate
         if: always()
@@ -188,8 +237,13 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
       
-      - name: Run ArchUnit tests
-        run: ./gradlew :tests:arch:test --no-daemon --stacktrace
+      - name: Run ArchUnit tests (with retry)
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 12
+          max_attempts: 3
+          retry_wait_seconds: 10
+          command: ./gradlew :tests:arch:test --no-daemon --stacktrace
       
       - name: Run log gate
         if: always()

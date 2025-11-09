@@ -1,63 +1,72 @@
-name: Build Scan & Dependency Check
+name: Nightly Build & Security Scan
 
 on:
   schedule:
-    # Run daily at 2 AM UTC
-    - cron: '0 2 * * *'
-  workflow_dispatch:  # Allow manual trigger
+    - cron: '0 2 * * *' # Daily at 2 AM UTC
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 
 env:
   JAVA_VERSION: '21'
   JAVA_DISTRIBUTION: 'temurin'
 
+permissions:
+  contents: read
+  security-events: write
+  checks: write
+
 jobs:
   build-scan:
-    name: Generate Build Scan
+    name: Build Scan
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
-          cache: 'gradle'
+          cache: gradle
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
       - name: Build with scan
         run: ./gradlew build --scan --no-daemon
 
-      - name: Upload build scan URL
+      - name: Upload build reports
         if: always()
-        run: |
-          echo "Build scan published. Check the build logs for the URL."
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: '**/build/reports/**'
+          retention-days: 30
 
-  dependency-check:
-    name: Dependency Vulnerability Scan
+  dependency-scan:
+    name: Dependency & Security Scan
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
-          cache: 'gradle'
+          cache: gradle
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
-      - name: Check dependencies
+      - name: Generate dependency tree
         run: ./gradlew dependencies --no-daemon > dependencies.txt
 
       - name: Upload dependency tree
@@ -67,26 +76,39 @@ jobs:
           path: dependencies.txt
           retention-days: 30
 
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
   test-coverage:
     name: Test Coverage Report
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
+    timeout-minutes: 25
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
-          cache: 'gradle'
+          cache: gradle
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
 
-      - name: Generate coverage report
+      - name: Generate coverage reports
         run: ./gradlew koverHtmlReport koverXmlReport --no-daemon
         continue-on-error: true
 
@@ -95,6 +117,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
-          path: |
-            **/build/reports/kover/**
+          path: '**/build/reports/kover/**'
           retention-days: 30
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          echo "=== Test Coverage Summary ==="
+          if [ -f build/reports/kover/xml/report.xml ]; then
+            echo "Coverage report generated successfully"
+          else
+            echo "No coverage report found"
+          fi

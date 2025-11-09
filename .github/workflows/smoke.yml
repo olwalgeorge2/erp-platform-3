@@ -6,31 +6,49 @@ on:
       identity_base_url:
         description: "Override base URL for identity (optional)"
         required: false
+        type: string
       tenant_id:
         description: "Tenant ID for positive login (optional)"
         required: false
+        type: string
       auth_username:
         description: "Username/email for positive login (optional)"
         required: false
+        type: string
       auth_password:
         description: "Password for positive login (optional, masked)"
         required: false
         type: string
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '21'
+  JAVA_DISTRIBUTION: 'temurin'
+
+permissions:
+  contents: read
+  checks: write
+
 jobs:
   smoke:
+    name: Execute Smoke Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: '21'
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: gradle
 
-      - name: Cache Gradle
+      - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
       - name: Run smoke tests
@@ -41,3 +59,21 @@ jobs:
           AUTH_PASSWORD: ${{ inputs.auth_password }}
         run: ./gradlew smokeIdentity --no-daemon --stacktrace
 
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: |
+            **/build/test-results/**/*.xml
+            **/build/reports/tests/**
+          retention-days: 14
+
+      - name: Smoke test summary
+        if: always()
+        run: |
+          echo "=== Smoke Test Summary ==="
+          if [ -d build/test-results/smokeIdentity ]; then
+            total=$(find build/test-results/smokeIdentity -name "*.xml" | wc -l)
+            echo "Total test files: $total"
+          fi

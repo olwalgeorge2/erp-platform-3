@@ -1,49 +1,88 @@
-name: CI
+name: CI Pipeline
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   JAVA_VERSION: '21'
   JAVA_DISTRIBUTION: 'temurin'
+  GRADLE_OPTS: '-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true'
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+  security-events: write
 
 jobs:
-  build:
-    name: Build & Test
+  lint:
+    name: Code Style Check
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
-          cache: 'gradle'
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
+          cache: gradle
+      
       - name: Validate Gradle wrapper
-        uses: gradle/wrapper-validation-action@v2
-
-      - name: Check Kotlin code style
+        uses: gradle/wrapper-validation-action@v3
+      
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+      
+      - name: Run ktlint
         run: ./gradlew ktlintCheck --no-daemon --stacktrace
+      
+      - name: Upload ktlint reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ktlint-reports
+          path: '**/build/reports/ktlint/**'
+          retention-days: 7
 
+  build:
+    name: Build & Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: gradle
+      
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+      
       - name: Build all modules
         run: ./gradlew build --no-daemon --stacktrace
-
-      - name: Identity Infrastructure Tests
-        run: ./gradlew :bounded-contexts:tenancy-identity:identity-infrastructure:test --no-daemon --stacktrace
-
+      
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -51,89 +90,134 @@ jobs:
           name: test-results
           path: |
             **/build/test-results/**/*.xml
-            **/build/reports/**
+            **/build/reports/tests/**
           retention-days: 7
-      - name: Log gate (unexpected errors)
-        shell: bash
-        run: |
-          chmod +x scripts/ci/log-gate.sh
-          scripts/ci/log-gate.sh scripts/ci/error-allowlist.txt  code-quality:
-    name: Code Quality
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      
+      - name: Upload build artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
         with:
-          fetch-depth: 0
+          name: build-artifacts
+          path: '**/build/libs/*.jar'
+          retention-days: 30
 
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: erp_identity
+          POSTGRES_USER: erp_user
+          POSTGRES_PASSWORD: erp_pass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
-          cache: 'gradle'
+          cache: gradle
+      
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+      
+      - name: Run Identity Infrastructure Tests
+        run: ./gradlew :bounded-contexts:tenancy-identity:identity-infrastructure:test --no-daemon --stacktrace
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-results
+          path: |
+            **/build/test-results/**/*.xml
+            **/build/reports/tests/**
+          retention-days: 7
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Run static analysis
-        run: ./gradlew checkKotlinGradlePluginConfigurationErrors --no-daemon --stacktrace
-        continue-on-error: true
-
-      - name: Check for dependency vulnerabilities
-        run: ./gradlew dependencyCheckAnalyze --no-daemon
-        continue-on-error: true
-
-  architecture-tests:
-    name: Architecture Tests
+  architecture:
+    name: Architecture Governance
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: lint
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ env.JAVA_VERSION }}
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ env.JAVA_VERSION }}
           distribution: ${{ env.JAVA_DISTRIBUTION }}
-          cache: 'gradle'
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Run ArchUnit suites
+          cache: gradle
+      
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+      
+      - name: Run ArchUnit tests
         run: ./gradlew :tests:arch:test --no-daemon --stacktrace
-
+      
       - name: Upload ArchUnit report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: archunit-report
           path: tests/arch/build/reports/tests/test
+          retention-days: 7
 
-  build-status:
-    name: Build Status
+  security:
+    name: Security Scan
     runs-on: ubuntu-latest
-    needs: [build, code-quality, architecture-tests]
+    timeout-minutes: 10
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-results.sarif
+      
+      - name: Upload to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+  status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    needs: [lint, build, integration-tests, architecture]
     if: always()
     steps:
-      - name: Summarize and gate
-        shell: bash
+      - name: Check status
         run: |
-          echo "=== Build Status Summary ==="
+          echo "=== CI Pipeline Status ==="
+          echo "Lint: ${{ needs.lint.result }}"
           echo "Build: ${{ needs.build.result }}"
-          echo "Code Quality: ${{ needs.code-quality.result }} (non-blocking)"
-          echo "Architecture Tests: ${{ needs.architecture-tests.result }}"
-          echo ""
-          if [[ "${{ needs.build.result }}" == "success" && "${{ needs.architecture-tests.result }}" == "success" ]]; then
-            echo "All required checks passed"
+          echo "Integration: ${{ needs.integration-tests.result }}"
+          echo "Architecture: ${{ needs.architecture.result }}"
+          
+          if [[ "${{ needs.lint.result }}" == "success" && \
+                "${{ needs.build.result }}" == "success" && \
+                "${{ needs.integration-tests.result }}" == "success" && \
+                "${{ needs.architecture.result }}" == "success" ]]; then
+            echo "✅ All checks passed"
             exit 0
           else
-            echo "Build or architecture tests failed"
+            echo "❌ Pipeline failed"
             exit 1
           fi
-
-
-

@@ -31,6 +31,17 @@ subprojects {
     }
 }
 
+// Convenience preflight task for local verification
+tasks.register("verifyLocal") {
+    group = "verification"
+    description = "Run ktlint + architecture tests + identity infra tests"
+    dependsOn(
+        ":ktlintCheck",
+        ":tests:arch:test",
+        ":bounded-contexts:tenancy-identity:identity-infrastructure:test",
+    )
+}
+
 // Make filtered test runs not fail tasks when no tests match in a given subproject
 subprojects {
     tasks.withType<Test>().configureEach {

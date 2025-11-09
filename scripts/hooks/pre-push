@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "[pre-push] Verifying style and key tests before push"
+
+# Resolve Gradle wrapper
+if [[ -f "./gradlew" ]]; then
+  GRADLE_CMD="./gradlew"
+elif [[ -f "./gradlew.bat" ]]; then
+  GRADLE_CMD="./gradlew.bat"
+else
+  echo "[pre-push] gradlew not found. Aborting." >&2
+  exit 1
+fi
+
+# Allow opting out in emergencies
+if [[ "${SKIP_PREPUSH_CHECKS:-}" == "1" ]]; then
+  echo "[pre-push] SKIP_PREPUSH_CHECKS=1 set. Skipping checks."
+  exit 0
+fi
+
+# Fast style check
+$GRADLE_CMD ktlintCheck --no-daemon --stacktrace
+
+# Governance and hot-path tests (keep quick)
+$GRADLE_CMD :tests:arch:test --no-daemon --stacktrace
+$GRADLE_CMD :bounded-contexts:tenancy-identity:identity-infrastructure:test --no-daemon --stacktrace
+
+echo "[pre-push] All checks passed"
+exit 0
+

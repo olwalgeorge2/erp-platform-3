@@ -41,13 +41,20 @@ jobs:
         uses: gradle/actions/wrapper-validation@v3.5.0
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v3.5.0
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
       - name: Run ktlint check
         run: ./gradlew ktlintCheck --no-daemon --stacktrace
+
+      - name: Log gate (unexpected errors)
+        if: always()
+        shell: bash
+        run: |
+          chmod +x scripts/ci/log-gate.sh
+          scripts/ci/log-gate.sh scripts/ci/error-allowlist.txt
 
       - name: Upload ktlint reports
         if: failure()

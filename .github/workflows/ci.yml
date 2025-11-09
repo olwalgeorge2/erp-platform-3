@@ -47,7 +47,7 @@ jobs:
         uses: gradle/actions/wrapper-validation@v3.5.0
       
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v3.5.0
       
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -81,7 +81,7 @@ jobs:
           cache: gradle
       
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v3.5.0
       
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -143,7 +143,7 @@ jobs:
           cache: gradle
       
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v3.5.0
       
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -177,7 +177,7 @@ jobs:
           cache: gradle
       
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v3.5.0
       
       - name: Make gradlew executable
         run: chmod +x gradlew

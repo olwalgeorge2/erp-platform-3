@@ -49,6 +49,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
       
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+      
       - name: Run ktlint
         run: ./gradlew ktlintCheck --no-daemon --stacktrace
       
@@ -79,6 +82,9 @@ jobs:
       
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+      
+      - name: Make gradlew executable
+        run: chmod +x gradlew
       
       - name: Build all modules (exclude integration tests)
         run: ./gradlew build -x :bounded-contexts:tenancy-identity:identity-infrastructure:test --no-daemon --stacktrace
@@ -139,6 +145,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
       
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+      
       - name: Run Identity Infrastructure Tests
         run: ./gradlew :bounded-contexts:tenancy-identity:identity-infrastructure:test --no-daemon --stacktrace
       
@@ -169,6 +178,9 @@ jobs:
       
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+      
+      - name: Make gradlew executable
+        run: chmod +x gradlew
       
       - name: Run ArchUnit tests
         run: ./gradlew :tests:arch:test --no-daemon --stacktrace

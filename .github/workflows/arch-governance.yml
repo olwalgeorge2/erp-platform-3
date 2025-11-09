@@ -36,6 +36,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
       - name: Run ArchUnit tests (full suite, enforced)
         run: ./gradlew :tests:arch:test --no-daemon --stacktrace
 

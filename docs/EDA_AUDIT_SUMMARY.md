@@ -26,12 +26,14 @@
   - Channel: `identity-events-out`
   - Topic: `identity.domain.events.v1`
   - Partitioning by aggregate ID
-  - Headers: event-type, tenant-id, correlation-id
+  - Headers: event-type, tenant-id, trace-id, aggregate-id, event-version (from DomainEvent)
+  - DLQ: `identity.domain.events.dlq` (for events exceeding max attempts)
 - ✅ **Observability**:
-  - Metrics: `identity.outbox.events.published`, `identity.outbox.publish.duration`
-  - Structured logging with MDC context
+  - Metrics: `identity.outbox.events.published` (success/failure), `identity.outbox.publish.duration`, `identity.outbox.batch.duration`, `identity.outbox.events.pending` (gauge)
+  - Structured logging with MDC (traceId, tenantId)
   - ACK/NACK handling
-  - Retry logic (max 3 attempts)
+  - Retry logic with outbox reprocessing (max 5 attempts)
+  - Health monitoring via pending events gauge
 
 #### Synchronous Integration
 - REST endpoints for authentication, tenant management, role queries

@@ -36,6 +36,16 @@ class OutboxEventScheduler(
             "identity.outbox.batch.duration",
         )
 
+    init {
+        // Register gauge for monitoring outbox lag
+        meterRegistry.gauge(
+            "identity.outbox.events.pending",
+            this,
+        ) { scheduler ->
+            scheduler.outboxRepository.countPending(MAX_ATTEMPTS).toDouble()
+        }
+    }
+
     @Scheduled(every = "5s", concurrentExecution = SKIP)
     @Transactional(TxType.REQUIRES_NEW)
     fun publishPendingEvents() {
@@ -58,6 +68,7 @@ class OutboxEventScheduler(
                                 event.eventType,
                                 event.aggregateId,
                                 event.payload,
+                                event.version,
                             )
                     ) {
                         is Result.Success -> {

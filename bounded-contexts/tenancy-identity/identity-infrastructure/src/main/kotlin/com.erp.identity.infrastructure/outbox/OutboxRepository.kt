@@ -10,6 +10,8 @@ interface OutboxRepository {
         maxAttemptsBeforeFailure: Int,
     ): List<OutboxEventEntity>
 
+    fun countPending(maxAttemptsBeforeFailure: Int): Long
+
     fun markPublished(event: OutboxEventEntity): Result<Unit>
 
     fun markFailed(

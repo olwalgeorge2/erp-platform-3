@@ -48,6 +48,20 @@ class JpaOutboxRepository(
             .setMaxResults(limit)
             .resultList
 
+    override fun countPending(maxAttemptsBeforeFailure: Int): Long =
+        entityManager
+            .createQuery(
+                """
+                SELECT COUNT(e) FROM OutboxEventEntity e
+                WHERE e.status = :pending
+                   OR (e.status = :failed AND e.failureCount < :maxAttempts)
+                """.trimIndent(),
+                Long::class.java,
+            ).setParameter("pending", OutboxEventStatus.PENDING)
+            .setParameter("failed", OutboxEventStatus.FAILED)
+            .setParameter("maxAttempts", maxAttemptsBeforeFailure)
+            .singleResult
+
     override fun markPublished(event: OutboxEventEntity): Result<Unit> =
         update(event) {
             it.markPublished()

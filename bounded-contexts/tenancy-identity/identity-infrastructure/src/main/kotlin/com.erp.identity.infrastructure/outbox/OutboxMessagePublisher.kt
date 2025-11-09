@@ -7,5 +7,6 @@ interface OutboxMessagePublisher {
         eventType: String,
         aggregateId: String?,
         payload: String,
+        version: Int = 1,
     ): Result<Unit>
 }

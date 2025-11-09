@@ -60,6 +60,28 @@ mp:
         topic: ${IDENTITY_EVENTS_TOPIC:identity.domain.events.v1}
         bootstrap:
           servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+        key:
+          serializer: org.apache.kafka.common.serialization.StringSerializer
+        value:
+          serializer: org.apache.kafka.common.serialization.StringSerializer
+        acks: all  # Wait for all in-sync replicas
+        retries: 3
+        enable:
+          idempotence: true  # Exactly-once semantics
+        max:
+          in:
+            flight:
+              requests:
+                per:
+                  connection: 5
+        # Dead Letter Queue configuration for failed events
+        failure-strategy: dead-letter-queue
+        dead-letter-queue:
+          topic: ${IDENTITY_EVENTS_DLQ_TOPIC:identity.domain.events.dlq}
+          key:
+            serializer: org.apache.kafka.common.serialization.StringSerializer
+          value:
+            serializer: org.apache.kafka.common.serialization.StringSerializer
 
 app:
   environment: PRODUCTION

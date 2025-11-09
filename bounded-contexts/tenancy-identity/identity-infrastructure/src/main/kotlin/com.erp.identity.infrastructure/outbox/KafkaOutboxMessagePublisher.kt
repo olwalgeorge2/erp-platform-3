@@ -30,6 +30,7 @@ class KafkaOutboxMessagePublisher(
         eventType: String,
         aggregateId: String?,
         payload: String,
+        version: Int,
     ): Result<Unit> {
         val traceId = MDC.get("traceId")?.toString() ?: UUID.randomUUID().toString()
 
@@ -63,6 +64,12 @@ class KafkaOutboxMessagePublisher(
                         .RecordHeader("aggregate-id", aggId.toByteArray()),
                 )
             }
+
+            // Add event-version header from DomainEvent.version
+            headers.add(
+                org.apache.kafka.common.header.internals
+                    .RecordHeader("event-version", version.toString().toByteArray()),
+            )
 
             // Create Kafka metadata with headers
             val metadata =

@@ -33,6 +33,8 @@ class OutboxEventEntity(
     var aggregateId: String? = null,
     @Column(name = "payload", nullable = false, columnDefinition = "TEXT")
     var payload: String = "",
+    @Column(name = "version", nullable = false)
+    var version: Int = 1,
     @Column(name = "occurred_at", nullable = false)
     var occurredAt: Instant = Instant.now(),
     @Column(name = "recorded_at", nullable = false)
@@ -87,6 +89,7 @@ class OutboxEventEntity(
                 aggregateType = event.javaClass.declaringClass?.name ?: event.javaClass.name,
                 aggregateId = extractAggregateId(event),
                 payload = payload,
+                version = event.version.value,
                 occurredAt = event.occurredAt,
                 recordedAt = Instant.now(),
                 status = OutboxEventStatus.PENDING,

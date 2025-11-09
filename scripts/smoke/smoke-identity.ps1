@@ -30,11 +30,11 @@ function Test-Endpoint {
 }
 
 function Test-TcpPort {
-  Param([string]$Host, [int]$Port)
+  Param([string]$Hostname, [int]$Port)
   try {
-    $r = Test-NetConnection -ComputerName $Host -Port $Port -WarningAction SilentlyContinue
-    return [pscustomobject]@{ Host=$Host; Port=$Port; Reachable=$r.TcpTestSucceeded }
-  } catch { return [pscustomobject]@{ Host=$Host; Port=$Port; Reachable=$false } }
+    $r = Test-NetConnection -ComputerName $Hostname -Port $Port -WarningAction SilentlyContinue
+    return [pscustomobject]@{ Host=$Hostname; Port=$Port; Reachable=$r.TcpTestSucceeded }
+  } catch { return [pscustomobject]@{ Host=$Hostname; Port=$Port; Reachable=$false } }
 }
 
 Write-Host "[smoke] Tenancy-Identity + Kafka quick checks" -ForegroundColor Cyan
@@ -72,8 +72,8 @@ if ($tenant -and $user -and $pass) {
 }
 
 # Kafka checks (network level + UI)
-$kafkaPort = Test-TcpPort -Host 'localhost' -Port 9092
-$kafkaUiPort = Test-TcpPort -Host 'localhost' -Port 8090
+$kafkaPort = Test-TcpPort -Hostname 'localhost' -Port 9092
+$kafkaUiPort = Test-TcpPort -Hostname 'localhost' -Port 8090
 $kafkaUiHttp = Test-Endpoint -Url 'http://localhost:8090/' -Expected @(200,301,302)
 
 # Summaries

@@ -15,7 +15,8 @@ class RequestLoggingFilter :
     ContainerRequestFilter,
     ContainerResponseFilter {
     override fun filter(requestContext: ContainerRequestContext) {
-        val traceId = requestContext.getHeaderString(TRACE_ID_HEADER)?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
+        val traceId =
+            requestContext.getHeaderString(TRACE_ID_HEADER)?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
         val tenantId = requestContext.getHeaderString(TENANT_ID_HEADER)
 
         MDC.put("traceId", traceId)

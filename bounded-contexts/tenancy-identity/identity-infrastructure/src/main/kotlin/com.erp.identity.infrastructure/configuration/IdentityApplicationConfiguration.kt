@@ -33,7 +33,8 @@ class IdentityApplicationConfiguration {
     fun authenticationService(
         credentialCryptoPort: CredentialCryptoPort,
         passwordPolicy: PasswordPolicy,
-    ): AuthenticationService = AuthenticationService(credentialVerifier = credentialCryptoPort, passwordPolicy = passwordPolicy)
+    ): AuthenticationService =
+        AuthenticationService(credentialVerifier = credentialCryptoPort, passwordPolicy = passwordPolicy)
 
     @Produces
     fun userCommandHandler(
@@ -66,7 +67,8 @@ class IdentityApplicationConfiguration {
         )
 
     @Produces
-    fun tenantQueryHandler(tenantRepository: TenantRepository): TenantQueryHandler = TenantQueryHandler(tenantRepository)
+    fun tenantQueryHandler(tenantRepository: TenantRepository): TenantQueryHandler =
+        TenantQueryHandler(tenantRepository)
 
     @Produces
     fun roleCommandHandler(roleRepository: RoleRepository): RoleCommandHandler = RoleCommandHandler(roleRepository)

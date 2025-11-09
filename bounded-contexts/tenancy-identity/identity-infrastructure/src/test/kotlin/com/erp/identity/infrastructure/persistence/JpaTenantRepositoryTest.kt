@@ -42,7 +42,8 @@ class JpaTenantRepositoryTest {
 
     @Test
     fun `save wraps generic persistence exception`() {
-        every { entityManager.merge(any<TenantEntity>()) } throws PersistenceException("generic failure", RuntimeException("unexpected"))
+        every { entityManager.merge(any<TenantEntity>()) } throws
+            PersistenceException("generic failure", RuntimeException("unexpected"))
 
         val result = repository.save(sampleTenant())
 

@@ -82,7 +82,8 @@ data class Role(
         action: String,
     ): Boolean = permissions.any { it.resource == resource && it.action == action }
 
-    fun hasAnyPermission(requiredPermissions: Set<Permission>): Boolean = permissions.intersect(requiredPermissions).isNotEmpty()
+    fun hasAnyPermission(requiredPermissions: Set<Permission>): Boolean =
+        permissions.intersect(requiredPermissions).isNotEmpty()
 
     fun hasAllPermissions(requiredPermissions: Set<Permission>): Boolean = permissions.containsAll(requiredPermissions)
 }

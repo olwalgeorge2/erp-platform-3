@@ -188,7 +188,10 @@ class UserTest {
     fun `reactivate clears suspension reason and resets counters`() {
         val suspended =
             User
-                .create(tenantId, "suspended", "suspended@example.com", "Suspended User", credential()).activate().suspend("audit").copy(
+                .create(tenantId, "suspended", "suspended@example.com", "Suspended User", credential())
+                .activate()
+                .suspend("audit")
+                .copy(
                     failedLoginAttempts = 3,
                     lockedUntil = Instant.now().plusSeconds(120),
                 )

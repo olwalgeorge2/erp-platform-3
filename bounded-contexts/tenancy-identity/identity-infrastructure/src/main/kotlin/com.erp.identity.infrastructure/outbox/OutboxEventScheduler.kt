@@ -52,7 +52,14 @@ class OutboxEventScheduler(
 
             pendingEvents.forEach { event ->
                 try {
-                    when (val publishResult = messagePublisher.publish(event.eventType, event.aggregateId, event.payload)) {
+                    when (
+                        val publishResult =
+                            messagePublisher.publish(
+                                event.eventType,
+                                event.aggregateId,
+                                event.payload,
+                            )
+                    ) {
                         is Result.Success -> {
                             outboxRepository.markPublished(event)
                             publishedCounter.increment()

@@ -24,7 +24,9 @@ data class User(
 ) {
     init {
         require(username.isNotBlank()) { "Username cannot be blank" }
-        require(username.matches(USERNAME_REGEX)) { "Username must be alphanumeric with underscores/hyphens (3-50 chars)" }
+        require(
+            username.matches(USERNAME_REGEX),
+        ) { "Username must be alphanumeric with underscores/hyphens (3-50 chars)" }
         require(email.isNotBlank()) { "Email cannot be blank" }
         require(email.matches(EMAIL_REGEX)) { "Email must be valid" }
         require(fullName.isNotBlank()) { "Full name cannot be blank" }
@@ -90,7 +92,9 @@ data class User(
     }
 
     fun disable(): User {
-        require(status in setOf(UserStatus.ACTIVE, UserStatus.SUSPENDED)) { "Can only disable active or suspended users" }
+        require(
+            status in setOf(UserStatus.ACTIVE, UserStatus.SUSPENDED),
+        ) { "Can only disable active or suspended users" }
         return copy(
             status = UserStatus.DISABLED,
             updatedAt = Instant.now(),

@@ -121,7 +121,7 @@ class ProxyService {
 
         val request = builder.build()
         return try {
-            val upstream = client.send(request, HttpResponse.BodyHandlers.ofByteArray())
+            val upstream = sendWithRetry(client, request, route.target.retries)
             val durationMs = (System.nanoTime() - start) / 1_000_000
 
             val responseBuilder = Response.status(upstream.statusCode())
@@ -134,12 +134,52 @@ class ProxyService {
             val resp = responseBuilder.entity(upstream.body()).build()
             metrics.recordRequest(method, path, upstream.statusCode(), durationMs)
             resp
+        } catch (e: java.net.http.HttpTimeoutException) {
+            val durationMs = (System.nanoTime() - start) / 1_000_000
+            metrics.markError("proxy_timeout")
+            metrics.recordRequest(method, path, 504, durationMs)
+            Response.status(504).entity(byteArrayOf()).build()
         } catch (e: Exception) {
             val durationMs = (System.nanoTime() - start) / 1_000_000
             metrics.markError("proxy_exception")
-            metrics.recordRequest(method, path, 500, durationMs)
+            metrics.recordRequest(method, path, 502, durationMs)
             Response.status(502).entity(byteArrayOf()).build()
         }
+    }
+
+    private fun sendWithRetry(
+        client: HttpClient,
+        request: HttpRequest,
+        retries: Int,
+    ): HttpResponse<ByteArray> {
+        var attempt = 0
+        var delayMs = 100L
+        var lastException: Exception? = null
+        while (attempt <= retries) {
+            try {
+                val resp = client.send(request, HttpResponse.BodyHandlers.ofByteArray())
+                if (resp.statusCode() >= 500 && attempt < retries) {
+                    Thread.sleep(delayMs)
+                    attempt += 1
+                    delayMs = (delayMs * 2).coerceAtMost(1000L)
+                    continue
+                }
+                return resp
+            } catch (e: java.net.http.HttpTimeoutException) {
+                lastException = e
+                if (attempt >= retries) throw e
+                Thread.sleep(delayMs)
+                attempt += 1
+                delayMs = (delayMs * 2).coerceAtMost(1000L)
+            } catch (e: java.io.IOException) {
+                lastException = e
+                if (attempt >= retries) throw e
+                Thread.sleep(delayMs)
+                attempt += 1
+                delayMs = (delayMs * 2).coerceAtMost(1000L)
+            }
+        }
+        throw lastException ?: IllegalStateException("Retry logic failed without exception")
     }
 
     private fun buildQueryString(params: MultivaluedMap<String, String>): String {

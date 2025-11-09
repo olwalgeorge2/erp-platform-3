@@ -42,11 +42,26 @@ class TenantCommandHandler(
             }
     }
 
-    fun activateTenant(command: ActivateTenantCommand): Result<Tenant> = updateTenant(command.tenantId) { it.activate() }
+    fun activateTenant(
+        command: ActivateTenantCommand,
+    ): Result<Tenant> =
+        updateTenant(command.tenantId) { tenant ->
+            tenant.activate()
+        }
 
-    fun suspendTenant(command: SuspendTenantCommand): Result<Tenant> = updateTenant(command.tenantId) { it.suspend(command.reason) }
+    fun suspendTenant(
+        command: SuspendTenantCommand,
+    ): Result<Tenant> =
+        updateTenant(command.tenantId) { tenant ->
+            tenant.suspend(command.reason)
+        }
 
-    fun resumeTenant(command: ResumeTenantCommand): Result<Tenant> = updateTenant(command.tenantId) { it.reactivate() }
+    fun resumeTenant(
+        command: ResumeTenantCommand,
+    ): Result<Tenant> =
+        updateTenant(command.tenantId) { tenant ->
+            tenant.reactivate()
+        }
 
     private fun updateTenant(
         tenantId: TenantId,

@@ -82,20 +82,44 @@ dependencies {
     testRuntimeOnly(project(":bounded-contexts:inventory-management:inventory-warehouse:warehouse-infrastructure"))
 
     // Manufacturing Execution
-    testRuntimeOnly(project(":bounded-contexts:manufacturing-execution:manufacturing-maintenance:maintenance-domain"))
-    testRuntimeOnly(project(":bounded-contexts:manufacturing-execution:manufacturing-maintenance:maintenance-application"))
-    testRuntimeOnly(project(":bounded-contexts:manufacturing-execution:manufacturing-maintenance:maintenance-infrastructure"))
-    testRuntimeOnly(project(":bounded-contexts:manufacturing-execution:manufacturing-production:production-domain"))
-    testRuntimeOnly(project(":bounded-contexts:manufacturing-execution:manufacturing-production:production-application"))
-    testRuntimeOnly(project(":bounded-contexts:manufacturing-execution:manufacturing-production:production-infrastructure"))
-    testRuntimeOnly(project(":bounded-contexts:manufacturing-execution:manufacturing-quality:quality-domain"))
-    testRuntimeOnly(project(":bounded-contexts:manufacturing-execution:manufacturing-quality:quality-application"))
-    testRuntimeOnly(project(":bounded-contexts:manufacturing-execution:manufacturing-quality:quality-infrastructure"))
+    testRuntimeOnly(
+        project(":bounded-contexts:manufacturing-execution:manufacturing-maintenance:maintenance-domain"),
+    )
+    testRuntimeOnly(
+        project(":bounded-contexts:manufacturing-execution:manufacturing-maintenance:maintenance-application"),
+    )
+    testRuntimeOnly(
+        project(":bounded-contexts:manufacturing-execution:manufacturing-maintenance:maintenance-infrastructure"),
+    )
+    testRuntimeOnly(
+        project(":bounded-contexts:manufacturing-execution:manufacturing-production:production-domain"),
+    )
+    testRuntimeOnly(
+        project(":bounded-contexts:manufacturing-execution:manufacturing-production:production-application"),
+    )
+    testRuntimeOnly(
+        project(":bounded-contexts:manufacturing-execution:manufacturing-production:production-infrastructure"),
+    )
+    testRuntimeOnly(
+        project(":bounded-contexts:manufacturing-execution:manufacturing-quality:quality-domain"),
+    )
+    testRuntimeOnly(
+        project(":bounded-contexts:manufacturing-execution:manufacturing-quality:quality-application"),
+    )
+    testRuntimeOnly(
+        project(":bounded-contexts:manufacturing-execution:manufacturing-quality:quality-infrastructure"),
+    )
 
     // Operations Service
-    testRuntimeOnly(project(":bounded-contexts:operations-service:operations-field-service:field-service-domain"))
-    testRuntimeOnly(project(":bounded-contexts:operations-service:operations-field-service:field-service-application"))
-    testRuntimeOnly(project(":bounded-contexts:operations-service:operations-field-service:field-service-infrastructure"))
+    testRuntimeOnly(
+        project(":bounded-contexts:operations-service:operations-field-service:field-service-domain"),
+    )
+    testRuntimeOnly(
+        project(":bounded-contexts:operations-service:operations-field-service:field-service-application"),
+    )
+    testRuntimeOnly(
+        project(":bounded-contexts:operations-service:operations-field-service:field-service-infrastructure"),
+    )
 
     // Procurement
     testRuntimeOnly(project(":bounded-contexts:procurement:procurement-purchasing:purchasing-domain"))

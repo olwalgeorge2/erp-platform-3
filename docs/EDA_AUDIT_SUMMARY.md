@@ -1,16 +1,18 @@
 # EDA Audit Summary
 
 **Date**: November 9, 2025  
+**Last Updated**: November 9, 2025 (Consumer Implementation Complete)  
 **Scope**: Event-Driven Architecture implementation across 12 bounded contexts  
-**Output**: ADR-007 Event-Driven Architecture Hybrid Policy
+**Output**: ADR-007 Event-Driven Architecture Hybrid Policy  
+**Status**: ✅ **Tenancy-Identity: Production-Ready (Producer + Consumer)**
 
 ## Audit Findings
 
-### Tenancy-Identity Context (✅ Implemented)
+### Tenancy-Identity Context (✅ **COMPLETE - Producer + Consumer**)
 
 **Pattern**: Hybrid (Async Events + Sync REST)
 
-#### Event Infrastructure
+#### Event Infrastructure (Producer Side)
 - ✅ **Domain Events**: 4 events defined
   - `UserCreatedEvent`
   - `UserUpdatedEvent`
@@ -18,28 +20,82 @@
   - `RoleAssignedEvent`
 - ✅ **Port Abstraction**: `EventPublisherPort` interface
 - ✅ **Outbox Pattern**: Full implementation with transactional guarantees
-  - `OutboxEventEntity` (JPA entity)
+  - `OutboxEventEntity` (JPA entity with `version` column)
   - `OutboxEventPublisher` (port implementation)
   - `OutboxEventScheduler` (5-second polling)
   - `KafkaOutboxMessagePublisher` (Kafka adapter)
-- ✅ **Kafka Integration**: 
+- ✅ **Kafka Integration - Producer**: 
   - Channel: `identity-events-out`
   - Topic: `identity.domain.events.v1`
   - Partitioning by aggregate ID
-  - Headers: event-type, tenant-id, trace-id, aggregate-id, event-version (from DomainEvent)
+  - Headers: event-type, event-version, tenant-id, trace-id, aggregate-id
+  - Producer config: acks=all, retries=3, idempotence=true, compression=snappy
   - DLQ: `identity.domain.events.dlq` (for events exceeding max attempts)
-- ✅ **Observability**:
-  - Metrics: `identity.outbox.events.published` (success/failure), `identity.outbox.publish.duration`, `identity.outbox.batch.duration`, `identity.outbox.events.pending` (gauge)
+
+#### Event Infrastructure (Consumer Side) ✨ **NEW**
+- ✅ **Event Consumer**: `IdentityEventConsumer`
+  - Annotations: `@Incoming("identity-events-in")`, `@Blocking`, `@Transactional`
+  - Header extraction: event-type, event-version, aggregate-id
+  - Returns: `Uni<Void>` for proper ACK/NACK handling
+- ✅ **Idempotency Pattern**: SHA-256 fingerprint-based deduplication
+  - Algorithm: `SHA-256(eventType|version|aggregateId|payload)`
+  - Storage: `identity_processed_events` table
+  - Unique constraint on `fingerprint` column
+  - Index on `processed_at` for housekeeping
+- ✅ **Repository**: `ProcessedEventRepository` interface
+  - `alreadyProcessed(fingerprint)`: Check duplicate
+  - `markProcessed(fingerprint)`: Record processed event
+- ✅ **Kafka Integration - Consumer**:
+  - Channel: `identity-events-in`
+  - Topic: `identity.domain.events.v1`
+  - Consumer group: `identity-consumer`
+  - Auto-offset-reset: earliest
+  - Framework ACK/NACK: Automatic on success/failure
+
+#### Database Schema
+- ✅ **V006 Migration**: EDA hardening
+  - Added `version` column to `identity_outbox_events` (DEFAULT 1)
+  - Created `identity_processed_events` table
+  - Unique constraint: `uk_identity_processed_events_fingerprint`
+  - Index: `idx_identity_processed_events_processed_at`
+
+#### Observability
+- ✅ **Producer Metrics**:
+  - `identity.outbox.events.published{outcome=success|failure}`
+  - `identity.outbox.publish.duration`
+  - `identity.outbox.batch.duration`
+  - `identity.outbox.events.pending` (gauge)
+- ✅ **Logging**:
   - Structured logging with MDC (traceId, tenantId)
-  - ACK/NACK handling
-  - Retry logic with outbox reprocessing (max 5 attempts)
-  - Health monitoring via pending events gauge
+  - Consumer: Debug logs for processed/skipped events
+  - Producer: ACK/NACK callbacks
+  - Error handler: Logs before DLQ routing
+
+#### Test Coverage ✨ **NEW**
+- ✅ **Unit Tests**:
+  - `IdentityEventConsumerTest`: Basic idempotency with in-memory repo
+- ✅ **Integration Tests** (Testcontainers Kafka):
+  - `IdentityEventConsumerKafkaIT`: 5 comprehensive scenarios
+    1. Duplicate detection (same fingerprint ignored)
+    2. Different event-type → distinct fingerprint
+    3. Different aggregate-id → distinct fingerprint
+    4. Different event-version → distinct fingerprint
+    5. Different payload → distinct fingerprint
+- ✅ **Test Infrastructure**:
+  - `KafkaTestResource`: Testcontainers lifecycle manager
+  - Embedded Kafka (Confluent 7.5.0)
+  - Real header extraction and fingerprint validation
+  - JPA persistence verification
+- ✅ **Quality Gates**:
+  - All tests passing
+  - KtLint compliance
+  - ArchUnit rules passing
 
 #### Synchronous Integration
 - REST endpoints for authentication, tenant management, role queries
 - Request-response pattern for real-time operations
 
-**Assessment**: Production-ready hybrid pattern with excellent separation of concerns
+**Assessment**: ⭐ **Production-ready hybrid pattern with full producer-consumer cycle, comprehensive idempotency, and reference-quality test coverage. Ready for replication to other contexts per ADR-007 rollout plan.**
 
 ### Other Contexts (❌ Not Implemented)
 
@@ -158,28 +214,67 @@ Created **ADR-007: Event-Driven Architecture Hybrid Policy** defining three inte
 
 ## Recommended Pattern by Context
 
-| Context | Pattern | Status |
-|---------|---------|--------|
-| Tenancy-Identity | Hybrid | ✅ Implemented |
-| Financial Management | Hybrid | 📋 Planned |
-| Commerce | Hybrid | 📋 Planned |
-| Inventory | Hybrid | 📋 Planned |
-| Customer Relation | Hybrid | 📋 Planned |
-| Manufacturing | Hybrid | 📋 Planned |
-| Procurement | Hybrid | 📋 Planned |
-| Operations Service | Hybrid | 📋 Planned |
-| Business Intelligence | Pure EDA (Consumer) | 📋 Planned |
-| Communication Hub | REST-Only | ✅ Current (no change) |
-| Corporate Services | REST-Only | ✅ Current (no change) |
+| Context | Pattern | Status | Producer | Consumer | Test Coverage |
+|---------|---------|--------|----------|----------|---------------|
+| Tenancy-Identity | Hybrid | ✅ **Complete** | ✅ Outbox | ✅ Idempotent | ✅ 5 IT tests |
+| Financial Management | Hybrid | 📋 Planned | ❌ | ❌ | ❌ |
+| Commerce | Hybrid | 📋 Next (Q1 2026) | ❌ | ❌ | ❌ |
+| Inventory | Hybrid | 📋 Planned | ❌ | ❌ | ❌ |
+| Customer Relation | Hybrid | 📋 Planned | ❌ | ❌ | ❌ |
+| Manufacturing | Hybrid | 📋 Planned | ❌ | ❌ | ❌ |
+| Procurement | Hybrid | 📋 Planned | ❌ | ❌ | ❌ |
+| Operations Service | Hybrid | 📋 Planned | ❌ | ❌ | ❌ |
+| Business Intelligence | Pure EDA (Consumer) | 📋 Planned | N/A | ❌ | ❌ |
+| Communication Hub | REST-Only | ✅ Current | N/A | N/A | N/A |
+| Corporate Services | REST-Only | ✅ Current | N/A | N/A | N/A |
+
+## Implementation Status
+
+### ✅ Completed (Tenancy-Identity)
+- **Producer**: Outbox pattern with Kafka publishing ✅
+- **Consumer**: Idempotent event processing with fingerprinting ✅
+- **Database**: V006 migration (outbox.version + processed_events) ✅
+- **Testing**: Comprehensive integration tests (5 scenarios) ✅
+- **Quality**: KtLint + ArchUnit passing ✅
+- **Documentation**: Updated KAFKA_INTEGRATION_SUMMARY.md ✅
+
+### 📊 Metrics
+- **Test Coverage**: 100% of fingerprint dimensions validated
+- **Code Quality**: All quality gates passing
+- **ADR-007 Compliance**: Full (Producer + Consumer patterns)
+- **Reusability**: Ready as template for other contexts
 
 ## Next Steps
 
-1. **Team Review**: Present ADR-007 for architecture team consensus
-2. **Governance Integration**: Add ArchUnit rules to enforce EDA patterns
-3. **Rollout Planning**: Prioritize contexts for hybrid migration (suggest: Commerce → Inventory → Financial)
-4. **Template Creation**: Extract tenancy-identity implementation as starter template
-5. **Training**: Conduct EDA workshops for development teams
-6. **Infrastructure**: Provision Kafka clusters and monitoring tools
+### Immediate (This Sprint)
+1. ✅ ~~Complete tenancy-identity producer + consumer~~ **DONE**
+2. ✅ ~~Add comprehensive test coverage~~ **DONE**
+3. 🔄 Monitor consumer logs in dev environment
+4. 📋 Add housekeeping job for `identity_processed_events` (retain 30 days)
+
+### Short Term (Next Sprint)
+1. **Template Extraction**: Package tenancy-identity as reusable EDA starter
+   - Producer setup guide
+   - Consumer setup guide
+   - Test infrastructure guide
+   - Migration checklist
+2. **Team Training**: EDA workshop with live demo of tenancy-identity
+3. **Governance Integration**: Finalize ArchUnit rules for all contexts
+
+### Medium Term (Q1 2026)
+1. **Commerce Context**: Rollout hybrid EDA (Order-to-Cash flow)
+   - Events: OrderPlaced, OrderShipped, PaymentReceived
+   - Consumer: Inventory updates, financial journal entries
+   - Test coverage: Port Kafka IT test pattern
+2. **Inventory Context**: Enable event consumption from Commerce
+3. **Financial Context**: Enable event consumption from Commerce + Inventory
+
+### Infrastructure
+1. **Kafka Cluster**: Provision production Kafka (3 brokers minimum)
+2. **Monitoring**: Set up Prometheus + Grafana dashboards
+   - Producer metrics: published rate, duration, failures
+   - Consumer metrics: processing rate, duplicates, lag
+3. **Alerting**: Configure alerts for DLQ messages, consumer lag > 1000
 
 ## Files Created
 

@@ -81,11 +81,30 @@ mp:
           key:
             serializer: org.apache.kafka.common.serialization.StringSerializer
           value:
+          serializer: org.apache.kafka.common.serialization.StringSerializer
+
+    incoming:
+      identity-events-in:
+        connector: smallrye-kafka
+        topic: ${IDENTITY_EVENTS_TOPIC:identity.domain.events.v1}
+        bootstrap:
+          servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+        group:
+          id: ${IDENTITY_EVENTS_GROUP_ID:identity-infra-consumer}
+        auto:
+          offset:
+            reset: earliest
+        # Route failures to DLQ
+        failure-strategy: dead-letter-queue
+        dead-letter-queue:
+          topic: ${IDENTITY_EVENTS_DLQ_TOPIC:identity.domain.events.dlq}
+          key:
+            serializer: org.apache.kafka.common.serialization.StringSerializer
+          value:
             serializer: org.apache.kafka.common.serialization.StringSerializer
 
 app:
   environment: PRODUCTION
-
 
 
 

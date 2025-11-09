@@ -34,6 +34,7 @@ dependencies {
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.3.1")
     testImplementation("org.testcontainers:junit-jupiter:1.20.1")
     testImplementation("org.testcontainers:postgresql:1.20.1")
+    testImplementation("org.testcontainers:kafka:1.20.1")
 }
 
 tasks.withType<Test>().configureEach {

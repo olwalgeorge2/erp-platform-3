@@ -380,8 +380,106 @@ fun getProduct(@PathParam("id") id: String): Response {
 - **Availability**: 99.95% uptime
 - **Scale**: Horizontally to 10+ instances behind load balancer
 
+## Implementation Status
+
+**Current Phase:** Sprint 3 (Nov 11-25, 2025)  
+**Status:** 🚧 In Progress - Pre-Implementation Complete  
+**Implementation Plan:** [docs/SPRINT3_API_GATEWAY_PLAN.md](../SPRINT3_API_GATEWAY_PLAN.md)  
+**README:** [api-gateway/README.md](../../api-gateway/README.md)
+
+### Completed (2025-11-09)
+- ✅ Dependencies added to version catalog (`gradle/libs.versions.toml`)
+- ✅ Quarkus extensions configured (JWT, Redis, REST Client, Micrometer, OpenTelemetry)
+- ✅ Test dependencies prepared (Testcontainers, WireMock, REST Assured)
+- ✅ Sprint plan finalized with security hardening (Story 2.5)
+- ✅ Implementation checklist documented in README
+- ✅ Placeholder inventory completed
+
+### In Progress
+- 🔄 Epic 0: Pre-Sprint Setup (Story 0.1) ✅
+- 🔄 Epic 1: Core Gateway Infrastructure (Stories 1.1-1.4)
+- 📋 Epic 2: Authentication & Authorization (Stories 2.1-2.5)
+- 📋 Epic 3: Rate Limiting (Stories 3.1-3.3)
+- 📋 Epic 4: Observability (Stories 4.1-4.3)
+
+### Key Implementation Decisions
+
+**Security (Story 2.5 - NEW):**
+- Anti-enumeration patterns from DEVELOPER_ADVISORY.md
+- Timing guards to prevent side-channel attacks
+- ArchUnit tests for architecture enforcement
+- Audit logging without PII exposure
+
+**Technology Stack:**
+- Quarkus 3.29.0 (Kotlin 2.2.0)
+- SmallRye JWT for authentication
+- Redis for distributed rate limiting
+- Micrometer + Prometheus for metrics
+- OpenTelemetry for distributed tracing
+
+**Integration Points:**
+- Tenancy-Identity: JWKS endpoint for JWT validation
+- Platform-Shared: Security utilities (ADR-006 compliant)
+- Redis: Rate limiting state management
+- Load Balancer: HA deployment (to be configured)
+
+### Sprint 3 Milestones
+
+| Day | Epic | Focus | Status |
+|-----|------|-------|--------|
+| Pre | 0 | Dependencies & Setup | ✅ Complete |
+| 1-4 | 1 | Core Infrastructure | 📋 Planned |
+| 5-6 | 2 | Auth + Security Hardening | 📋 Planned |
+| 7-8 | 3 | Rate Limiting | 📋 Planned |
+| 9 | 4 | Observability | 📋 Planned |
+| 10-11 | - | Testing + Polish | 📋 Planned |
+
+### Quality Gates (Sprint Completion)
+
+**Functional:**
+- [ ] Routes to tenancy-identity context working
+- [ ] JWT validation with identity service JWKS
+- [ ] Per-tenant rate limiting enforced
+- [ ] CORS configured and tested
+- [ ] Error responses standardized
+
+**Non-Functional:**
+- [ ] p95 latency < 50ms overhead
+- [ ] 1000 req/s per instance (load tested)
+- [ ] >80% test coverage
+- [ ] ktlint passing
+- [ ] Security scan clean (no HIGH/CRITICAL)
+
+**Security:**
+- [ ] Anti-enumeration patterns implemented
+- [ ] Timing guards active
+- [ ] ArchUnit tests enforcing boundaries
+- [ ] Audit logging PII-free
+
+### Post-Sprint 3 Roadmap
+
+**Sprint 4:** Expand routing to additional contexts (commerce, inventory)  
+**Sprint 5:** API versioning and backward compatibility  
+**Sprint 6:** GraphQL gateway implementation (optional)  
+**Sprint 7:** API composition patterns (BFF)
+
+### Monitoring & Operations
+
+**Deployment Target:** Kubernetes (multi-instance HA)  
+**Observability:**
+- Health: `/health/live`, `/health/ready`
+- Metrics: `/metrics` (Prometheus)
+- Tracing: OpenTelemetry with correlation IDs
+
+**Performance Baseline (from ADR):**
+- Latency target: <10ms overhead (P95)
+- Throughput target: 10,000 req/s per instance
+- Sprint 3 target: 1000 req/s (baseline validation)
+
 ## Review Date
 
 - **After Phase 3**: Validate gateway performance under load
 - **After Phase 5**: Review if BFF patterns needed
 - **Quarterly**: Assess if service mesh needed
+- **Sprint 3 Retrospective**: Nov 25, 2025
+

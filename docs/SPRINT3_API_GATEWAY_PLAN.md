@@ -121,40 +121,93 @@
 
 ## Work Breakdown Structure
 
-### Epic 1: Core Gateway Infrastructure (32 hours)
+### Epic 0: Pre-Sprint Setup (1 hour)
 
-#### Story 1.1: Project Setup & Configuration (4 hours)
-**Estimate:** 4 hours  
+#### Story 0.1: Dependency & Placeholder Cleanup (1 hour)
+**Estimate:** 1 hour  
+**Assignee:** Developer 1  
+**Priority:** P0 - MUST complete before Story 1.1
+
+**Tasks:**
+- [x] Add missing Quarkus extensions to `gradle/libs.versions.toml`:
+  - `quarkus-rest-client`
+  - `quarkus-rest-client-jackson`
+  - `quarkus-smallrye-jwt`
+  - `quarkus-smallrye-jwt-build`
+  - `quarkus-redis-client`
+  - `quarkus-micrometer-registry-prometheus`
+- [x] Add test dependencies to version catalog:
+  - `testcontainers` (core + junit-jupiter)
+  - `wiremock`
+  - `rest-assured`
+- [ ] Review existing placeholder files to be replaced:
+  - `ApiGatewayApplication.kt`
+  - `routing/GatewayRouter.kt`
+  - `security/GatewaySecurityConfig.kt`
+  - `security/TenantFilter.kt`
+
+**Acceptance Criteria:**
+- Version catalog entries added (versions managed by Quarkus BOM)
+- Test dependencies available for integration tests
+- Placeholder file inventory documented
+
+**Files Modified:**
+```
+gradle/libs.versions.toml (update)
+```
+
+**Notes:**
+- Quarkus BOM manages all Quarkus extension versions automatically
+- Focus on gateway implementation, not version management
+
+---
+
+### Epic 1: Core Gateway Infrastructure (33 hours)
+
+#### Story 1.1: Project Setup & Configuration (5 hours)
+**Estimate:** 5 hours (updated from 4 hours)  
 **Assignee:** Developer 1
 
 **Tasks:**
 - [x] Review existing `api-gateway/` structure
-- [ ] Configure Quarkus extensions:
-  - `quarkus-rest-client-reactive` (for service calls)
-  - `quarkus-rest-client-jackson` (JSON serialization)
-  - `quarkus-smallrye-jwt` (JWT validation)
-  - `quarkus-redis-client` (rate limiting)
-  - `quarkus-micrometer-registry-prometheus` (metrics)
-  - `quarkus-opentelemetry` (tracing)
-- [ ] Create `application.yml` configuration structure
-- [ ] Define environment variables in `config/api-gateway.env`
-- [ ] Update `build.gradle.kts` with dependencies
-- [ ] Remove excluded Hibernate/Agroal dependencies (already done ✅)
+- [ ] Update `build.gradle.kts` with dependencies from version catalog
+- [ ] Replace placeholder `ApiGatewayApplication.kt` with proper Quarkus app
+- [ ] Create `application.yml` configuration structure:
+  - Server config (port: 8080)
+  - CORS settings
+  - JWT validation settings
+  - Redis connection
+  - Observability (logging, metrics, tracing)
+- [ ] Create `config/api-gateway.env` with deployment variables
+- [ ] Reference `.env.example` for port/host configurations
 - [ ] Verify build passes: `./gradlew :api-gateway:build`
+- [ ] Update README.md with:
+  - Architecture overview
+  - Setup instructions
+  - Configuration reference
+  - Integration points with tenancy-identity
 
 **Acceptance Criteria:**
-- Gateway compiles successfully
-- Configuration files structured and documented
-- README.md updated with setup instructions
+- Gateway compiles successfully with all dependencies
+- Configuration files align with `.env.example` variables
+- Placeholder files replaced (not supplemented)
+- README documents security patterns from DEVELOPER_ADVISORY
+- Build passes without warnings
 
 **Files to Create/Modify:**
 ```
 api-gateway/
-├── src/main/resources/application.yml
-├── config/api-gateway.env
-├── README.md
+├── src/main/kotlin/com/erp/apigateway/ApiGatewayApplication.kt (replace)
+├── src/main/resources/application.yml (create)
+├── config/api-gateway.env (create)
+├── README.md (update)
 └── build.gradle.kts (update)
 ```
+
+**Security Notes:**
+- Reference DEVELOPER_ADVISORY.md sections 1-7 for patterns
+- Anti-enumeration for auth failures (generic 401 responses)
+- Timing guards for authentication to prevent side-channel attacks
 
 ---
 
@@ -427,6 +480,56 @@ api-gateway/src/test/kotlin/cors/CorsTest.kt
 api-gateway/src/main/kotlin/
 └── config/PublicEndpointsConfig.kt
 ```
+
+---
+
+#### Story 2.5: Security Hardening (3 hours)
+**Estimate:** 3 hours  
+**Assignee:** Developer 1  
+**Priority:** P0 - Security critical
+
+**Tasks:**
+- [ ] Implement anti-enumeration patterns from DEVELOPER_ADVISORY.md:
+  - Generic 401 responses (no user existence disclosure)
+  - Consistent error messages for auth failures
+- [ ] Add timing guards for authentication:
+  - Minimum response time budget (prevent timing attacks)
+  - Normalize successful vs failed auth response times
+- [ ] Create ArchUnit tests for gateway architecture:
+  - Validate filter execution order
+  - Ensure security context propagation
+  - Verify no business logic in gateway layer
+- [ ] Validate compliance with ADR-006 platform-shared rules:
+  - No business domain models in gateway
+  - Only technical primitives and security utilities
+- [ ] Security logging without PII exposure:
+  - Log authentication attempts (without credentials)
+  - Structured logging for audit trails
+  - Correlation IDs for security events
+
+**Acceptance Criteria:**
+- Authentication failures return generic messages
+- Timing attacks mitigated with response budgets
+- ArchUnit tests enforce architecture boundaries
+- Security audit logs structured and PII-free
+- Aligns with tenancy-identity security patterns
+
+**Files to Create:**
+```
+api-gateway/src/main/kotlin/
+├── security/
+│   ├── AuthenticationTimingGuard.kt
+│   ├── AntiEnumerationHandler.kt
+│   └── SecurityAuditLogger.kt
+└── test/
+    ├── arch/GatewayArchitectureTest.kt
+    └── security/SecurityHardeningTest.kt
+```
+
+**Reference Documentation:**
+- DEVELOPER_ADVISORY.md (Sections 1-7)
+- ADR-006: Platform-Shared Governance Rules
+- REVIEW_PHASE1_ERROR_SANITIZATION_* (Anti-enumeration patterns)
 
 ---
 
@@ -930,21 +1033,42 @@ export default function () {
 
 ## Daily Milestones
 
+### Pre-Sprint (Before Day 1)
+**Focus:** Dependency Preparation
+
+**Goals:**
+- [x] Complete Story 0.1: Dependency & Placeholder Cleanup (1 hour)
+  - Version catalog updated with Quarkus extensions
+  - Test dependencies added
+  - Placeholder inventory completed
+
+**Deliverables:**
+- libs.versions.toml updated
+- Build environment ready
+- Architecture baseline documented
+
+**Status:** ✅ Complete (2025-11-09)
+
+---
+
 ### Day 1 (Mon, Nov 11)
 **Focus:** Setup & Configuration
 
 **Goals:**
 - [ ] Sprint kickoff meeting (1 hour)
-- [ ] Review ADR-004 and DEVELOPER_ADVISORY
-- [ ] Complete Story 1.1: Project Setup (4 hours)
+- [ ] Review ADR-004, DEVELOPER_ADVISORY (sections 1-7), ADR-006
+- [ ] Complete Story 1.1: Project Setup (5 hours - adjusted)
 - [ ] Start Story 1.2: Route Configuration (2 hours)
 
 **Deliverables:**
-- Gateway builds successfully
-- Configuration structure in place
-- README updated
+- Gateway builds successfully with all dependencies
+- Configuration aligns with .env.example
+- Placeholder files replaced
+- README documents security patterns
 
-**EOD Status:** 30% Epic 1 complete
+**EOD Status:** 35% Epic 1 complete
+
+**Key Focus:** Security patterns from DEVELOPER_ADVISORY must be referenced in README
 
 ---
 
@@ -1008,78 +1132,100 @@ export default function () {
 - Tenant context resolution
 - Integration with identity service
 
-**EOD Status:** 75% Epic 2 complete
+**EOD Status:** 65% Epic 2 complete
 
 ---
 
 ### Day 6 (Mon, Nov 18)
-**Focus:** CORS & Public Endpoints + Rate Limiting Setup
+**Focus:** Security Hardening + CORS & Public Endpoints
 
 **Goals:**
+- [ ] Complete Story 2.5: Security Hardening (3 hours)
 - [ ] Complete Story 2.3: CORS (4 hours)
 - [ ] Complete Story 2.4: Public Endpoints (2 hours)
-- [ ] Complete Story 3.1: Redis Integration (4 hours)
 
 **Deliverables:**
+- Anti-enumeration patterns implemented
+- Timing guards active
+- ArchUnit tests passing
 - CORS working
 - Public endpoints accessible
-- Redis connected
 
-**EOD Status:** Epic 2 complete, 25% Epic 3 complete
+**EOD Status:** Epic 2 complete, security baseline established
+
+**Key Focus:** Security hardening from DEVELOPER_ADVISORY is critical for production readiness
 
 ---
 
 ### Day 7 (Tue, Nov 19)
-**Focus:** Rate Limiting Implementation
+**Focus:** Rate Limiting Setup
 
 **Goals:**
-- [ ] Complete Story 3.2: Rate Limiter (8 hours)
-- [ ] Start Story 3.3: Rate Limit Filter (2 hours)
+- [ ] Complete Story 3.1: Redis Integration (4 hours)
+- [ ] Start Story 3.2: Rate Limiter (4 hours)
 
 **Deliverables:**
-- Token bucket algorithm working
-- Redis-backed rate limiting
-- Unit tests passing
+- Redis connected
+- Health check reports Redis status
+- Token bucket algorithm started
 
-**EOD Status:** 80% Epic 3 complete
+**EOD Status:** 50% Epic 3 complete
 
 ---
 
 ### Day 8 (Wed, Nov 20)
-**Focus:** Rate Limiting Completion & Observability
+**Focus:** Rate Limiting Implementation
 
 **Goals:**
-- [ ] Complete Story 3.3: Rate Limit Filter (2 hours)
-- [ ] Complete Story 4.1: Structured Logging (3 hours)
-- [ ] Complete Story 4.2: Metrics (3 hours)
+- [ ] Complete Story 3.2: Rate Limiter (4 hours remaining)
+- [ ] Complete Story 3.3: Rate Limit Filter (4 hours)
 
 **Deliverables:**
-- Rate limiting end-to-end
-- JSON logging configured
-- Prometheus metrics exposed
+- Token bucket algorithm working
+- Redis-backed rate limiting
+- Rate limit filter end-to-end
+- Unit tests passing
 
-**EOD Status:** Epic 3 complete, 75% Epic 4 complete
+**EOD Status:** Epic 3 complete
 
 ---
 
 ### Day 9 (Thu, Nov 21)
-**Focus:** Observability & Testing
+**Focus:** Observability
 
 **Goals:**
+- [ ] Complete Story 4.1: Structured Logging (3 hours)
+- [ ] Complete Story 4.2: Metrics (3 hours)
 - [ ] Complete Story 4.3: Distributed Tracing (2 hours)
-- [ ] Load testing (3 hours)
-- [ ] Integration test suite completion (3 hours)
 
 **Deliverables:**
+- JSON logging configured
+- Prometheus metrics exposed
+- Distributed tracing active
 - All observability features working
-- Load test results documented
-- Integration tests passing
 
-**EOD Status:** Epic 4 complete, all features implemented
+**EOD Status:** Epic 4 complete
 
 ---
 
 ### Day 10 (Fri, Nov 22)
+**Focus:** Testing & Validation
+
+**Goals:**
+- [ ] Load testing (3 hours)
+- [ ] Integration test suite completion (3 hours)
+- [ ] End-to-end validation with identity service (2 hours)
+
+**Deliverables:**
+- Load test results documented (1000 req/s target)
+- Integration tests passing
+- E2E flow validated
+
+**EOD Status:** All features implemented and tested
+
+---
+
+### Day 11 (Mon, Nov 25) - Extended Day
 **Focus:** Polish, Documentation & Sprint Closure
 
 **Goals:**
@@ -1088,10 +1234,12 @@ export default function () {
   - API documentation
   - Deployment runbook
   - Operations guide
-  - README updates
+  - README security patterns
 - [ ] Security scan review (1 hour)
 - [ ] Sprint demo preparation (1 hour)
 - [ ] Sprint retrospective (1 hour)
+
+**Note:** Extended to Day 11 due to Story 2.5 addition (security hardening)
 
 **Deliverables:**
 - All P0 stories complete
@@ -1222,7 +1370,7 @@ QUARKUS_HTTP_LIMITS_MAX_BODY_SIZE=10M
 // build.gradle.kts
 dependencies {
     // Quarkus Core
-    implementation("io.quarkus:quarkus-rest-client-reactive")
+    implementation("io.quarkus:quarkus-rest-client")
     implementation("io.quarkus:quarkus-rest-client-jackson")
     implementation("io.quarkus:quarkus-resteasy-reactive-jackson")
     
@@ -1249,7 +1397,7 @@ dependencies {
 
 ### Reference Documentation
 
-- [Quarkus REST Client](https://quarkus.io/guides/rest-client-reactive)
+- [Quarkus REST Client](https://quarkus.io/guides/rest-client)
 - [Quarkus JWT](https://quarkus.io/guides/security-jwt)
 - [Quarkus Redis](https://quarkus.io/guides/redis)
 - [Quarkus Micrometer](https://quarkus.io/guides/micrometer)

@@ -1,5 +1,6 @@
 #
-#Sun Nov 09 16:47:28 EAT 2025
+#Sun Nov 09 17:11:08 EAT 2025
+classes\ that\ have\ simple\ name\ ending\ with\ 'EventConsumer'\ should\ reside\ in\ any\ package\ ['com.erp.identity..infrastructure..'],\ because\ consumers\ are\ infrastructure\ adapters\ (ADR-007)=4868ecee-8db8-41b7-b39a-d6bc941b0ba1
 classes\ that\ have\ simple\ name\ ending\ with\ 'OutboxEventScheduler'\ or\ have\ simple\ name\ ending\ with\ 'OutboxEventPublisher'\ or\ have\ simple\ name\ ending\ with\ 'OutboxMessagePublisher'\ or\ have\ simple\ name\ ending\ with\ 'OutboxRepository'\ or\ have\ simple\ name\ ending\ with\ 'OutboxEventEntity'\ should\ reside\ in\ any\ package\ ['com.erp.identity..infrastructure..'],\ because\ outbox\ is\ an\ infrastructure\ concern\ (ADR-007)=16b52ea5-0961-4866-ba5a-bd98bdc554b6
 classes\ that\ implement\ com.erp.shared.types.events.DomainEvent\ and\ reside\ in\ any\ package\ ['com.erp.identity..domain.events..']\ should\ have\ only\ final\ fields,\ because\ domain\ events\ must\ be\ immutable\ (ADR-007)=a7c18ea6-f4a5-4608-ba8a-b87c056fea0f
 no\ classes\ that\ reside\ in\ a\ package\ 'com.erp.commerce..'\ should\ depend\ on\ classes\ that\ reside\ in\ any\ package\ ['com.erp.identity..',\ 'com.erp.finance..',\ 'com.erp.inventory..',\ 'com.erp.manufacturing..',\ 'com.erp.procurement..',\ 'com.erp.customer..',\ 'com.erp.corporate..',\ 'com.erp.communication..',\ 'com.erp.operations..',\ 'com.erp.bi..'],\ because\ bounded\ contexts\ should\ communicate\ via\ events,\ not\ direct\ dependencies\ (ADR-003,\ ADR-006)=9e2f01af-5100-4930-a390-8b445b8685cc

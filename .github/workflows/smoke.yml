@@ -1,0 +1,43 @@
+name: Smoke Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      identity_base_url:
+        description: "Override base URL for identity (optional)"
+        required: false
+      tenant_id:
+        description: "Tenant ID for positive login (optional)"
+        required: false
+      auth_username:
+        description: "Username/email for positive login (optional)"
+        required: false
+      auth_password:
+        description: "Password for positive login (optional, masked)"
+        required: false
+        type: string
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Run smoke tests
+        env:
+          IDENTITY_BASE_URL: ${{ inputs.identity_base_url }}
+          TENANT_ID: ${{ inputs.tenant_id }}
+          AUTH_USERNAME: ${{ inputs.auth_username }}
+          AUTH_PASSWORD: ${{ inputs.auth_password }}
+        run: ./gradlew smokeIdentity --no-daemon --stacktrace
+

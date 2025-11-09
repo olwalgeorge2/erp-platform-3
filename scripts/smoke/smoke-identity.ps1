@@ -45,6 +45,32 @@ Write-Host "[smoke] Using base URL: $base" -ForegroundColor Cyan
 $health = Test-Endpoint -Url "$base/q/health" -Expected @(200)
 $templates = Test-Endpoint -Url "$base/api/roles/templates" -Expected @(200)
 
+# Optional auth test
+$tenant = $env:TENANT_ID
+$user = $env:AUTH_USERNAME
+$pass = $env:AUTH_PASSWORD
+
+function Invoke-Login {
+  Param([string]$Base, [string]$TenantId, [string]$Username, [string]$Password)
+  $payload = @{ tenantId = $TenantId; usernameOrEmail = $Username; password = $Password } | ConvertTo-Json -Compress
+  try {
+    $res = Invoke-WebRequest -Uri "$Base/api/auth/login" -UseBasicParsing -TimeoutSec 5 -Method POST -ContentType 'application/json' -Body $payload -ErrorAction Stop
+    return [pscustomobject]@{ StatusCode=$res.StatusCode; Ok=$true; Body=$res.Content }
+  } catch {
+    $code = if ($_.Exception.Response) { $_.Exception.Response.StatusCode.value__ } else { 0 }
+    return [pscustomobject]@{ StatusCode=$code; Ok=$false; Body='' }
+  }
+}
+
+if ($tenant -and $user -and $pass) {
+  $login = Invoke-Login -Base $base -TenantId $tenant -Username $user -Password $pass
+  Write-Host "[smoke] Login test (env creds): $($login.StatusCode)"
+} else {
+  # Negative login to validate endpoint wiring (expect 401)
+  $login = Invoke-Login -Base $base -TenantId ([guid]::NewGuid().ToString()) -Username "nouser@example.com" -Password "wrongpass123!"
+  Write-Host "[smoke] Login test (negative): $($login.StatusCode)"
+}
+
 # Kafka checks (network level + UI)
 $kafkaPort = Test-TcpPort -Host 'localhost' -Port 9092
 $kafkaUiPort = Test-TcpPort -Host 'localhost' -Port 8090
@@ -59,6 +85,12 @@ Write-Host "[smoke] Kafka UI 8090 reachable: $($kafkaUiPort.Reachable); HTTP=$($
 # Basic assertion logic
 $fail = $false
 if (-not $templates.Ok) { $fail = $true }
+# If env creds were provided, require 200; otherwise accept 401/400 as valid negative
+if ($tenant -and $user -and $pass) {
+  if ($login.StatusCode -ne 200) { $fail = $true }
+} else {
+  if ($login.StatusCode -notin  @(400,401)) { $fail = $true }
+}
 # Health endpoint may be disabled; warn if not 200 but do not fail purely on that
 if (-not $health.Ok) { Write-Host "[warn] /q/health not 200 (may be disabled)." -ForegroundColor Yellow }
 
@@ -68,4 +100,3 @@ if ($fail) {
 }
 
 Write-Host "[smoke] All critical checks passed." -ForegroundColor Green
-

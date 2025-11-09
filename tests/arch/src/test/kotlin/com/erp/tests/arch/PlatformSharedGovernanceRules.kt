@@ -26,9 +26,10 @@ class PlatformSharedGovernanceRules {
         @JvmStatic
         @BeforeAll
         fun importClasses() {
-            allClasses = ClassFileImporter()
-                .withImportOption(ImportOption.DoNotIncludeTests())
-                .importPackages("com.erp..")
+            allClasses =
+                ClassFileImporter()
+                    .withImportOption(ImportOption.DoNotIncludeTests())
+                    .importPackages("com.erp..")
         }
     }
 
@@ -64,8 +65,7 @@ class PlatformSharedGovernanceRules {
                     "com.erp.operations..",
                     // BI contexts
                     "com.erp.bi..",
-                )
-                .because(
+                ).because(
                     "platform-shared must contain only technical primitives, " +
                         "not business domain concepts (ADR-006)",
                 )
@@ -110,8 +110,7 @@ class PlatformSharedGovernanceRules {
                     "com.erp.communication..",
                     "com.erp.operations..",
                     "com.erp.bi..",
-                )
-                .because(
+                ).because(
                     "bounded contexts should communicate via events, " +
                         "not direct dependencies (ADR-003, ADR-006)",
                 )
@@ -135,8 +134,7 @@ class PlatformSharedGovernanceRules {
                     "com.erp.communication..",
                     "com.erp.operations..",
                     "com.erp.bi..",
-                )
-                .because(
+                ).because(
                     "bounded contexts should communicate via events, " +
                         "not direct dependencies (ADR-003, ADR-006)",
                 )
@@ -160,8 +158,7 @@ class PlatformSharedGovernanceRules {
                     "com.erp.communication..",
                     "com.erp.operations..",
                     "com.erp.bi..",
-                )
-                .because(
+                ).because(
                     "bounded contexts should communicate via events, " +
                         "not direct dependencies (ADR-003, ADR-006)",
                 )

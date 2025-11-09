@@ -11,7 +11,9 @@ sealed class Result<out T> {
     ) : Result<Nothing>() {
         init {
             val duplicates = validationErrors.groupBy { it.field }.filterValues { it.size > 1 }
-            require(duplicates.isEmpty()) { "Duplicate validation errors for fields: ${duplicates.keys.joinToString()}" }
+            require(duplicates.isEmpty()) {
+                "Duplicate validation errors for fields: ${duplicates.keys.joinToString()}"
+            }
         }
     }
 

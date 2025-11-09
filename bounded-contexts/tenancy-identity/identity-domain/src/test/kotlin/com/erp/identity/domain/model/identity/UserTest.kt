@@ -168,7 +168,16 @@ class UserTest {
 
     @Test
     fun `suspend adds suspension reason metadata`() {
-        val active = User.create(tenantId, "active_user", "active.user@example.com", "Active User", credential()).activate()
+        val active =
+            User
+                .create(
+                    tenantId,
+                    "active_user",
+                    "active.user@example.com",
+                    "Active User",
+                    credential(),
+                )
+                .activate()
 
         val suspended = active.suspend("policy review")
 

@@ -45,7 +45,7 @@ jobs:
           cache: gradle
       
       - name: Validate Gradle wrapper (with retry)
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v3.0.0
         with:
           timeout_minutes: 3
           max_attempts: 3
@@ -54,13 +54,13 @@ jobs:
             chmod +x gradlew
             ./gradlew --version
       
-      - name: Warm up dependency cache
-        uses: nick-fields/retry@v3
+      - name: Warm up dependency cache (dependency resolution only)
+        uses: nick-fields/retry@v3.0.0
         with:
-          timeout_minutes: 8
+          timeout_minutes: 6
           max_attempts: 3
           retry_wait_seconds: 10
-          command: ./gradlew dependencies --no-daemon --stacktrace
+          command: ./gradlew resolveAndLockAll --write-locks --no-daemon --stacktrace || ./gradlew dependencies --no-daemon --stacktrace
 
   lint:
     needs: cache-warmup
@@ -87,7 +87,7 @@ jobs:
         run: chmod +x gradlew
       
       - name: Run ktlint (with retry)
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v3.0.0
         with:
           timeout_minutes: 8
           max_attempts: 3
@@ -126,7 +126,7 @@ jobs:
         run: chmod +x gradlew
       
       - name: Build all modules (exclude integration tests, with retry)
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v3.0.0
         with:
           timeout_minutes: 25
           max_attempts: 3
@@ -193,7 +193,7 @@ jobs:
         run: chmod +x gradlew
       
       - name: Run Identity Infrastructure Tests (with retry)
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v3.0.0
         with:
           timeout_minutes: 15
           max_attempts: 3
@@ -238,7 +238,7 @@ jobs:
         run: chmod +x gradlew
       
       - name: Run ArchUnit tests (with retry)
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v3.0.0
         with:
           timeout_minutes: 12
           max_attempts: 3

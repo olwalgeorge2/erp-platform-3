@@ -79,6 +79,7 @@ cp .env.example .env
    $env:KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"   # host runtime
    ```
    > When the identity service runs inside Docker compose instead, set `KAFKA_BOOTSTRAP_SERVERS=kafka:29092` so it reaches the internal listener.
+   > Kafka UI is available at `http://localhost:8090` once the `kafka-ui` container is healthy.
 4. Verify the credentials with the helper script:
    ```powershell
    .\test-db-connection.ps1

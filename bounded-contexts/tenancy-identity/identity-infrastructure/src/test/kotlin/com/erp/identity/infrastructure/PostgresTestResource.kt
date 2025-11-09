@@ -17,7 +17,8 @@ class PostgresTestResource : QuarkusTestResourceLifecycleManager {
             "quarkus.datasource.jdbc.url" to postgres.jdbcUrl,
             "quarkus.datasource.username" to postgres.username,
             "quarkus.datasource.password" to postgres.password,
-            "quarkus.hibernate-orm.database.generation" to "validate",
+            // Disable scheduled jobs during tests to avoid EMF closed/rollback noise on shutdown
+            "quarkus.scheduler.enabled" to "false",
         )
     }
 

@@ -10,6 +10,7 @@ This document lists all port mappings for the ERP platform services to avoid con
 | 8090 | Kafka UI | erp-kafka-ui | Kafka management interface (changed from 8080 to avoid Docker conflict) |
 | 9092 | Kafka Broker | erp-kafka | Kafka external listener |
 | 9093 | Kafka Controller | erp-kafka | Kafka controller (KRaft mode) |
+| 29092 | Kafka Internal | erp-kafka | In-cluster listener for other containers |
 
 ## Application Services
 
@@ -48,6 +49,9 @@ This document lists all port mappings for the ERP platform services to avoid con
 - All ports can be overridden using environment variables
 - In production, use proper secrets management
 - Ensure PostgreSQL is running before starting application services
+- Kafka bootstrap servers:
+  - Host access: set `KAFKA_BOOTSTRAP_SERVERS=localhost:9092`
+  - In-cluster (Docker): set `KAFKA_BOOTSTRAP_SERVERS=kafka:29092`
  - Dev server script auto-selects a free port starting at 8181: `scripts/dev-identity.ps1`
 
 ## Local Infrastructure Startup

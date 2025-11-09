@@ -31,6 +31,55 @@ class ProxyService {
         incomingPath: String,
         queryParams: MultivaluedMap<String, String>,
         incomingHeaders: MultivaluedMap<String, String>,
+    ): Response =
+        forward(
+            route = route,
+            method = "GET",
+            incomingPath = incomingPath,
+            queryParams = queryParams,
+            incomingHeaders = incomingHeaders,
+            body = null,
+        )
+
+    fun forwardDelete(
+        route: ServiceRoute,
+        incomingPath: String,
+        queryParams: MultivaluedMap<String, String>,
+        incomingHeaders: MultivaluedMap<String, String>,
+    ): Response =
+        forward(
+            route = route,
+            method = "DELETE",
+            incomingPath = incomingPath,
+            queryParams = queryParams,
+            incomingHeaders = incomingHeaders,
+            body = null,
+        )
+
+    fun forwardWithBody(
+        route: ServiceRoute,
+        method: String,
+        incomingPath: String,
+        queryParams: MultivaluedMap<String, String>,
+        incomingHeaders: MultivaluedMap<String, String>,
+        body: ByteArray,
+    ): Response =
+        forward(
+            route = route,
+            method = method,
+            incomingPath = incomingPath,
+            queryParams = queryParams,
+            incomingHeaders = incomingHeaders,
+            body = body,
+        )
+
+    private fun forward(
+        route: ServiceRoute,
+        method: String,
+        incomingPath: String,
+        queryParams: MultivaluedMap<String, String>,
+        incomingHeaders: MultivaluedMap<String, String>,
+        body: ByteArray?,
     ): Response {
         val base = route.target.baseUrl.trimEnd('/')
         val path = if (incomingPath.startsWith("/")) incomingPath else "/$incomingPath"
@@ -43,9 +92,21 @@ class ProxyService {
                 .connectTimeout(Duration.ofSeconds(route.target.timeoutSeconds.toLong()))
                 .build()
 
-        val builder = HttpRequest.newBuilder().GET().uri(targetUri)
+        val builder = HttpRequest.newBuilder().uri(targetUri)
 
-        // Copy headers except hop-by-hop
+        // Apply method + body
+        when (method.uppercase()) {
+            "GET" -> builder.GET()
+            "DELETE" -> builder.DELETE()
+            "POST", "PUT", "PATCH" -> {
+                val publisher = HttpRequest.BodyPublishers.ofByteArray(body ?: ByteArray(0))
+                // PATCH not directly on builder prior to JDK 21; use method()
+                builder.method(method.uppercase(), publisher)
+            }
+            else -> builder.method(method.uppercase(), HttpRequest.BodyPublishers.noBody())
+        }
+
+        // Copy headers except hop-by-hop; content-length is recomputed by client
         incomingHeaders.forEach { (name, values) ->
             val lower = name.lowercase()
             if (!hopByHopHeaders.contains(lower)) {

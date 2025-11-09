@@ -35,4 +35,77 @@ class ProxyController
                 incomingHeaders = headers.requestHeaders,
             )
         }
+
+        @jakarta.ws.rs.POST
+        @Path("{path: .+}")
+        fun proxyPost(
+            @PathParam("path") subPath: String,
+            @Context uriInfo: UriInfo,
+            @Context headers: HttpHeaders,
+            requestBody: ByteArray,
+        ): Response {
+            val resolved = routeResolver.resolve("/" + subPath)
+            return proxyService.forwardWithBody(
+                route = resolved,
+                method = "POST",
+                incomingPath = "/" + subPath,
+                queryParams = uriInfo.queryParameters,
+                incomingHeaders = headers.requestHeaders,
+                body = requestBody,
+            )
+        }
+
+        @jakarta.ws.rs.PUT
+        @Path("{path: .+}")
+        fun proxyPut(
+            @PathParam("path") subPath: String,
+            @Context uriInfo: UriInfo,
+            @Context headers: HttpHeaders,
+            requestBody: ByteArray,
+        ): Response {
+            val resolved = routeResolver.resolve("/" + subPath)
+            return proxyService.forwardWithBody(
+                route = resolved,
+                method = "PUT",
+                incomingPath = "/" + subPath,
+                queryParams = uriInfo.queryParameters,
+                incomingHeaders = headers.requestHeaders,
+                body = requestBody,
+            )
+        }
+
+        @jakarta.ws.rs.PATCH
+        @Path("{path: .+}")
+        fun proxyPatch(
+            @PathParam("path") subPath: String,
+            @Context uriInfo: UriInfo,
+            @Context headers: HttpHeaders,
+            requestBody: ByteArray,
+        ): Response {
+            val resolved = routeResolver.resolve("/" + subPath)
+            return proxyService.forwardWithBody(
+                route = resolved,
+                method = "PATCH",
+                incomingPath = "/" + subPath,
+                queryParams = uriInfo.queryParameters,
+                incomingHeaders = headers.requestHeaders,
+                body = requestBody,
+            )
+        }
+
+        @jakarta.ws.rs.DELETE
+        @Path("{path: .+}")
+        fun proxyDelete(
+            @PathParam("path") subPath: String,
+            @Context uriInfo: UriInfo,
+            @Context headers: HttpHeaders,
+        ): Response {
+            val resolved = routeResolver.resolve("/" + subPath)
+            return proxyService.forwardDelete(
+                route = resolved,
+                incomingPath = "/" + subPath,
+                queryParams = uriInfo.queryParameters,
+                incomingHeaders = headers.requestHeaders,
+            )
+        }
     }

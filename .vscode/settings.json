@@ -4,5 +4,26 @@
   "kotlinLanguageServer.ktlintPath": "${workspaceFolder}/ktlint.jar",
   "java.compile.nullAnalysis.mode": "automatic",
   "postman.settings.dotenv-detection-notification-visibility": false,
-  "java.configuration.updateBuildConfiguration": "interactive"
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "java.import.exclusions": [
+    "**/bounded-contexts/**",
+    "**/business-intelligence/**",
+    "**/commerce/**",
+    "**/communication-hub/**",
+    "**/corporate-services/**",
+    "**/customer-relation/**",
+    "**/financial-management/**",
+    "**/inventory-management/**",
+    "**/manufacturing-execution/**",
+    "**/operations-service/**",
+    "**/procurement/**",
+    "**/platform-shared/**",
+    "**/platform-infrastructure/**",
+    "**/portal/**",
+    "**/tests/**"
+  ],
+  "java.project.sourcePaths": [
+    "api-gateway/src/main/kotlin",
+    "api-gateway/src/test/kotlin"
+  ]
 }

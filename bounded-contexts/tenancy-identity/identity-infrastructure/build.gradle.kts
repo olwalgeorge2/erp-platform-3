@@ -6,6 +6,9 @@ plugins {
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
+        // Future-proof Jackson annotations on constructor params
+        // See KT-73255: apply annotation to both param and property to avoid warnings
+        freeCompilerArgs.add("-Xannotation-default-target=param-property")
     }
 }
 

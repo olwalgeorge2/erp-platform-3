@@ -70,9 +70,10 @@ function Invoke-InstallHooks {
         Write-Error "Not a git repository"
         exit 1
     }
-    Copy-Item 'scripts/hooks/pre-commit.ps1' '.git/hooks/pre-commit' -Force
-    Copy-Item 'scripts/hooks/pre-push.ps1' '.git/hooks/pre-push' -Force
-    Write-Host "✅ Git hooks installed successfully" -ForegroundColor Green
+    # Use bash scripts for Git compatibility on Windows
+    Copy-Item 'scripts/hooks/pre-commit' '.git/hooks/pre-commit' -Force
+    Copy-Item 'scripts/hooks/pre-push' '.git/hooks/pre-push' -Force
+    Write-Host "✅ Git hooks installed successfully (bash versions for Git compatibility)" -ForegroundColor Green
     Write-Host "Run: .\dev.ps1 verify-hooks to test" -ForegroundColor Cyan
 }
 

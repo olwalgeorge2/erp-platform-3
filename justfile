@@ -11,7 +11,7 @@ default:
 # Install git hooks for pre-commit and pre-push validation
 install-hooks:
     @echo "Installing git hooks..."
-    @pwsh -NoProfile -Command "if (Test-Path '.git/hooks') { Copy-Item 'scripts/hooks/pre-commit.ps1' '.git/hooks/pre-commit' -Force; Copy-Item 'scripts/hooks/pre-push.ps1' '.git/hooks/pre-push' -Force; Write-Host 'Git hooks installed successfully' -ForegroundColor Green; Write-Host 'Run: just verify-hooks to test' -ForegroundColor Cyan } else { Write-Error 'Not a git repository' }"
+    @pwsh -NoProfile -Command "if (Test-Path '.git/hooks') { Copy-Item 'scripts/hooks/pre-commit' '.git/hooks/pre-commit' -Force; Copy-Item 'scripts/hooks/pre-push' '.git/hooks/pre-push' -Force; Write-Host 'Git hooks installed successfully (bash versions for Git compatibility)' -ForegroundColor Green; Write-Host 'Run: just verify-hooks to test' -ForegroundColor Cyan } else { Write-Error 'Not a git repository' }"
 
 # Verify git hooks are properly installed and functional
 verify-hooks:

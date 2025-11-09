@@ -36,10 +36,18 @@ tasks.register("verifyLocal") {
     group = "verification"
     description = "Run ktlint + architecture tests + identity infra tests"
     dependsOn(
-        ":ktlintCheck",
         ":tests:arch:test",
         ":bounded-contexts:tenancy-identity:identity-infrastructure:test",
     )
+}
+
+gradle.projectsEvaluated {
+    val verify = tasks.named("verifyLocal")
+    subprojects.forEach { p ->
+        if (p.tasks.findByName("ktlintCheck") != null) {
+            verify.configure { dependsOn(p.path + ":ktlintCheck") }
+        }
+    }
 }
 
 // Make filtered test runs not fail tasks when no tests match in a given subproject

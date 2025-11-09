@@ -1,3 +1,5 @@
+package erp.platform.buildlogic
+
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 

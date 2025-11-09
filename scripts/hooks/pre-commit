@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[pre-commit] Running architecture governance suites (ADR-006, Layering, Hexagonal)"
+echo "[pre-commit] Running code style and architecture governance checks"
 
 # Allow bypass via environment variable
 if [[ "${SKIP_ARCH_HOOK:-}" == "1" ]]; then
-  echo "[pre-commit] SKIP_ARCH_HOOK=1 set. Skipping architecture tests."
+  echo "[pre-commit] SKIP_ARCH_HOOK=1 set. Skipping all pre-commit checks."
   exit 0
 fi
 
@@ -24,12 +24,27 @@ fi
 non_docs=$(echo "$changed_files" | grep -vE '^(docs/|README.md|CONTRIBUTING.md|.*\.md$)' || true)
 # Further narrow to relevant code files/paths that can affect ArchUnit
 code_changes=$(echo "$non_docs" | grep -E '^(bounded-contexts/|platform-shared/|platform-infrastructure/|api-gateway/|tests/arch/|buildSrc/|build.gradle.kts$|settings.gradle.kts$)|\.(kt|kts|java|gradle(\.kts)?)$' || true)
+
+# Check for Kotlin files specifically for ktlint
+kotlin_files=$(echo "$changed_files" | grep -E '\.(kt|kts)$' || true)
+
+# Run ktlint if Kotlin files changed
+if [[ -n "$kotlin_files" ]]; then
+  echo "[pre-commit] Step 1/2: Running ktlint on Kotlin files..."
+  ./gradlew ktlintCheck --no-daemon --stacktrace
+  echo "[pre-commit] ✓ ktlint passed"
+else
+  echo "[pre-commit] No Kotlin files changed, skipping ktlint"
+fi
+
+# Run architecture tests if relevant code changed
 if [[ -z "$code_changes" ]]; then
   echo "[pre-commit] No relevant code changes for architecture tests. Skipping."
   exit 0
 fi
 
-# Run the entire arch test suite once for speed
+echo "[pre-commit] Step 2/2: Running architecture tests..."
 ./gradlew :tests:arch:test --no-daemon --stacktrace
 
-echo "[pre-commit] Architecture tests passed"
+echo "[pre-commit] ✓ Architecture tests passed"
+echo "[pre-commit] All checks passed! ✓"

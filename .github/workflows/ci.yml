@@ -53,18 +53,11 @@ jobs:
             **/build/test-results/**/*.xml
             **/build/reports/**
           retention-days: 7
-
-      - name: Upload build artifacts
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            **/build/libs/*.jar
-            !**/build/libs/*-plain.jar
-          retention-days: 7
-
-  code-quality:
+      - name: Log gate (unexpected errors)
+        shell: bash
+        run: |
+          chmod +x scripts/ci/log-gate.sh
+          scripts/ci/log-gate.sh scripts/ci/error-allowlist.txt  code-quality:
     name: Code Quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -141,5 +134,6 @@ jobs:
             echo "Build or architecture tests failed"
             exit 1
           fi
+
 
 

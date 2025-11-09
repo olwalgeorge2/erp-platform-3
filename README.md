@@ -125,15 +125,40 @@ cp .env.example .env
 ## 7. Contributing
 
 ### Development Workflow
-1. Create a feature branch from `main`
-2. Make your changes following the coding standards
-3. Run `./gradlew ktlintFormat` to auto-format code
-4. Run `./gradlew check` to verify all tests pass
-5. Commit with clear, descriptive messages
-6. Push and create a Pull Request
+1. **One-time setup:** Install git hooks with `just install-hooks`
+2. Create a feature branch from `main`
+3. Make your changes following the coding standards
+4. Run `just format` to auto-format code
+5. Run `just verify` to run all local quality gates
+6. Commit (pre-commit hook auto-runs: ktlint + arch tests)
+7. Push (pre-push hook auto-runs: full verification)
+8. Create a Pull Request
+
+> **📖 See [docs/LOCAL_QUALITY_GATES.md](docs/LOCAL_QUALITY_GATES.md) for complete quality gate documentation**
+
+### Quick Commands
+```powershell
+# With 'just' (recommended - install: choco install just OR scoop install just)
+just install-hooks  # One-time: Install pre-commit/pre-push hooks
+just lint           # Check code style only
+just format         # Auto-fix code style issues
+just verify         # Full local preflight (recommended before push)
+just preflight      # Format + verify combo
+just push           # Git push with explicit gate validation
+
+# Without 'just' (use dev.ps1)
+.\dev.ps1 install-hooks
+.\dev.ps1 lint
+.\dev.ps1 format
+.\dev.ps1 verify
+.\dev.ps1 preflight
+.\dev.ps1 push
+```
 
 ### Code Standards
 - Follow ktlint rules (enforced via `.editorconfig`)
+- 120-character line length maximum
+- No wildcard imports
 - Write unit tests for new functionality
 - Update documentation for architectural changes
 - Create ADRs for significant design decisions

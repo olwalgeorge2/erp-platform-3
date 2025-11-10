@@ -1,6 +1,8 @@
 package com.erp.apigateway.exception
 
 import com.erp.apigateway.routing.RouteNotFoundException
+import com.erp.apigateway.tracing.TraceContext
+import jakarta.inject.Inject
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.ext.ExceptionMapper
@@ -9,10 +11,14 @@ import jakarta.ws.rs.ext.Provider
 data class ErrorResponse(
     val code: String,
     val message: String,
+    val traceId: String? = null,
 )
 
 @Provider
 class GatewayExceptionMapper : ExceptionMapper<Throwable> {
+    @Inject
+    var traceContext: TraceContext? = null
+
     override fun toResponse(exception: Throwable): Response {
         val (status, code, message) =
             when (exception) {
@@ -31,7 +37,7 @@ class GatewayExceptionMapper : ExceptionMapper<Throwable> {
                     )
             }
 
-        val body = ErrorResponse(code = code, message = message)
+        val body = ErrorResponse(code = code, message = message, traceId = traceContext?.traceId)
 
         return Response
             .status(status)

@@ -92,6 +92,60 @@ class AuthResourceTest {
         assertEquals(user.id.toString(), body.id)
     }
 
+    @Test
+    fun `assign role returns OK`() {
+        val user = sampleUser()
+        whenever(commandService.assignRole(any())).thenReturn(Result.success(user))
+
+        val response =
+            resource.assignRole(
+                user.id.toString(),
+                com.erp.identity.infrastructure.adapter.input.rest.dto.AssignRoleRequest(
+                    tenantId = user.tenantId.value,
+                    roleId = java.util.UUID.randomUUID(),
+                ),
+            )
+
+        assertEquals(Response.Status.OK.statusCode, response.status)
+        val body = response.entity as UserResponse
+        assertEquals(user.id.toString(), body.id)
+    }
+
+    @Test
+    fun `update credentials returns OK`() {
+        val user = sampleUser()
+        whenever(commandService.updateCredentials(any())).thenReturn(Result.success(user))
+
+        val response =
+            resource.updateCredentials(
+                user.id.toString(),
+                com.erp.identity.infrastructure.adapter.input.rest.dto.UpdateCredentialsRequest(
+                    tenantId = user.tenantId.value,
+                    currentPassword = null,
+                    newPassword = "NewPassword123!",
+                    requestedBy = "tester",
+                ),
+            )
+
+        assertEquals(Response.Status.OK.statusCode, response.status)
+        val body = response.entity as UserResponse
+        assertEquals(user.username, body.username)
+    }
+
+    @Test
+    fun `invalid userId returns 400`() {
+        val response =
+            resource.activateUser(
+                "not-a-uuid",
+                ActivateUserRequest(
+                    tenantId = java.util.UUID.randomUUID(),
+                    requestedBy = "admin",
+                    requirePasswordReset = false,
+                ),
+            )
+        assertEquals(Response.Status.BAD_REQUEST.statusCode, response.status)
+    }
+
     private fun sampleUser(): User {
         val tenantId = TenantId.generate()
         return User(

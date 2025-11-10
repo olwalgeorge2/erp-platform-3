@@ -59,7 +59,7 @@ mp:
         connector: smallrye-kafka
         topic: ${IDENTITY_EVENTS_TOPIC:identity.domain.events.v1}
         bootstrap:
-          servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+          servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
         key:
           serializer: org.apache.kafka.common.serialization.StringSerializer
         value:
@@ -88,7 +88,7 @@ mp:
         connector: smallrye-kafka
         topic: ${IDENTITY_EVENTS_TOPIC:identity.domain.events.v1}
         bootstrap:
-          servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+          servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
         group:
           id: ${IDENTITY_EVENTS_GROUP_ID:identity-infra-consumer}
         auto:

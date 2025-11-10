@@ -7,10 +7,12 @@ This document lists all port mappings for the ERP platform services to avoid con
 | Port | Service | Container | Description |
 |------|---------|-----------|-------------|
 | 5432 | PostgreSQL | erp-postgres | Main database for identity and other services |
-| 8090 | Kafka UI | erp-kafka-ui | Kafka management interface (changed from 8080 to avoid Docker conflict) |
-| 9092 | Kafka Broker | erp-kafka | Kafka external listener |
-| 9093 | Kafka Controller | erp-kafka | Kafka controller (KRaft mode) |
-| 29092 | Kafka Internal | erp-kafka | In-cluster listener for other containers |
+| 8090 | Redpanda Console | erp-redpanda-console | Redpanda management interface (Kafka-compatible) |
+| 19092 | Redpanda Kafka API | erp-redpanda | External Kafka protocol listener |
+| 18081 | Schema Registry | erp-redpanda | Built-in Schema Registry (Confluent-compatible) |
+| 18082 | HTTP Proxy | erp-redpanda | REST API for Kafka operations |
+| 19644 | Admin API | erp-redpanda | Redpanda admin and metrics endpoint |
+| 9092 | Redpanda Internal | erp-redpanda | In-cluster Kafka listener for other containers |
 
 ## Application Services
 
@@ -29,8 +31,15 @@ This document lists all port mappings for the ERP platform services to avoid con
 
 **Current Status**:
 - Docker Desktop: Uses port 8080 (internal)
-- Kafka UI: Now uses port 8090 (http://localhost:8090)
+- Redpanda Console: Uses port 8090 (http://localhost:8090)
 - No conflicts remaining
+
+### Migration from Kafka to Redpanda
+**Changes Applied**: 
+- Replaced Apache Kafka with Redpanda (10x faster, simpler, Kafka-compatible)
+- External port changed from 9092 → 19092 to avoid conflicts
+- Built-in Schema Registry (18081) and HTTP Proxy (18082)
+- See `docs/REDPANDA_MIGRATION.md` for complete details
 
 ## Database Credentials
 
@@ -49,17 +58,17 @@ This document lists all port mappings for the ERP platform services to avoid con
 - All ports can be overridden using environment variables
 - In production, use proper secrets management
 - Ensure PostgreSQL is running before starting application services
-- Kafka bootstrap servers:
-  - Host access: set `KAFKA_BOOTSTRAP_SERVERS=localhost:9092`
-  - In-cluster (Docker): set `KAFKA_BOOTSTRAP_SERVERS=kafka:29092`
- - Dev server script auto-selects a free port starting at 8181: `scripts/dev-identity.ps1`
+- Redpanda bootstrap servers (Kafka-compatible):
+  - Host access: set `KAFKA_BOOTSTRAP_SERVERS=localhost:19092` (note: port changed to 19092)
+  - In-cluster (Docker): set `KAFKA_BOOTSTRAP_SERVERS=redpanda:9092`
+- Dev server script auto-selects a free port starting at 8181: `scripts/dev-identity.ps1`
 
 ## Local Infrastructure Startup
 
 1. Stop or reconfigure any local PostgreSQL service that already listens on port `5432` (for example `postgresql-x64-17`) so the `erp-postgres` container can bind to it.
 2. Start the Docker compose stack that hosts the dev data services:
    ```bash
-   docker compose -f docker-compose-kafka.yml up -d postgres kafka kafka-ui
+   docker compose -f docker-compose-kafka.yml up -d postgres redpanda redpanda-console
    ```
 3. Verify the credentials with the helper script:
    ```powershell
@@ -72,3 +81,5 @@ This document lists all port mappings for the ERP platform services to avoid con
    ```
 
 > Tip: Keep Docker Desktop running while `quarkusDev` is active so Flyway can reuse the same PostgreSQL instance during live reload.
+> 
+> **Note**: We now use Redpanda instead of Apache Kafka. Redpanda is 10x faster, simpler to operate, and 100% Kafka-compatible. See `docs/REDPANDA_MIGRATION.md` for complete migration details.

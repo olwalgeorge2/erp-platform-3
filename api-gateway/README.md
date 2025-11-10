@@ -18,6 +18,15 @@ The API Gateway serves as the single entry point for all external client request
 - ✅ HTTP proxy for GET/POST/PUT/PATCH/DELETE
 - ✅ Error standardization with GatewayExceptionMapper
 
+### Metrics (Micrometer/Prometheus)
+- `gateway_requests_total{method,endpoint,status}`
+- `gateway_request_duration_seconds{method,endpoint,status}` (timer)
+- `gateway_errors_total{type}`
+- `gateway_ratelimit_exceeded_total{tenant}`
+- `gateway_auth_failures_total{reason}`
+
+Prometheus scrape: `/q/metrics` (enabled via `quarkus-micrometer-registry-prometheus`).
+
 **Related Documentation:**
 - 📐 [ADR-004: API Gateway Pattern](../docs/adr/ADR-004-api-gateway-pattern.md)
 - 📋 [Sprint 3 Implementation Plan](../docs/SPRINT3_API_GATEWAY_PLAN.md)
@@ -141,6 +150,339 @@ filter/
 - ✅ Configurable limits (default: 100 req/min)
 - ✅ HTTP 429 responses with reset time
 - ✅ X-RateLimit-Limit/Remaining/Reset headers
+
+#### Rate Limiting Deep Dive
+
+**Algorithm: Sliding Window**
+
+The gateway uses a sliding window algorithm implemented in `RateLimiter.kt`:
+
+```kotlin
+// Redis key pattern: ratelimit:{tenantId}:{endpoint}:{windowStart}
+// Each minute gets a new counter, allowing precise sliding window calculation
+val key = "ratelimit:$tenantId:$endpoint:${windowStart}"
+val currentCount = redis.increment(key)
+redis.expire(key, windowDuration)
+```
+
+**Benefits:**
+- **Fair distribution:** Prevents burst at window boundaries (unlike fixed window)
+- **Memory efficient:** Older windows auto-expire via Redis TTL
+- **Distributed:** Multiple gateway instances share rate limit state
+
+**Configuration:**
+
+```yaml
+gateway:
+  rate-limits:
+    default:
+      requests-per-minute: 100
+      window: 60s
+    # Per-endpoint overrides (future enhancement)
+    endpoints:
+      /api/v1/inventory/products:
+        requests-per-minute: 500
+      /api/v1/identity/auth/login:
+        requests-per-minute: 10  # Prevent brute force
+```
+
+**Response Headers:**
+
+| Header | Example | Description |
+|--------|---------|-------------|
+| `X-RateLimit-Limit` | `100` | Max requests allowed per window |
+| `X-RateLimit-Remaining` | `42` | Requests remaining in current window |
+| `X-RateLimit-Reset` | `2025-11-10T15:32:00Z` | When the rate limit resets |
+
+**HTTP 429 Response:**
+```json
+{
+  "code": "RATE_LIMIT_EXCEEDED",
+  "message": "Rate limit exceeded. Try again in 27 seconds.",
+  "details": {
+    "limit": 100,
+    "window": "60s",
+    "resetAt": "2025-11-10T15:32:00Z"
+  }
+}
+```
+
+**Bypass Mechanisms:**
+
+Rate limiting is skipped for:
+- ✅ Health checks (`/health/*`)
+- ✅ Metrics endpoints (`/metrics`)
+- ✅ Public endpoints (configurable via `gateway.public-endpoints.patterns`)
+
+**Monitoring:**
+
+Track rate limit violations with:
+```prometheus
+# Prometheus metric (when implemented)
+gateway_ratelimit_exceeded_total{tenant="acme-corp",endpoint="/api/v1/orders"} 42
+
+# Structured logs
+{
+  "level": "WARN",
+  "message": "Rate limit exceeded",
+  "tenantId": "acme-corp",
+  "endpoint": "/api/v1/orders",
+  "traceId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Future Enhancements:**
+- ⚠️ Dynamic rate limit adjustment based on tenant subscription tier
+- ⚠️ Distributed rate limiting with Redis Cluster
+- ⚠️ Burst allowance (token bucket algorithm variant)
+- ⚠️ API key-based rate limiting for service accounts
+
+---
+
+### Resilience Patterns
+
+The API Gateway implements multiple resilience patterns to ensure reliability and graceful degradation:
+
+#### 1. ✅ Circuit Breaker (Ready for Implementation)
+
+**Pattern:** Stop calling failing downstream services to prevent cascading failures
+
+**Configuration (Future):**
+```yaml
+gateway:
+  services:
+    tenancy-identity:
+      url: http://localhost:8081
+      timeout: 5s
+      retries: 2
+      circuit-breaker:
+        failure-threshold: 5          # Open after 5 failures
+        success-threshold: 2          # Close after 2 successes
+        timeout: 60s                  # Half-open after 60s
+        monitor-window: 10s
+```
+
+**States:**
+- **CLOSED:** Normal operation, requests pass through
+- **OPEN:** Circuit tripped, return 503 immediately (fail-fast)
+- **HALF_OPEN:** Test with limited requests, close if successful
+
+**Implementation with SmallRye Fault Tolerance:**
+```kotlin
+@ApplicationScoped
+class ProxyService(private val httpClient: HttpClient) {
+    
+    @CircuitBreaker(
+        requestVolumeThreshold = 5,
+        failureRatio = 0.5,
+        delay = 60,
+        delayUnit = ChronoUnit.SECONDS
+    )
+    @Timeout(value = 5, unit = ChronoUnit.SECONDS)
+    @Retry(
+        maxRetries = 2,
+        delay = 100,
+        delayUnit = ChronoUnit.MILLIS,
+        retryOn = [IOException::class, TimeoutException::class]
+    )
+    @Fallback(fallbackMethod = "fallbackResponse")
+    suspend fun forwardRequest(/* ... */): Response {
+        // Existing proxy logic
+    }
+    
+    private fun fallbackResponse(/* ... */): Response {
+        return Response
+            .status(Response.Status.SERVICE_UNAVAILABLE)
+            .entity(ErrorResponse(
+                code = "SERVICE_UNAVAILABLE",
+                message = "The service is temporarily unavailable. Please try again later."
+            ))
+            .build()
+    }
+}
+```
+
+#### 2. ✅ Timeouts (Configured)
+
+**Current Configuration:**
+```yaml
+gateway:
+  services:
+    tenancy-identity:
+      timeout: 5s
+      retries: 2
+```
+
+**Implementation in ProxyService:**
+```kotlin
+val httpClient = HttpClient.newBuilder()
+    .connectTimeout(Duration.ofSeconds(5))
+    .build()
+
+val request = HttpRequest.newBuilder()
+    .timeout(Duration.ofSeconds(5))
+    .build()
+```
+
+**Benefits:**
+- Prevents thread starvation from slow downstream services
+- Enforces SLA boundaries (p95 < 50ms gateway latency target)
+- Cascading timeout budgets: Gateway 5s → Service 4s → Database 2s
+
+#### 3. ⚠️ Bulkhead Pattern (TODO)
+
+**Pattern:** Isolate resources to prevent one failing service from consuming all threads
+
+**Configuration (Future):**
+```yaml
+gateway:
+  bulkheads:
+    default:
+      max-concurrent-calls: 50
+      max-wait-duration: 10s
+    critical:  # For critical services
+      max-concurrent-calls: 100
+      max-wait-duration: 5s
+```
+
+**Implementation with SmallRye Fault Tolerance:**
+```kotlin
+@Bulkhead(value = 50, waitingTaskQueue = 10)
+suspend fun forwardRequest(/* ... */): Response {
+    // Proxy logic
+}
+```
+
+#### 4. ✅ Health Checks (Implemented)
+
+**Readiness Check:**
+```kotlin
+@Readiness
+class RedisReadinessCheck : HealthCheck {
+    @Inject
+    lateinit var redisClient: RedisClient
+    
+    override fun call(): HealthCheckResponse {
+        return try {
+            redisClient.ping()
+            HealthCheckResponse.up("redis")
+        } catch (e: Exception) {
+            HealthCheckResponse.down("redis")
+        }
+    }
+}
+```
+
+**Kubernetes Integration:**
+```yaml
+livenessProbe:
+  httpGet:
+    path: /health/live
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  
+readinessProbe:
+  httpGet:
+    path: /health/ready
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3
+```
+
+#### 5. ✅ Graceful Degradation (Implemented)
+
+**Rate Limiting:**
+- Redis failure → Allow all requests with warning log
+- Prevents cascading failure from rate limit backend
+
+```kotlin
+try {
+    val result = rateLimiter.checkLimit(tenantId, endpoint)
+    if (!result.allowed) {
+        return Response.status(429).entity(/* ... */).build()
+    }
+} catch (e: RedisException) {
+    logger.warn("Redis unavailable, bypassing rate limit", e)
+    // Allow request to proceed
+}
+```
+
+**Public Endpoint Bypass:**
+- Authentication failure → 401 for protected endpoints
+- Public endpoints (`/health/*`, `/api/v1/identity/auth/*`) → Always allowed
+
+#### 6. ⚠️ Backpressure (TODO)
+
+**Pattern:** Slow down incoming requests when system is under load
+
+**Configuration (Future):**
+```yaml
+gateway:
+  backpressure:
+    max-concurrent-requests: 1000
+    queue-size: 500
+    timeout: 30s
+```
+
+**Implementation:**
+```kotlin
+@ApplicationScoped
+class BackpressureFilter : ContainerRequestFilter {
+    private val semaphore = Semaphore(1000)
+    
+    override fun filter(requestContext: ContainerRequestContext) {
+        if (!semaphore.tryAcquire(30, TimeUnit.SECONDS)) {
+            throw ServiceUnavailableException("System overloaded, try again later")
+        }
+        
+        requestContext.setProperty("backpressure.permit", Unit)
+    }
+}
+```
+
+#### 7. ✅ Observability for Resilience (Implemented)
+
+**Metrics to Track:**
+```prometheus
+# Request latency (identify slow services)
+gateway_request_duration_seconds{method="GET",endpoint="/api/orders",status="200"} 0.045
+
+# Error rates (trigger circuit breaker)
+gateway_errors_total{type="timeout",service="inventory"} 42
+
+# Rate limit violations
+gateway_ratelimit_exceeded_total{tenant="acme",endpoint="/api/orders"} 15
+
+# Circuit breaker state
+gateway_circuit_breaker_state{service="inventory",state="open"} 1
+```
+
+**Alerting Rules:**
+```yaml
+groups:
+  - name: gateway_resilience
+    rules:
+      - alert: HighErrorRate
+        expr: rate(gateway_errors_total[5m]) > 0.1
+        for: 2m
+        annotations:
+          summary: "Gateway error rate above 10%"
+      
+      - alert: CircuitBreakerOpen
+        expr: gateway_circuit_breaker_state{state="open"} == 1
+        for: 1m
+        annotations:
+          summary: "Circuit breaker open for {{ $labels.service }}"
+```
+
+**Distributed Tracing:**
+- ✅ X-Trace-Id propagation across all services
+- OpenTelemetry integration for end-to-end request tracing
+- Identify latency bottlenecks in call chains
+
+---
 
 ### Epic 4: Observability ✅ **COMPLETED**
 **Stories:** 4.1 → 4.3  

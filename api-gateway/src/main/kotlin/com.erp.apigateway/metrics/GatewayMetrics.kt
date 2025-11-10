@@ -37,4 +37,8 @@ class GatewayMetrics {
     fun markRateLimitExceeded(tenant: String) {
         registry.counter("gateway_ratelimit_exceeded_total", Tags.of("tenant", tenant)).increment()
     }
+
+    fun markAuthFailure(reason: String) {
+        registry.counter("gateway_auth_failures_total", Tags.of("reason", reason)).increment()
+    }
 }

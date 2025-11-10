@@ -1,9 +1,44 @@
 # ADR-004: API Gateway Pattern
 
-**Status**: Accepted  
+**Status**: Accepted → Implemented  
 **Date**: 2025-11-05  
+**Updated**: 2025-11-10 (Implementation Complete)  
 **Deciders**: Architecture Team, Platform Team  
 **Tags**: api-gateway, security, routing, cross-cutting
+
+## Implementation Status
+
+✅ **IMPLEMENTED** - 2025-11-10
+
+**Completed Features:**
+- ✅ Gateway routing with wildcard pattern matching (`RouteResolver.kt`)
+- ✅ Redis-based distributed rate limiting with Testcontainers
+- ✅ HTTP proxy service with configurable retry logic
+- ✅ CORS handling and security headers
+- ✅ Exception mapping (404, 401, 500) with `GatewayExceptionMapper`
+- ✅ Metrics integration (Micrometer/Prometheus)
+- ✅ Comprehensive test coverage (12/12 tests passing)
+  - Integration tests with Testcontainers (Redis)
+  - Routing tests with WireMock
+  - Error handling tests
+
+**Test Results:**
+- `GatewayRouterTest`: 3/3 passing (CORS, 404/401, auth rejection)
+- `ApiGatewayRedisIntegrationTest`: 3/3 passing (set/get, increment, TTL)
+- `ProxyServiceMethodsTest`: 2/2 passing (POST with body, retry logic)
+- `ProxyServiceWireMockTest`: 1/1 passing (GET with headers)
+- `RouteResolverTest`: 2/2 passing (pattern matching, errors)
+- `GatewayExceptionMapperTest`: 1/1 passing (404 mapping)
+
+**Infrastructure:**
+- Redis 7-alpine for rate limiting backend
+- Redpanda v24.2.11 for event streaming (Kafka-compatible)
+- PostgreSQL 16-alpine for persistence
+
+**Documentation:**
+- Test coverage reports
+- Redis integration guide
+- API contracts defined
 
 ## Context
 

@@ -1,0 +1,25 @@
+# Test configuration for API Gateway
+quarkus:
+  # Disable dev services we don't need in tests
+  devservices:
+    enabled: false
+  
+  # Configure Redis from test resource
+  redis:
+    hosts: ${quarkus.redis.hosts:redis://localhost:6379}
+  
+  # Use in-memory or test JWT configuration
+  smallrye-jwt:
+    enabled: false
+  
+  log:
+    level: INFO
+    console:
+      json: false
+
+# Gateway test defaults
+gateway:
+  rate-limits:
+    default:
+      requests-per-minute: 100
+      window: 60s

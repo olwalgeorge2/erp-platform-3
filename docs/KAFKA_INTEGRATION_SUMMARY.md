@@ -1,7 +1,11 @@
 # Kafka Integration Summary
 
+> **⚠️ DEPRECATED DOCUMENT**: This document describes the original Apache Kafka integration. The platform has been migrated to **Redpanda** for better performance and operational simplicity. See [`REDPANDA_MIGRATION.md`](REDPANDA_MIGRATION.md) for current setup.
+>
+> The integration patterns described here (Outbox, Idempotency) remain valid, but infrastructure references (ports, containers) are outdated.
+
 **Status:** ✅ **Production-Ready** (Producer + Consumer + Full Test Coverage)  
-**Last Updated:** November 9, 2025
+**Last Updated:** November 9, 2025 (Archived: November 10, 2025)
 
 ## ✅ Files Created/Modified
 

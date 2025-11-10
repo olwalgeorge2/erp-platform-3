@@ -1,8 +1,12 @@
 # Kafka Integration Manual Verification Steps
 
-**Date:** November 6, 2025  
-**Kafka Stack:** Apache Kafka 3.8.1 (KRaft mode - ZooKeeper-less)  
-**Status:** ✅ Ready for testing
+> **⚠️ DEPRECATED DOCUMENT**: This document describes verification steps for Apache Kafka. The platform has been migrated to **Redpanda**. See [`REDPANDA_MIGRATION.md`](REDPANDA_MIGRATION.md) for current instructions.
+>
+> For Redpanda verification, use `rpk` CLI: `docker exec -it erp-redpanda rpk topic list`
+
+**Date:** November 6, 2025 (Archived: November 10, 2025)  
+**Original Stack:** Apache Kafka 3.8.1 (KRaft mode)  
+**Status:** ⚠️ ARCHIVED - Use Redpanda instead
 
 ---
 

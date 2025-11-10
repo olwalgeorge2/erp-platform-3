@@ -1,6 +1,7 @@
 package com.erp.apigateway.security
 
 import com.erp.apigateway.config.PublicEndpointsConfig
+import com.erp.apigateway.metrics.GatewayMetrics
 import jakarta.annotation.Priority
 import jakarta.inject.Inject
 import jakarta.ws.rs.Priorities
@@ -19,6 +20,9 @@ class AuthenticationFilter : ContainerRequestFilter {
     @Inject
     lateinit var publicEndpointsConfig: PublicEndpointsConfig
 
+    @Inject
+    lateinit var metrics: GatewayMetrics
+
     override fun filter(requestContext: ContainerRequestContext) {
         val path = requestContext.uriInfo.path
         if (publicEndpointsConfig.isPublic(path)) {
@@ -27,6 +31,7 @@ class AuthenticationFilter : ContainerRequestFilter {
 
         val authHeader = requestContext.headers.getFirst("Authorization") ?: ""
         if (!authHeader.startsWith("Bearer ")) {
+            metrics.markAuthFailure("missing_or_invalid_header")
             abort(requestContext, "Missing or invalid Authorization header")
             return
         }
@@ -36,6 +41,7 @@ class AuthenticationFilter : ContainerRequestFilter {
             try {
                 jwtValidator.parse(token)
             } catch (e: Exception) {
+                metrics.markAuthFailure("invalid_token")
                 abort(requestContext, "Invalid token")
                 return
             }

@@ -42,4 +42,35 @@ dependencies {
     testImplementation(libs.testcontainers.core)
     testImplementation(libs.testcontainers.junit)
     testImplementation(libs.wiremock)
+    testImplementation("io.quarkus:quarkus-junit5")
+}
+
+tasks.withType<Test>().configureEach {
+    enabled = true
+    useJUnitPlatform()
+
+    // Show test results in console
+    testLogging {
+        events("passed", "skipped", "failed", "standardOut", "standardError")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+
+        // Show individual test names and results
+        showStandardStreams = false
+    }
+
+    // Skip integration tests requiring Testcontainers (Docker) unless explicitly enabled
+    // Run with: ./gradlew test -DwithContainers=true
+    val withContainers = System.getProperty("withContainers", "false").toBoolean()
+    if (!withContainers) {
+        exclude("**/*IntegrationTest*")
+        exclude("**/*IT*")
+    }
+}
+
+// Enable tests (override convention plugin's disabled state)
+tasks.named<Test>("test") {
+    enabled = true
 }

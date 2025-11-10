@@ -9,7 +9,7 @@ class KafkaTestResource : QuarkusTestResourceLifecycleManager {
 
     override fun start(): Map<String, String> {
         kafka =
-            KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.5.0")).apply {
+            KafkaContainer(DockerImageName.parse("docker.redpanda.com/redpandadata/redpanda:v24.2.11")).apply {
                 withReuse(true)
                 start()
             }

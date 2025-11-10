@@ -2,6 +2,7 @@
 
 **Status**: Accepted  
 **Date**: 2025-11-05  
+**Updated**: 2025-11-10 (Migrated to Redpanda)  
 **Deciders**: Architecture Team  
 **Tags**: events, integration, messaging, bounded-contexts
 
@@ -28,10 +29,13 @@ We will use **asynchronous event-driven integration** as the primary communicati
    - No breaking changes without migration path
 
 3. **Message Broker**
-   - **Apache Kafka (KRaft mode)** for production (ZooKeeper-less quorum)
+   - **Redpanda** for production (Kafka-compatible, simpler operations)
+   - 100% Kafka API compatible (no code changes)
+   - 10x faster than Kafka, 75% less memory
    - Durable, ordered, replayable event log
    - Topic per event type or per bounded context
    - Consumer groups for parallel processing
+   - See [`REDPANDA_MIGRATION.md`](../REDPANDA_MIGRATION.md) for details
 
 4. **Event Store (Optional per Context)**
    - Contexts can optionally persist events
@@ -77,7 +81,7 @@ We will use **asynchronous event-driven integration** as the primary communicati
 - ❌ Duplicate message handling required (idempotency)
 
 ### Neutral
-- ⚖️ Requires message broker infrastructure (Kafka KRaft cluster)
+- ⚖️ Requires message broker infrastructure (Redpanda cluster)
 - ⚖️ Developers must understand async patterns
 - ⚖️ Testing integration flows more complex
 
@@ -306,7 +310,7 @@ PaymentFailed -> ReleaseInventory -> CancelOrder
 ## Testing Strategy
 
 - **Unit Tests**: Mock `EventPublisher` interface
-- **Integration Tests**: Use Testcontainers for Kafka (KRaft-enabled `KafkaContainer`)
+- **Integration Tests**: Use Testcontainers for Redpanda (Kafka-compatible `KafkaContainer`)
 - **Contract Tests**: Verify event schema compatibility
 - **E2E Tests**: Full workflow testing with real broker
 

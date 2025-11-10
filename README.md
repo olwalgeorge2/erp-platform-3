@@ -16,10 +16,11 @@ This repository hosts a modular, cloud-native Enterprise Resource Planning (ERP)
 3.1 Kotlin 2.2 and Java 21 as the primary language and runtime.
 3.2 Quarkus 3.x for reactive, cloud-native microservices.
 3.3 Gradle 8 with Kotlin DSL for builds and dependency management.
-3.4 PostgreSQL for relational persistence and Apache Kafka (KRaft mode) for eventing.
+3.4 PostgreSQL for relational persistence and Redpanda for eventing (Kafka-compatible).
 3.5 OpenTelemetry, JSON logging, and metrics for full-stack observability.
 
 See `docs/BUILD_SYSTEM_UPDATE.md` for detailed dependency versions, tooling rationale, and upgrade guidance.
+See `docs/REDPANDA_MIGRATION.md` for event streaming migration from Apache Kafka to Redpanda.
 
 ## 4. Repository Layout
 4.1 `api-gateway/` - Edge service for request routing and composition.
@@ -72,14 +73,16 @@ cp .env.example .env
 1. Ensure no other PostgreSQL instance is bound to port `5432`. On Windows, stop the bundled service with `Stop-Service postgresql-x64-17 -Force`.
 2. Bring up the developer data services:
    ```bash
-   docker compose -f docker-compose-kafka.yml up -d postgres kafka kafka-ui
+   docker compose -f docker-compose-kafka.yml up -d postgres redpanda redpanda-console
    ```
-3. Point Quarkus at the same Kafka listener you will test against:
+3. Point Quarkus at the Redpanda Kafka API listener:
    ```powershell
-   $env:KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"   # host runtime
+   $env:KAFKA_BOOTSTRAP_SERVERS = "localhost:19092"   # host runtime (external port)
    ```
-   > When the identity service runs inside Docker compose instead, set `KAFKA_BOOTSTRAP_SERVERS=kafka:29092` so it reaches the internal listener.
-   > Kafka UI is available at `http://localhost:8090` once the `kafka-ui` container is healthy.
+   > When the identity service runs inside Docker compose instead, set `KAFKA_BOOTSTRAP_SERVERS=redpanda:9092` so it reaches the internal listener.
+   > Redpanda Console is available at `http://localhost:8090` once the `redpanda-console` container is healthy.
+   > 
+   > **Note:** We use **Redpanda** instead of Apache Kafka for better performance (10x faster), simpler operations (no ZooKeeper/KRaft), and full Kafka compatibility. See `docs/REDPANDA_MIGRATION.md` for details.
 4. Verify the credentials with the helper script:
    ```powershell
    .\test-db-connection.ps1
@@ -106,6 +109,7 @@ cp .env.example .env
 - `docs/ROADMAP.md` - Implementation phases and milestones
 - `docs/ARCHITECTURE.md` - System design and bounded contexts
 - `docs/BUILD_SYSTEM_UPDATE.md` - Build tooling and conventions
+- `docs/REDPANDA_MIGRATION.md` - Event streaming with Redpanda (replaces Kafka)
 - `docs/PLATFORM_SHARED_GUIDE.md` - Governance rules for shared modules (Critical!)
 - `docs/adr/` - Architecture Decision Records
 

@@ -73,12 +73,12 @@ tasks.withType<Test>().configureEach {
     }
 
     // Skip integration tests requiring Testcontainers (Docker) unless explicitly enabled
-    // Run with: ./gradlew test -DwithContainers=true
+    // Run with: ./gradlew test -PwithContainers=true
     // Naming conventions matched by excludes: *IntegrationTest*, *IT*
     val withContainers = (findProperty("withContainers") as String?)?.toBoolean() ?: false
     if (!withContainers) {
-        exclude("**/*IntegrationTest*")
-        exclude("**/*IT*")
+        exclude("**/*IntegrationTest*.class")
+        exclude("**/*IT*.class")
     }
 }
 

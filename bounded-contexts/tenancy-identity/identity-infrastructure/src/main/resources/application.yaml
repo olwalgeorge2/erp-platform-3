@@ -6,7 +6,7 @@ quarkus:
     username: ${QUARKUS_DATASOURCE_USERNAME:erp_user}
     password: ${QUARKUS_DATASOURCE_PASSWORD:erp_pass}
     jdbc:
-      url: ${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://localhost:5432/erp_identity}
+      url: ${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://127.0.0.1:5432/erp_identity}
       driver: org.postgresql.Driver
     devservices:
       enabled: false
@@ -31,7 +31,7 @@ quarkus:
       username: ${QUARKUS_DATASOURCE_USERNAME:erp_user}
       password: ${QUARKUS_DATASOURCE_PASSWORD:erp_pass}
       jdbc:
-        url: ${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://localhost:5432/erp_identity}
+        url: ${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://127.0.0.1:5432/erp_identity}
   app:
     environment: DEVELOPMENT
 

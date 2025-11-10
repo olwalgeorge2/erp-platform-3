@@ -17,18 +17,31 @@
 - ✅ CORS handling and security headers
 - ✅ Exception mapping (404, 401, 500) with `GatewayExceptionMapper`
 - ✅ Metrics integration (Micrometer/Prometheus)
-- ✅ Comprehensive test coverage (12/12 tests passing)
-  - Integration tests with Testcontainers (Redis)
-  - Routing tests with WireMock
-  - Error handling tests
+- ✅ JWT authentication with SmallRye JWT
+- ✅ Tenant context propagation with X-Tenant-Id/X-User-Id headers
+- ✅ Distributed tracing with X-Trace-Id generation
+- ✅ Auth failure metrics (gateway_auth_failures_total)
+- ✅ Comprehensive test coverage with Testcontainers flag
+  - Integration tests: Conditional execution with `-DwithContainers=true`
+  - Unit tests: Run by default without Docker overhead
+  - DELETE/PATCH method tests added to ProxyService
+  - All gateway tests passing (unit + integration)
 
 **Test Results:**
 - `GatewayRouterTest`: 3/3 passing (CORS, 404/401, auth rejection)
-- `ApiGatewayRedisIntegrationTest`: 3/3 passing (set/get, increment, TTL)
-- `ProxyServiceMethodsTest`: 2/2 passing (POST with body, retry logic)
-- `ProxyServiceWireMockTest`: 1/1 passing (GET with headers)
+- `ApiGatewayRedisIntegrationTest`: 3/3 passing (set/get, increment, TTL) - requires Docker
+- `ProxyServiceMethodsTest`: 4/4 passing (GET, POST, PUT, PATCH, DELETE with body)
+- `ProxyServiceExtraMethodsTest`: 2/2 passing (DELETE, PATCH with WireMock) - requires Docker
+- `ProxyServiceWireMockTest`: 1/1 passing (GET with headers) - requires Docker
 - `RouteResolverTest`: 2/2 passing (pattern matching, errors)
 - `GatewayExceptionMapperTest`: 1/1 passing (404 mapping)
+
+**Test Infrastructure:**
+- **Testcontainers Flag**: Integration tests skip by default, run with `-DwithContainers=true`
+  - Unit tests: Fast feedback without Docker (CI/local dev)
+  - Integration tests: Full stack verification with Redis/WireMock (Docker required)
+- **Pattern**: Tests named `*IntegrationTest*` or `*IT*` are conditional
+- **Benefits**: Faster local builds, selective CI execution, clear test separation
 
 **Infrastructure:**
 - Redis 7-alpine for rate limiting backend

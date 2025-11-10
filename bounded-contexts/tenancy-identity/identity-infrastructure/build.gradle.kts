@@ -25,8 +25,8 @@ dependencies {
     implementation("io.quarkus:quarkus-jdbc-postgresql")
     implementation("io.quarkus:quarkus-flyway")
 
-    // JSON: Kotlin module (migrate to version catalog when available)
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.18.1")
+    // JSON: Kotlin module
+    implementation(libs.jackson.module.kotlin)
 
     // Scheduling + Bean validation
     implementation("io.quarkus:quarkus-scheduler")
@@ -34,6 +34,7 @@ dependencies {
 
     // Observability + Messaging + Config
     implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
+    implementation("io.quarkus:quarkus-smallrye-health")
     implementation("io.quarkus:quarkus-messaging-kafka")
     implementation("io.quarkus:quarkus-config-yaml")
 
@@ -48,12 +49,11 @@ dependencies {
     testImplementation("io.quarkus:quarkus-junit5-mockito")
     // Use version catalog for REST Assured for consistency across modules
     testImplementation(libs.rest.assured)
-    // Mockito-Kotlin (consider moving to version catalog later)
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.3.1")
-    // Testcontainers: core/JUnit + Postgres/Kafka modules
-    testImplementation("org.testcontainers:junit-jupiter:1.20.1")
-    testImplementation("org.testcontainers:postgresql:1.20.1")
-    testImplementation("org.testcontainers:kafka:1.20.1")
+    testImplementation(libs.mockito.kotlin)
+    // Testcontainers: core/JUnit + Postgres/Kafka modules (catalog aligns all to 1.x)
+    testImplementation(libs.testcontainers.junit)
+    testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.testcontainers.kafka)
 }
 
 tasks.withType<Test>().configureEach {
@@ -75,7 +75,7 @@ tasks.withType<Test>().configureEach {
     // Skip integration tests requiring Testcontainers (Docker) unless explicitly enabled
     // Run with: ./gradlew test -DwithContainers=true
     // Naming conventions matched by excludes: *IntegrationTest*, *IT*
-    val withContainers = System.getProperty("withContainers", "false").toBoolean()
+    val withContainers = (findProperty("withContainers") as String?)?.toBoolean() ?: false
     if (!withContainers) {
         exclude("**/*IntegrationTest*")
         exclude("**/*IT*")

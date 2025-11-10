@@ -9,6 +9,8 @@ slf4j = "2.0.16"
 testcontainers = "1.20.1"
 wiremock = "3.9.1"
 rest-assured = "5.5.0"
+jackson = "2.18.1"
+mockito-kotlin = "5.3.1"
 
 [libraries]
 quarkus-bom = { group = "io.quarkus.platform", name = "quarkus-bom", version.ref = "quarkus" }
@@ -33,6 +35,7 @@ quarkus-smallrye-jwt = { group = "io.quarkus", name = "quarkus-smallrye-jwt", ve
 quarkus-smallrye-jwt-build = { group = "io.quarkus", name = "quarkus-smallrye-jwt-build", version.ref = "quarkus" }
 quarkus-redis-client = { group = "io.quarkus", name = "quarkus-redis-client", version.ref = "quarkus" }
 quarkus-micrometer-registry-prometheus = { group = "io.quarkus", name = "quarkus-micrometer-registry-prometheus", version.ref = "quarkus" }
+quarkus-smallrye-health = { group = "io.quarkus", name = "quarkus-smallrye-health", version.ref = "quarkus" }
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junit" }
@@ -44,6 +47,10 @@ testcontainers-core = { group = "org.testcontainers", name = "testcontainers", v
 testcontainers-junit = { group = "org.testcontainers", name = "junit-jupiter", version.ref = "testcontainers" }
 wiremock = { group = "org.wiremock", name = "wiremock", version.ref = "wiremock" }
 rest-assured = { group = "io.rest-assured", name = "rest-assured", version.ref = "rest-assured" }
+jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jackson" }
+mockito-kotlin = { group = "org.mockito.kotlin", name = "mockito-kotlin", version.ref = "mockito-kotlin" }
+testcontainers-postgresql = { group = "org.testcontainers", name = "postgresql", version.ref = "testcontainers" }
+testcontainers-kafka = { group = "org.testcontainers", name = "kafka", version.ref = "testcontainers" }
 
 [bundles]
 quarkus-core = [

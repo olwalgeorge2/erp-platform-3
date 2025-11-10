@@ -7,9 +7,11 @@ class PublicEndpointsConfig {
     // Simple prefix-based patterns considered public (no auth)
     private val defaults =
         listOf(
-            "/health/",
-            "/metrics",
-            "/api/v1/identity/auth/",
+            "/q/health/", // SmallRye Health endpoints
+            "/health/", // Legacy health endpoint (deprecated)
+            "/q/metrics", // Prometheus metrics
+            "/metrics", // Legacy metrics endpoint
+            "/api/v1/identity/auth/", // Identity authentication endpoints
         )
 
     fun isPublic(path: String): Boolean {

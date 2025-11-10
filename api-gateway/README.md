@@ -27,6 +27,13 @@ The API Gateway serves as the single entry point for all external client request
 
 Prometheus scrape: `/q/metrics` (enabled via `quarkus-micrometer-registry-prometheus`).
 
+### Routing & Rewrites
+- Identity route maps `/api/v1/identity/*` → upstream `/api/*` via `pathRewrite`.
+- Health checks call upstream `healthPath` (default `/q/health/ready`) directly on the service base URL.
+- Data classes:
+  - `ServiceTarget(baseUrl, timeoutSeconds, retries, healthPath)`
+  - `ServiceRoute(pattern, target, authRequired, pathRewrite)`
+
 **Related Documentation:**
 - 📐 [ADR-004: API Gateway Pattern](../docs/adr/ADR-004-api-gateway-pattern.md)
 - 📋 [Sprint 3 Implementation Plan](../docs/SPRINT3_API_GATEWAY_PLAN.md)
@@ -687,6 +694,10 @@ logger.info(
 ---
 
 ## Testing Strategy
+
+### Running with/without containers
+- Default (unit + WireMock only): `./gradlew :api-gateway:test` (containers off)
+- Enable container ITs if added later: `-PwithContainers=true`
 
 ### ✅ Unit Tests (Implemented)
 Current test files:

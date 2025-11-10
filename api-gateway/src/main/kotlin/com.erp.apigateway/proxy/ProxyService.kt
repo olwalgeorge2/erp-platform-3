@@ -87,7 +87,8 @@ class ProxyService {
     ): Response {
         val start = System.nanoTime()
         val base = route.target.baseUrl.trimEnd('/')
-        val path = if (incomingPath.startsWith("/")) incomingPath else "/$incomingPath"
+        val rawPath = if (incomingPath.startsWith("/")) incomingPath else "/$incomingPath"
+        val path = route.mapUpstreamPath(rawPath)
         val query = buildQueryString(queryParams)
         val targetUri = URI.create("$base$path$query")
 

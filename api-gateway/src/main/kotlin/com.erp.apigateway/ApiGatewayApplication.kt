@@ -1,19 +1,13 @@
 package com.erp.apigateway
 
-import jakarta.ws.rs.GET
-import jakarta.ws.rs.Path
-import jakarta.ws.rs.Produces
-import jakarta.ws.rs.core.MediaType
+import jakarta.ws.rs.core.Application
 
-@Path("/health")
-class HealthResource {
-    @GET
-    @Path("/live")
-    @Produces(MediaType.TEXT_PLAIN)
-    fun live(): String = "OK"
-
-    @GET
-    @Path("/ready")
-    @Produces(MediaType.TEXT_PLAIN)
-    fun ready(): String = "READY"
-}
+/**
+ * API Gateway Application Entry Point.
+ *
+ * Health checks are now provided by SmallRye Health:
+ * - GET /q/health/live - Liveness probe (gateway process health)
+ * - GET /q/health/ready - Readiness probe (Redis + backend services)
+ * - GET /q/health - Combined health status
+ */
+class ApiGatewayApplication : Application()

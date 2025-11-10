@@ -19,3 +19,23 @@
 4.1 `identity-application/` - Leverages these adapters to service client workflows.
 4.2 `identity-domain/` - Declares the ports and business contracts satisfied here.
 4.3 Coordinate deployment artifacts with `deployment/` manifests and platform tooling.
+# Identity Infrastructure
+
+This module provides the REST adapters, persistence (Postgres/JPA/Flyway), messaging (Kafka/Redpanda), and supporting services for the Tenancy & Identity bounded context.
+
+## Testing
+
+- Default (fast unit tests only):
+  - `./gradlew :bounded-contexts:tenancy-identity:identity-infrastructure:test`
+  - Uses `withContainers=false` from the root `gradle.properties`.
+
+- Enable Testcontainers-based integration tests (Postgres/Kafka):
+  - `./gradlew :bounded-contexts:tenancy-identity:identity-infrastructure:test -PwithContainers=true`
+  - Or set in CI: `ORG_GRADLE_PROJECT_withContainers=true`
+
+- Naming conventions excluded when containers are off:
+  - `*IntegrationTest*`, `*IT*`
+
+- Tips
+  - Ensure Docker is running for container tests.
+  - Run a single IT: `./gradlew test -PwithContainers=true --tests '*AuthIntegrationTest*'`

@@ -111,7 +111,17 @@ cp .env.example .env
 - `docs/BUILD_SYSTEM_UPDATE.md` - Build tooling and conventions
 - `docs/REDPANDA_MIGRATION.md` - Event streaming with Redpanda (replaces Kafka)
 - `docs/PLATFORM_SHARED_GUIDE.md` - Governance rules for shared modules (Critical!)
+- `docs/TROUBLESHOOTING_DATABASE.md` - Database connection issues and solutions
 - `docs/adr/` - Architecture Decision Records
+
+### Troubleshooting
+If you encounter database connection errors ("password authentication failed"), see:
+- **[docs/TROUBLESHOOTING_DATABASE.md](docs/TROUBLESHOOTING_DATABASE.md)** - Common database issues and solutions
+
+Common issues:
+- Host PostgreSQL service conflicting with Docker PostgreSQL (most common)
+- Port conflicts on 5432
+- Configuration file conflicts (application.properties vs application.yaml)
 
 
 ## 6. Documentation Guide

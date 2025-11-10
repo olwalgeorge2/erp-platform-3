@@ -32,6 +32,7 @@ dependencies {
     implementation(libs.quarkus.opentelemetry)
     implementation(libs.quarkus.logging.json)
     implementation(libs.quarkus.config.yaml)
+    implementation(libs.quarkus.smallrye.health)
 
     // Logging API
     implementation(libs.slf4j.api)
@@ -62,8 +63,8 @@ tasks.withType<Test>().configureEach {
     }
 
     // Skip integration tests requiring Testcontainers (Docker) unless explicitly enabled
-    // Run with: ./gradlew test -DwithContainers=true
-    val withContainers = System.getProperty("withContainers", "false").toBoolean()
+    // Run with: ./gradlew test -PwithContainers=true
+    val withContainers = (findProperty("withContainers") as String?)?.toBoolean() ?: false
     if (!withContainers) {
         exclude("**/*IntegrationTest*")
         exclude("**/*IT*")

@@ -20,4 +20,11 @@ tasks.withType<Test>().configureEach {
         // Show individual test names and results
         showStandardStreams = false
     }
+
+    // Skip ITs by naming convention unless explicitly enabled
+    val withContainers = (findProperty("withContainers") as String?)?.toBoolean() ?: false
+    if (!withContainers) {
+        exclude("**/*IntegrationTest*")
+        exclude("**/*IT*")
+    }
 }

@@ -1,0 +1,209 @@
+### API Gateway - Health Check Tests
+### Use with REST Client extension in VS Code
+
+@baseUrl = http://localhost:8080
+@identityUrl = http://localhost:8081
+
+###############################################################################
+# Health Check Endpoints
+###############################################################################
+
+### 1. Full Health Check (All checks)
+GET {{baseUrl}}/q/health
+Accept: application/json
+
+### 2. Liveness Check (JVM Health - Memory & Threads)
+# This should always be UP unless JVM is in critical state
+GET {{baseUrl}}/q/health/live
+Accept: application/json
+
+### 3. Readiness Check (Redis + Backend Services)
+# This checks if Gateway is ready to handle requests
+# - RedisReadinessCheck: Verifies Redis connectivity
+# - BackendServicesCheck: Verifies Identity service availability
+GET {{baseUrl}}/q/health/ready
+Accept: application/json
+
+### 4. Startup Check
+GET {{baseUrl}}/q/health/started
+Accept: application/json
+
+###############################################################################
+# Direct Identity Service Health (Bypassing Gateway)
+###############################################################################
+
+### 5. Identity Service - Full Health
+GET {{identityUrl}}/q/health
+Accept: application/json
+
+### 6. Identity Service - Liveness
+GET {{identityUrl}}/q/health/live
+Accept: application/json
+
+### 7. Identity Service - Readiness
+GET {{identityUrl}}/q/health/ready
+Accept: application/json
+
+###############################################################################
+# API Gateway - Metrics & Monitoring
+###############################################################################
+
+### 8. Prometheus Metrics
+GET {{baseUrl}}/q/metrics
+Accept: text/plain
+
+### 9. OpenAPI Spec
+GET {{baseUrl}}/q/openapi
+Accept: application/json
+
+###############################################################################
+# API Gateway - Routing Tests
+###############################################################################
+
+### 10. Test Gateway Routing to Identity Service
+# This route should be configured in RouteConfiguration.kt
+GET {{baseUrl}}/api/identity/health
+Accept: application/json
+
+### 11. Test Gateway Root
+GET {{baseUrl}}/
+Accept: application/json
+
+###############################################################################
+# Identity Service - API Tests (Through Gateway)
+###############################################################################
+
+### 12. List Users (if endpoint exists)
+GET {{baseUrl}}/api/identity/users
+Accept: application/json
+
+### 13. Get User by ID (if endpoint exists)
+GET {{baseUrl}}/api/identity/users/1
+Accept: application/json
+
+###############################################################################
+# Redis Health Simulation Tests
+###############################################################################
+
+### 14. Test with Redis Running (Should be UP)
+# Prerequisites: docker compose -f docker-compose-kafka.yml up -d redis
+GET {{baseUrl}}/q/health/ready
+Accept: application/json
+
+### 15. Simulate Redis Failure
+# To test: docker stop erp-redis
+# Then run the readiness check - should show Redis DOWN
+# GET {{baseUrl}}/q/health/ready
+
+###############################################################################
+# Backend Service Health Simulation Tests
+###############################################################################
+
+### 16. Test with Identity Service Running (Should be UP)
+GET {{baseUrl}}/q/health/ready
+Accept: application/json
+
+### 17. Simulate Identity Service Failure
+# To test: Stop identity service (port 8081)
+# Then run the readiness check - should show Backend Service DOWN
+# GET {{baseUrl}}/q/health/ready
+
+###############################################################################
+# Memory/Thread Stress Tests (Liveness)
+###############################################################################
+
+### 18. Check Memory Usage
+# Liveness should be UP if heap usage < 95%
+GET {{baseUrl}}/q/health/live
+Accept: application/json
+
+### 19. Check for Thread Deadlocks
+# Liveness should be UP if no deadlocks detected
+GET {{baseUrl}}/q/health/live
+Accept: application/json
+
+###############################################################################
+# Kubernetes Integration Tests
+###############################################################################
+
+### 20. Liveness Probe (K8s would call this)
+# If this returns DOWN, K8s will restart the pod
+GET {{baseUrl}}/q/health/live
+Accept: application/json
+
+### 21. Readiness Probe (K8s would call this)
+# If this returns DOWN, K8s will remove pod from load balancer
+GET {{baseUrl}}/q/health/ready
+Accept: application/json
+
+### 22. Startup Probe (K8s would call this during startup)
+# If this returns DOWN, K8s will wait before checking liveness/readiness
+GET {{baseUrl}}/q/health/started
+Accept: application/json
+
+###############################################################################
+# Expected Responses
+###############################################################################
+
+# Healthy Response (200 OK):
+# {
+#   "status": "UP",
+#   "checks": [
+#     {
+#       "name": "Redis readiness",
+#       "status": "UP",
+#       "data": {
+#         "latency_ms": 2
+#       }
+#     },
+#     {
+#       "name": "Backend services health",
+#       "status": "UP",
+#       "data": {
+#         "identity-service": "UP"
+#       }
+#     }
+#   ]
+# }
+
+# Unhealthy Response (503 Service Unavailable):
+# {
+#   "status": "DOWN",
+#   "checks": [
+#     {
+#       "name": "Redis readiness",
+#       "status": "DOWN",
+#       "data": {
+#         "error": "Connection refused"
+#       }
+#     }
+#   ]
+# }
+
+###############################################################################
+# Test Scenarios
+###############################################################################
+
+# Scenario 1: All services healthy
+# - Start all Docker services: docker compose -f docker-compose-kafka.yml up -d
+# - Start Identity service: .\scripts\dev-identity.ps1
+# - Start API Gateway: .\scripts\dev-gateway.ps1
+# - Run: GET {{baseUrl}}/q/health/ready
+# - Expected: status=UP, all checks UP
+
+# Scenario 2: Redis down
+# - docker stop erp-redis
+# - Run: GET {{baseUrl}}/q/health/ready
+# - Expected: status=DOWN, Redis check DOWN, Gateway removed from K8s LB
+
+# Scenario 3: Identity service down
+# - Stop identity service
+# - Run: GET {{baseUrl}}/q/health/ready
+# - Expected: status=DOWN, Backend service check DOWN
+
+# Scenario 4: High memory usage
+# - Load test or memory leak simulation
+# - Run: GET {{baseUrl}}/q/health/live
+# - Expected: status=DOWN if heap > 95%, K8s would restart pod
+
+###############################################################################

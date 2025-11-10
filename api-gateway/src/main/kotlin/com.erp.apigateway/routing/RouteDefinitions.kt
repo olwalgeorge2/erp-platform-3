@@ -12,6 +12,11 @@ object RouteDefinitions {
                         retries = 2,
                     ),
                 authRequired = false, // login/register will be public; refined later per-endpoint
+                pathRewrite =
+                    PathRewrite(
+                        removePrefix = "/api/v1/identity",
+                        addPrefix = "/api",
+                    ),
             ),
         )
 }

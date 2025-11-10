@@ -116,7 +116,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run ArchUnit tests
-        run: ./gradlew :tests:archunit-tests:test --no-daemon
+        run: ./gradlew :tests:arch:test --no-daemon
 
   security-scan:
     name: Security Scan

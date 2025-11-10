@@ -9,6 +9,9 @@ data class ServiceTarget(
     val timeoutSeconds: Int = 5,
     val retries: Int = 2,
     val healthPath: String = "/q/health/ready",
+    val backoffInitialMs: Long = 100,
+    val backoffMaxMs: Long = 1000,
+    val backoffJitterMs: Long = 50,
 )
 
 data class PathRewrite(

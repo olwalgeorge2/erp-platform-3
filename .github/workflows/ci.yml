@@ -6,10 +6,12 @@ on:
   pull_request:
     branches: [ "**" ]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  # ═══════════════════════════════════════════════════════════════
   # Phase 1: Dependency & Cache Warmup
-  # ═══════════════════════════════════════════════════════════════
   dependency-cache-warmup:
     name: Dependency Cache Warmup
     runs-on: ubuntu-latest
@@ -34,9 +36,7 @@ jobs:
       - name: Warm up Gradle cache
         run: ./gradlew dependencies --no-daemon
 
-  # ═══════════════════════════════════════════════════════════════
   # Phase 2: Parallel Quality Checks
-  # ═══════════════════════════════════════════════════════════════
   code-style-check:
     name: Code Style Check
     runs-on: ubuntu-latest
@@ -62,9 +62,7 @@ jobs:
       - name: Run ktlint
         run: ./gradlew ktlintCheck --no-daemon
 
-  # ═══════════════════════════════════════════════════════════════
   # Phase 3: Build & Unit Tests
-  # ═══════════════════════════════════════════════════════════════
   build-and-unit-tests:
     name: Build & Unit Tests
     runs-on: ubuntu-latest
@@ -90,9 +88,7 @@ jobs:
       - name: Build and run unit tests
         run: ./gradlew build test -PwithContainers=false --no-daemon
 
-  # ═══════════════════════════════════════════════════════════════
   # Phase 4: Parallel Architecture & Security Analysis
-  # ═══════════════════════════════════════════════════════════════
   architecture-governance:
     name: Architecture Governance
     runs-on: ubuntu-latest
@@ -143,9 +139,7 @@ jobs:
       - name: Run OWASP dependency check
         run: ./gradlew dependencyCheckAnalyze --no-daemon || true
 
-  # ═══════════════════════════════════════════════════════════════
   # Phase 5: Integration Tests
-  # ═══════════════════════════════════════════════════════════════
   integration-tests:
     name: Integration Tests
     runs-on: ubuntu-latest
@@ -173,24 +167,52 @@ jobs:
       - name: Run integration tests with Testcontainers
         run: ./gradlew test --no-daemon
 
-  # ═══════════════════════════════════════════════════════════════
-  # Phase 6: Final Status Check
-  # ═══════════════════════════════════════════════════════════════
+  # Phase 6: Publish Monitoring Assets (Grafana + Prometheus)
+  publish-monitoring-assets:
+    name: Publish Monitoring Assets
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    if: always()
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: "Upload Grafana Dashboard (API Gateway)"
+        uses: actions/upload-artifact@v4
+        with:
+          name: grafana-api-gateway-dashboard
+          path: dashboards/grafana/api-gateway-dashboard.json
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: "Upload Prometheus Alerts (API Gateway)"
+        uses: actions/upload-artifact@v4
+        with:
+          name: prometheus-api-gateway-alerts
+          path: monitoring/prometheus/api-gateway-alerts.yml
+          if-no-files-found: warn
+          retention-days: 14
+
+  # Phase 7: Final Status Check
   ci-status:
     name: CI Status
     runs-on: ubuntu-latest
-    needs: [code-style-check, build-and-unit-tests, architecture-governance, security-scan, integration-tests]
+    needs: [code-style-check, build-and-unit-tests, architecture-governance, security-scan, integration-tests, publish-monitoring-assets]
     if: always()
     steps:
-      - name: Check CI status
+      - name: "Check CI status"
+        shell: bash
         run: |
-          if [[ "${{ needs.code-style-check.result }}" == "failure" || \
-                "${{ needs.build-and-unit-tests.result }}" == "failure" || \
-                "${{ needs.architecture-governance.result }}" == "failure" || \
-                "${{ needs.integration-tests.result }}" == "failure" ]]; then
-            echo "❌ CI Pipeline Failed"
+          if [[ "${{ needs.code-style-check.result }}" == "failure" || \\
+                "${{ needs.build-and-unit-tests.result }}" == "failure" || \\
+                "${{ needs.architecture-governance.result }}" == "failure" || \\
+                "${{ needs.security-scan.result }}" == "failure" || \\
+                "${{ needs.integration-tests.result }}" == "failure" || \\
+                "${{ needs.publish-monitoring-assets.result }}" == "failure" ]]; then
+            echo "CI Pipeline Failed"
             exit 1
           else
-            echo "✅ CI Pipeline Passed"
+            echo "CI Pipeline Passed"
           fi
-

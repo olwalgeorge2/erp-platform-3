@@ -29,10 +29,154 @@ Prometheus scrape: `/q/metrics` (enabled via `quarkus-micrometer-registry-promet
 
 ### Routing & Rewrites
 - Identity route maps `/api/v1/identity/*` → upstream `/api/*` via `pathRewrite`.
-- Health checks call upstream `healthPath` (default `/q/health/ready`) directly on the service base URL.
+- Health checks call upstream `healthPath` directly on the service base URL.
 - Data classes:
   - `ServiceTarget(baseUrl, timeoutSeconds, retries, healthPath)`
   - `ServiceRoute(pattern, target, authRequired, pathRewrite)`
+
+#### Config-driven routes
+Routes can be provided via `application.yml` under `gateway.routes`:
+
+```
+gateway:
+  routes:
+    - pattern: "/api/v1/identity/*"
+      base-url: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+      timeout: 5s
+      retries: 2
+      auth-required: false
+      health-path: "/q/health"   # identity exposes /q/health
+      rewrite:
+        remove-prefix: "/api/v1/identity"
+        add-prefix: "/api"
+```
+
+If `gateway.routes` is absent, built-in defaults are used.
+
+### Rate Limit Overrides
+- Configure per-tenant and per-endpoint overrides:
+```
+gateway:
+  rate-limits:
+    default:
+      requests-per-minute: 100
+      window: 60s
+    overrides:
+      tenants:
+        acme-tenant:
+          requests-per-minute: 1000
+          window: 60s
+      endpoints:
+        - pattern: "/api/v1/identity/*"
+          requests-per-minute: 20
+          window: 60s
+```
+
+### Trace Headers
+- Gateway sets/echoes:
+  - `X-Trace-Id`: generated if missing and returned in responses
+  - `traceparent`: generated if missing (W3C format `00-<traceId>-<spanId>-01`) and echoed
+  - `tracestate`: passed through if present and echoed
+
+- Quick dev checks:
+```
+curl -i -H "X-Trace-Id: demo-1" http://localhost:8080/q/health
+curl -i -H "traceparent: 00-11111111111111111111111111111111-2222222222222222-01" http://localhost:8080/q/metrics
+curl -i \
+  -H "traceparent: 00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01" \
+  -H "tracestate: vendor1=foo,vendor2=bar" \
+  http://localhost:8080/q/health
+```
+
+### Protected Paths (403)
+- Designate protected path prefixes via config. Requests under these prefixes require at least one role in the `GatewaySecurityContext` (set by `AuthenticationFilter`). Otherwise, the gateway returns 403 and increments `gateway_auth_failures_total{reason="forbidden"}`.
+
+```
+gateway:
+  auth:
+    protected-prefixes:
+      - "/api/v1/secure/"
+      - "/api/admin/"
+```
+
+- Quick tests:
+  - Expect 401 if not authenticated on protected path (handled by AuthenticationFilter).
+  - Expect 403 if authenticated but missing required roles on protected path (handled by AuthorizationFilter).
+
+Example (403 when token has no roles):
+```
+curl -i -H "Authorization: Bearer <jwt-without-roles>" \
+  http://localhost:8080/api/v1/secure/ping
+```
+
+Metric visibility:
+```
+curl -s http://localhost:8080/q/metrics | rg gateway_auth_failures_total
+```
+
+## Dashboards & Alerts
+
+### Grafana Dashboard (starter)
+- A starter dashboard is provided at `dashboards/grafana/api-gateway-dashboard.json` with panels for:
+  - Request rate: `rate(gateway_requests_total[5m])` by status/method
+  - Error rate (5xx) and proxy errors: `gateway_errors_total{type}`, `status=~"5.."`
+  - Latency (avg): `rate(gateway_request_duration_seconds_sum[5m]) / rate(gateway_request_duration_seconds_count[5m])`
+  - Rate-limit exceeded: `increase(gateway_ratelimit_exceeded_total[5m])`
+  - Auth failures: `increase(gateway_auth_failures_total[5m])`
+
+Import the JSON into Grafana and select your Prometheus datasource.
+
+### Prometheus Alerts (starter)
+- See `monitoring/prometheus/api-gateway-alerts.yml` for starter rules:
+  - High 5xx error rate (>5% for 10m)
+  - Elevated auth failures and rate-limit exceed events
+  - High average latency (over 500ms for 10m)
+
+Adjust thresholds for your environment and SLOs.
+
+### Dev JWT (local testing)
+- Generate a short‑lived RS256 token (5m default) with optional roles:
+  - PowerShell: `scripts/dev-jwt.ps1 -Subject dev-user -Roles "admin,user" -Issuer erp-platform-dev -Minutes 10`
+  - Bash: `scripts/dev-jwt.sh dev-user admin,user erp-platform-dev 10`
+- Keys are generated on first run under `scripts/keys/` and token saved to `scripts/tokens/dev.jwt`.
+- Use with the dev profile and local key verification:
+  - Config: `api-gateway/src/main/resources/application-dev.yml` sets `mp.jwt.verify.publickey.location` to `file:./scripts/keys/dev-jwt-public.pem` and issuer to `erp-platform-dev`.
+  - Run Quarkus in dev with `-Dquarkus.profile=dev`.
+
+Example request:
+```
+TOKEN=$(cat scripts/tokens/dev.jwt)
+curl -i -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/secure/ping
+```
+
+### Protected Prefixes (dev)
+- `application-dev.yml` enables sample protected prefixes:
+```
+gateway:
+  auth:
+    protected-prefixes:
+      - "/api/v1/secure/"
+      - "/api/admin/"
+```
+
+### Grafana provisioning (dev)
+- Minimal provisioning is included so Grafana can auto‑load the dashboard when mounting the repo:
+  - Datasource: `monitoring/grafana/provisioning/datasources/prometheus.yml`
+  - Dashboards: `monitoring/grafana/provisioning/dashboards/api-gateway.yml` (points to `dashboards/grafana/`)
+- Run Grafana with provisioning mounted, for example via Docker:
+```
+docker run -d --name grafana -p 3000:3000 \
+  -v "$PWD/monitoring/grafana/provisioning:/etc/grafana/provisioning" \
+  -v "$PWD/dashboards/grafana:/var/lib/grafana/dashboards" \
+  grafana/grafana:latest
+```
+- Ensure Prometheus is reachable at `http://localhost:9090` (default in the provisioning file).
+
+### CI Artifacts
+- The GitHub Actions workflow publishes monitoring assets on every run:
+  - `grafana-api-gateway-dashboard` → `dashboards/grafana/api-gateway-dashboard.json`
+  - `prometheus-api-gateway-alerts` → `monitoring/prometheus/api-gateway-alerts.yml`
+- Retrieve: Actions → specific run → Artifacts sidebar.
 
 **Related Documentation:**
 - 📐 [ADR-004: API Gateway Pattern](../docs/adr/ADR-004-api-gateway-pattern.md)

@@ -16,6 +16,8 @@ class GatewaySecurityContext(
 
     override fun getAuthenticationScheme(): String = "Bearer"
 
+    fun roles(): Set<String> = roles
+
     private data class SimplePrincipal(
         val nameValue: String,
     ) : Principal {

@@ -27,13 +27,24 @@ mp:
       issuer: ${JWT_ISSUER:erp-platform}
 
 gateway:
-  services:
-    tenancy-identity:
-      url: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+  routes:
+    - pattern: "/api/v1/identity/*"
+      base-url: ${IDENTITY_SERVICE_URL:http://localhost:8081}
       timeout: 5s
       retries: 2
+      auth-required: false
+      health-path: "/q/health"
+      backoff-initial-ms: 100
+      backoff-max-ms: 1000
+      backoff-jitter-ms: 50
+      rewrite:
+        remove-prefix: "/api/v1/identity"
+        add-prefix: "/api"
 
   rate-limits:
     default:
       requests-per-minute: ${RATE_LIMIT_DEFAULT_REQUESTS:100}
       window: ${RATE_LIMIT_DEFAULT_WINDOW:60s}
+
+  auth:
+    min-failure-duration-ms: 100

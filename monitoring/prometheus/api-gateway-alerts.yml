@@ -1,0 +1,45 @@
+groups:
+  - name: api-gateway-alerts
+    interval: 1m
+    rules:
+      - alert: ApiGatewayHighErrorRate
+        expr: |
+          (sum(rate(gateway_requests_total{status=~"5.."}[5m])) by ()
+            /
+           sum(rate(gateway_requests_total[5m])) by ()) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API Gateway 5xx error rate > 5%"
+          description: '5xx ratio is {{ $value | printf "%.2f" }} over the last 10m'
+
+      - alert: ApiGatewayHighLatency
+        expr: |
+          (sum(rate(gateway_request_duration_seconds_sum[5m]))
+            /
+           sum(rate(gateway_request_duration_seconds_count[5m]))) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API Gateway average latency > 500ms"
+          description: 'Avg latency is {{ $value | printf "%.3f" }}s over the last 10m'
+
+      - alert: ApiGatewayAuthFailuresSpike
+        expr: increase(gateway_auth_failures_total[5m]) > 50
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "API Gateway auth failures elevated"
+          description: "Auth failures > 50 in 5 minutes"
+
+      - alert: ApiGatewayRateLimitExceededSpike
+        expr: increase(gateway_ratelimit_exceeded_total[5m]) > 100
+        for: 5m
+        labels:
+          severity: info
+        annotations:
+          summary: "API Gateway rate-limit exceeded events elevated"
+          description: "Rate-limit exceeds > 100 in 5 minutes"

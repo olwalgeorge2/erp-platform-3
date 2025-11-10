@@ -17,9 +17,19 @@ quarkus:
     console:
       json: false
 
-# Gateway test defaults
+# Gateway test defaults (merged)
 gateway:
+  public-prefixes:
+    - "/test/"
   rate-limits:
     default:
       requests-per-minute: 100
       window: 60s
+    overrides:
+      endpoints:
+        - pattern: "/api/v1/identity/*"
+          requests-per-minute: 2
+          window: 60s
+        - pattern: "/test/*"
+          requests-per-minute: 2
+          window: 60s

@@ -23,7 +23,11 @@ class AuthenticationFilter : ContainerRequestFilter {
     @Inject
     lateinit var metrics: GatewayMetrics
 
+    @Inject
+    lateinit var timingGuard: AuthenticationTimingGuard
+
     override fun filter(requestContext: ContainerRequestContext) {
+        val startedAt = System.currentTimeMillis()
         val path = requestContext.uriInfo.path
         if (publicEndpointsConfig.isPublic(path)) {
             return
@@ -32,7 +36,7 @@ class AuthenticationFilter : ContainerRequestFilter {
         val authHeader = requestContext.headers.getFirst("Authorization") ?: ""
         if (!authHeader.startsWith("Bearer ")) {
             metrics.markAuthFailure("missing_or_invalid_header")
-            abort(requestContext, "Missing or invalid Authorization header")
+            abort(requestContext, "Missing or invalid Authorization header", startedAt)
             return
         }
 
@@ -42,7 +46,7 @@ class AuthenticationFilter : ContainerRequestFilter {
                 jwtValidator.parse(token)
             } catch (e: Exception) {
                 metrics.markAuthFailure("invalid_token")
-                abort(requestContext, "Invalid token")
+                abort(requestContext, "Invalid token", startedAt)
                 return
             }
 
@@ -61,7 +65,9 @@ class AuthenticationFilter : ContainerRequestFilter {
     private fun abort(
         ctx: ContainerRequestContext,
         message: String,
+        startedAt: Long,
     ) {
+        timingGuard.guard(startedAt)
         ctx.abortWith(
             Response
                 .status(Response.Status.UNAUTHORIZED)

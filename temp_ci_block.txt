@@ -1,0 +1,22 @@
+  ci-status:
+    name: CI Status
+    runs-on: ubuntu-latest
+    needs: [code-style-check, build-and-unit-tests, architecture-governance, security-scan, integration-tests, publish-monitoring-assets]
+    if: always()
+    steps:
+      - name: ✅ Check CI status
+        run: |
+          if [[ "${{ needs.code-style-check.result }}" == "failure" || \
+                "${{ needs.build-and-unit-tests.result }}" == "failure" || \
+                "${{ needs.architecture-governance.result }}" == "failure" || \
+                "${{ needs.integration-tests.result }}" == "failure" || \
+                "${{ needs.publish-monitoring-assets.result }}" == "failure" ]]; then
+            echo "❌ CI Pipeline Failed"
+            exit 1
+          else
+            echo "✅ CI Pipeline Passed"
+          fi
+
+
+
+

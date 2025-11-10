@@ -1,0 +1,58 @@
+{
+  "title": "API Gateway Overview",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Request Rate (rps)",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (status,method) (rate(gateway_requests_total[5m]))", "legendFormat": "{{method}} {{status}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "5xx Error Rate (ratio)",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(gateway_requests_total{status=~\"5..\"}[5m])) / sum(rate(gateway_requests_total[5m]))", "legendFormat": "5xx ratio" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Average Latency (s)",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum(rate(gateway_request_duration_seconds_sum[5m])) / sum(rate(gateway_request_duration_seconds_count[5m]))", "legendFormat": "avg" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Proxy Errors by Type",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "increase(gateway_errors_total[5m])", "legendFormat": "{{type}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Rate-Limit Exceeded",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "increase(gateway_ratelimit_exceeded_total[5m])", "legendFormat": "{{tenant}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Auth Failures",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "increase(gateway_auth_failures_total[5m])", "legendFormat": "{{reason}}" }
+      ]
+    }
+  ],
+  "templating": { "list": [] }
+}

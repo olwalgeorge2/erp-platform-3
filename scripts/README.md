@@ -204,3 +204,21 @@ The script sets these environment variables before launching Quarkus:
 - Tips:
   - Ensure Docker is running for container tests.
   - Use `--tests '*AuthIntegrationTest*'` to run a single IT.
+
+## Monitoring Stack (Prometheus + Grafana)
+
+- Start stack (Prometheus on 9090, Grafana on 3000):
+  - PowerShell: `./scripts/dev-monitoring.ps1 up`
+  - Bash: `./scripts/dev-monitoring.sh up`
+
+- Stop stack:
+  - PowerShell: `./scripts/dev-monitoring.ps1 down`
+  - Bash: `./scripts/dev-monitoring.sh down`
+
+- Logs:
+  - PowerShell: `./scripts/dev-monitoring.ps1 logs`
+  - Bash: `./scripts/dev-monitoring.sh logs`
+
+Notes:
+- Prometheus is configured in `monitoring/prometheus/prometheus.yml` to scrape the gateway at `host.docker.internal:8080/q/metrics`.
+- Grafana auto-loads the dashboard from `dashboards/grafana` via provisioning under `monitoring/grafana/provisioning`.

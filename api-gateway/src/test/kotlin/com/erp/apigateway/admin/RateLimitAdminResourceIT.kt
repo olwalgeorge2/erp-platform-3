@@ -8,9 +8,11 @@ import io.smallrye.jwt.build.Jwt
 import jakarta.json.Json
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import java.time.Instant
 
 @QuarkusTest
+@EnabledIfSystemProperty(named = "withContainers", matches = "true")
 @QuarkusTestResource(RedisTestResource::class)
 @QuarkusTestResource(AdminJwtTestResource::class)
 class RateLimitAdminResourceIT {

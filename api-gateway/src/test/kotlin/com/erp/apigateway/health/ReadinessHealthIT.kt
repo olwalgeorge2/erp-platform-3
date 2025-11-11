@@ -7,8 +7,10 @@ import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 
 @QuarkusTest
+@EnabledIfSystemProperty(named = "withContainers", matches = "true")
 @QuarkusTestResource(RedisTestResource::class)
 @QuarkusTestResource(RouteWireMockResource::class)
 class ReadinessHealthIT {

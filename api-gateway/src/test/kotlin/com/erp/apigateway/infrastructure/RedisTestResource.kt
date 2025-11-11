@@ -8,6 +8,13 @@ class RedisTestResource : QuarkusTestResourceLifecycleManager {
     private lateinit var redis: GenericContainer<*>
 
     override fun start(): Map<String, String> {
+        // Check if containers are disabled
+        val withContainers = System.getProperty("withContainers", "false")
+        if (withContainers != "true") {
+            // Return empty map to skip container startup
+            return emptyMap()
+        }
+
         redis =
             GenericContainer(DockerImageName.parse("redis:7-alpine"))
                 .withExposedPorts(6379)

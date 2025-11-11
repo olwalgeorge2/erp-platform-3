@@ -9,12 +9,14 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 
 /**
  * Integration test for Redis service using Testcontainers.
  * Verifies that Redis operations work correctly with the containerized Redis instance.
  */
 @QuarkusTest
+@EnabledIfSystemProperty(named = "withContainers", matches = "true")
 @QuarkusTestResource(RedisTestResource::class)
 class ApiGatewayRedisIntegrationTest {
     @Inject

@@ -5,12 +5,14 @@ import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
 import io.restassured.RestAssured.given
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 
 /**
  * Integration test for API Gateway using Testcontainers for Redis.
  * This test verifies that the gateway properly integrates with Redis for rate limiting.
  */
 @QuarkusTest
+@EnabledIfSystemProperty(named = "withContainers", matches = "true")
 @QuarkusTestResource(RedisTestResource::class)
 class GatewayRouterTest {
     @Test

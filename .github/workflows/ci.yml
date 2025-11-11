@@ -33,10 +33,10 @@ jobs:
         run: chmod +x gradlew
       - name: Build (Linux)
         if: runner.os != 'Windows'
-        run: ./gradlew build -PwithContainers=false --no-daemon
+        run: ./gradlew build -PwithContainers=false -DwithContainers=false --no-daemon
       - name: Build (Windows)
         if: runner.os == 'Windows'
-        run: .\gradlew.bat build -PwithContainers=false --no-daemon
+        run: .\gradlew.bat build -PwithContainers=false -DwithContainers=false --no-daemon
 
   # Phase 1: Dependency & Cache Warmup
   dependency-cache-warmup:
@@ -113,7 +113,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build and run unit tests
-        run: ./gradlew build test -PwithContainers=false --no-daemon
+        run: ./gradlew build test -PwithContainers=false -DwithContainers=false --no-daemon
 
   # Phase 4: Parallel Architecture & Security Analysis
   architecture-governance:

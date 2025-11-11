@@ -159,11 +159,17 @@ class ProxyService {
                     values.forEach { v -> responseBuilder.header(name, v) }
                 }
             }
+            val status = upstream.statusCode()
             val resp = responseBuilder.entity(upstream.body()).build()
-            // Success resets circuit
-            circ.consecutiveFailures = 0
-            metrics.setCircuitOpen(routeKey, false)
-            metrics.recordRequest(method, path, upstream.statusCode(), durationMs)
+            if (status >= 500) {
+                // Count 5xx as failures for circuit breaker
+                updateCircuitOnFailure(circ, route, routeKey)
+            } else {
+                // Success resets circuit
+                circ.consecutiveFailures = 0
+                metrics.setCircuitOpen(routeKey, false)
+            }
+            metrics.recordRequest(method, path, status, durationMs)
             resp
         } catch (e: java.net.http.HttpTimeoutException) {
             val durationMs = (System.nanoTime() - start) / 1_000_000

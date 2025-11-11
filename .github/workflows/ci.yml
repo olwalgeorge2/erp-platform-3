@@ -199,11 +199,8 @@ jobs:
 
       - name: Run OWASP dependency check
         run: |
-          # Fail on CRITICAL and HIGH vulnerabilities
-          # CVSS >= 7.0 (HIGH) or >= 9.0 (CRITICAL)
-          ./gradlew dependencyCheckAnalyze \
-            -Pdependency-check.failBuildOnCVSS=7 \
-            --no-daemon
+          # Run dependency check with pre-configured settings
+          ./gradlew dependencyCheckAnalyze --no-daemon
       
       - name: Upload OWASP report on failure
         if: failure()

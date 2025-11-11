@@ -35,6 +35,8 @@ JAVA_OPTS=(
   -Dgateway.routes[0].retries=0
   -Dgateway.routes[0].auth-required=false
   -Dgateway.routes[0].health-path=/
+  -Dgateway.public-prefixes[0]=/mock
+  -Dgateway.timing-guard.min-failure-duration-ms=50
 )
 
 java "${JAVA_OPTS[@]}" -jar "$JAR" >/tmp/gateway-proxy-smoke.log 2>&1 &

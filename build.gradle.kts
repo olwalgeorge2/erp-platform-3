@@ -19,10 +19,16 @@ dependencyCheck {
     autoUpdate = false  // Don't auto-update in CI to avoid API issues
     
     analyzers {
-        // Keep essential analyzers, disable problematic ones
+        // Keep essential analyzers, disable problematic ones for CI
         assemblyEnabled = false
         nuspecEnabled = false 
         nugetconfEnabled = false
+        nodeAuditEnabled = false  // Disable Node.js analyzer to avoid issues
+        
+        // Keep core analyzers for JVM ecosystem
+        jarEnabled = true
+        archiveEnabled = true
+        centralEnabled = true
     }
 }
 

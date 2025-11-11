@@ -9,7 +9,6 @@ import jakarta.json.Json
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.Test
 import java.time.Instant
-import java.util.Date
 
 @QuarkusTest
 @QuarkusTestResource(RedisTestResource::class)
@@ -22,8 +21,7 @@ class RateLimitAdminResourceIT {
             .subject("admin-user")
             .groups(setOf("admin"))
             .issuedAt(Instant.now())
-            .expiresAt(Date.from(Instant.now().plusSeconds(600)))
-            .jws()
+            .expiresAt(Instant.now().plusSeconds(600))
             .sign(AdminKeys.privateKey)
 
     private fun userToken(): String =
@@ -33,8 +31,7 @@ class RateLimitAdminResourceIT {
             .subject("user")
             .groups(setOf("user"))
             .issuedAt(Instant.now())
-            .expiresAt(Date.from(Instant.now().plusSeconds(600)))
-            .jws()
+            .expiresAt(Instant.now().plusSeconds(600))
             .sign(AdminKeys.privateKey)
 
     @Test

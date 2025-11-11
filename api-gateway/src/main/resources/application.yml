@@ -25,6 +25,14 @@ mp:
       publickey:
         location: ${JWT_PUBLIC_KEY_URL:http://localhost:8081/api/v1/identity/.well-known/jwks.json}
       issuer: ${JWT_ISSUER:erp-platform}
+      # Accept only these audiences (comma-separated). Leave empty to skip audience check.
+      audiences: ${JWT_AUDIENCES:}
+
+smallrye:
+  jwt:
+    time:
+      # Allowed clock skew in seconds when validating iat/exp/nbf
+      allowed-clock-skew: ${JWT_ALLOWED_CLOCK_SKEW:30}
 
 gateway:
   routes:

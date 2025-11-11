@@ -11,11 +11,20 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 
 @ApplicationScoped
 class ProxyService {
     @Inject
     lateinit var metrics: GatewayMetrics
+
+    private data class Circuit(
+        var consecutiveFailures: Int = 0,
+        @Volatile var openUntilMs: Long = 0,
+    )
+
+    private val circuits: MutableMap<String, Circuit> = ConcurrentHashMap()
+
     private val hopByHopHeaders =
         setOf(
             "connection",
@@ -121,6 +130,15 @@ class ProxyService {
         }
 
         val request = builder.build()
+        val routeKey = route.pattern
+
+        // Circuit breaker short-circuit
+        val now = System.currentTimeMillis()
+        val circ = circuits.computeIfAbsent(routeKey) { Circuit() }
+        if (now < circ.openUntilMs) {
+            metrics.setCircuitOpen(routeKey, true)
+            return Response.status(503).entity(byteArrayOf()).build()
+        }
         return try {
             val upstream =
                 sendWithRetry(
@@ -130,6 +148,7 @@ class ProxyService {
                     backoffInitialMs = route.target.backoffInitialMs,
                     backoffMaxMs = route.target.backoffMaxMs,
                     backoffJitterMs = route.target.backoffJitterMs,
+                    routeKey = routeKey,
                 )
             val durationMs = (System.nanoTime() - start) / 1_000_000
 
@@ -141,17 +160,23 @@ class ProxyService {
                 }
             }
             val resp = responseBuilder.entity(upstream.body()).build()
+            // Success resets circuit
+            circ.consecutiveFailures = 0
+            metrics.setCircuitOpen(routeKey, false)
             metrics.recordRequest(method, path, upstream.statusCode(), durationMs)
             resp
         } catch (e: java.net.http.HttpTimeoutException) {
             val durationMs = (System.nanoTime() - start) / 1_000_000
             metrics.markError("proxy_timeout")
             metrics.recordRequest(method, path, 504, durationMs)
+            // Update circuit state
+            updateCircuitOnFailure(circ, route, routeKey)
             Response.status(504).entity(byteArrayOf()).build()
         } catch (e: Exception) {
             val durationMs = (System.nanoTime() - start) / 1_000_000
             metrics.markError("proxy_exception")
             metrics.recordRequest(method, path, 502, durationMs)
+            updateCircuitOnFailure(circ, route, routeKey)
             Response.status(502).entity(byteArrayOf()).build()
         }
     }
@@ -163,6 +188,7 @@ class ProxyService {
         backoffInitialMs: Long,
         backoffMaxMs: Long,
         backoffJitterMs: Long,
+        routeKey: String,
     ): HttpResponse<ByteArray> {
         var attempt = 0
         var lastException: Exception? = null
@@ -170,6 +196,7 @@ class ProxyService {
             try {
                 val resp = client.send(request, HttpResponse.BodyHandlers.ofByteArray())
                 if (resp.statusCode() >= 500 && attempt < retries) {
+                    metrics.markRetry(routeKey)
                     sleepWithBackoff(attempt, backoffInitialMs, backoffMaxMs, backoffJitterMs)
                     attempt += 1
                     continue
@@ -178,16 +205,30 @@ class ProxyService {
             } catch (e: java.net.http.HttpTimeoutException) {
                 lastException = e
                 if (attempt >= retries) throw e
+                metrics.markRetry(routeKey)
                 sleepWithBackoff(attempt, backoffInitialMs, backoffMaxMs, backoffJitterMs)
                 attempt += 1
             } catch (e: java.io.IOException) {
                 lastException = e
                 if (attempt >= retries) throw e
+                metrics.markRetry(routeKey)
                 sleepWithBackoff(attempt, backoffInitialMs, backoffMaxMs, backoffJitterMs)
                 attempt += 1
             }
         }
         throw lastException ?: IllegalStateException("Retry logic failed without exception")
+    }
+
+    private fun updateCircuitOnFailure(
+        circ: Circuit,
+        route: ServiceRoute,
+        routeKey: String,
+    ) {
+        circ.consecutiveFailures += 1
+        if (circ.consecutiveFailures >= route.target.cbFailureThreshold) {
+            circ.openUntilMs = System.currentTimeMillis() + route.target.cbResetMs
+            metrics.setCircuitOpen(routeKey, true)
+        }
     }
 
     private fun sleepWithBackoff(

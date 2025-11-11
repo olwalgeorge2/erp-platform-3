@@ -21,7 +21,9 @@ class RouteConfiguration {
             if (configured != null &&
                 configured.isNotEmpty()
             ) {
-                configured.map { toServiceRoute(it) }
+                val mapped = configured.map { toServiceRoute(it) }
+                validateRoutes(mapped)
+                mapped
             } else {
                 RouteDefinitions.defaultRoutes("http://localhost:8081")
             }
@@ -42,6 +44,8 @@ class RouteConfiguration {
                 backoffInitialMs = entry.backoffInitialMs() ?: 100,
                 backoffMaxMs = entry.backoffMaxMs() ?: 1000,
                 backoffJitterMs = entry.backoffJitterMs() ?: 50,
+                cbFailureThreshold = entry.cbFailureThreshold() ?: 5,
+                cbResetMs = entry.cbResetMs() ?: 30000,
             )
 
         val rewriteCfg = entry.rewrite()
@@ -60,5 +64,33 @@ class RouteConfiguration {
             authRequired = authRequired,
             pathRewrite = rewrite,
         )
+    }
+
+    private fun validateRoutes(routes: List<ServiceRoute>) {
+        // healthPath must be absolute
+        routes.forEach {
+            val hp = it.target.healthPath
+            require(hp.startsWith("/")) {
+                "healthPath must start with '/': $hp (pattern ${it.pattern})"
+            }
+            require(it.target.timeoutSeconds in 1..120) {
+                "timeoutSeconds must be 1..120 (pattern ${it.pattern})"
+            }
+        }
+        // Overlap detection for /* prefixes
+        val prefixes =
+            routes
+                .map { it.pattern }
+                .filter { it.endsWith("/*") }
+                .map { it.removeSuffix("/*") }
+        for (i in prefixes.indices) {
+            for (j in i + 1 until prefixes.size) {
+                val a = prefixes[i]
+                val b = prefixes[j]
+                if (a.startsWith(b) || b.startsWith(a)) {
+                    throw IllegalArgumentException("Overlapping route patterns detected: '$a/*' and '$b/*'")
+                }
+            }
+        }
     }
 }

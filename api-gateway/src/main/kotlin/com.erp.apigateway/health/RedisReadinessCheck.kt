@@ -1,5 +1,6 @@
 package com.erp.apigateway.health
 
+import com.erp.apigateway.metrics.GatewayMetrics
 import io.quarkus.redis.datasource.RedisDataSource
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -22,6 +23,7 @@ class RedisReadinessCheck
     @Inject
     constructor(
         private val redisDataSource: RedisDataSource,
+        private val metrics: GatewayMetrics,
     ) : HealthCheck {
         private val logger = LoggerFactory.getLogger(RedisReadinessCheck::class.java)
 
@@ -37,6 +39,8 @@ class RedisReadinessCheck
                 val latencyMs = System.currentTimeMillis() - startTime
 
                 logger.debug("Redis health check passed ({}ms)", latencyMs)
+                metrics.setRedisHealth(true)
+                metrics.setRedisLatencyMs(latencyMs)
 
                 HealthCheckResponse
                     .builder()
@@ -47,6 +51,7 @@ class RedisReadinessCheck
                     .build()
             } catch (e: Exception) {
                 logger.error("Redis health check failed: {}", e.message, e)
+                metrics.setRedisHealth(false)
 
                 HealthCheckResponse
                     .builder()

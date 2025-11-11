@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "api-gateway.fullname" . }}
+  labels:
+    app: {{ include "api-gateway.name" . }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "api-gateway.name" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "api-gateway.name" . }}
+    spec:
+      containers:
+        - name: api-gateway
+          image: "{{ .Values.image.repository | replace "OWNER" .Release.Namespace }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          env:
+            - name: REDIS_URL
+              value: {{ .Values.env.REDIS_URL | quote }}
+            - name: IDENTITY_SERVICE_URL
+              value: {{ .Values.env.IDENTITY_SERVICE_URL | quote }}
+            - name: JWT_ENABLED
+              value: {{ .Values.env.JWT_ENABLED | quote }}
+          readinessProbe:
+            httpGet:
+              path: /q/health/ready
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /q/health/live
+              port: {{ .Values.service.targetPort }}
+            initialDelaySeconds: 20
+            periodSeconds: 20
+

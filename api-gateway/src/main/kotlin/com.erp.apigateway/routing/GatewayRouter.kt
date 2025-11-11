@@ -12,6 +12,8 @@ data class ServiceTarget(
     val backoffInitialMs: Long = 100,
     val backoffMaxMs: Long = 1000,
     val backoffJitterMs: Long = 50,
+    val cbFailureThreshold: Int = 5,
+    val cbResetMs: Long = 30000,
 )
 
 data class PathRewrite(
@@ -51,6 +53,9 @@ class RouteResolver(
     fun resolve(path: String): ServiceRoute =
         routes.firstOrNull { matches(it.pattern, path) }
             ?: throw RouteNotFoundException("No route for $path")
+
+    // Expose configured routes for health/metrics aggregation
+    fun routes(): List<ServiceRoute> = routes
 
     private fun matches(
         pattern: String,

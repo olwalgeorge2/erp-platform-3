@@ -11,6 +11,8 @@ class RedisService {
 
     private val stringCommands by lazy { redis.value(String::class.java) }
     private val longCommands by lazy { redis.value(Long::class.java) }
+    private val keyCommands by lazy { redis.key() }
+    private val stringCommands by lazy { redis.value(String::class.java) }
 
     fun incr(key: String): Long = longCommands.incr(key)
 
@@ -22,4 +24,17 @@ class RedisService {
     }
 
     fun get(key: String): String? = stringCommands.get(key)
+
+    fun set(
+        key: String,
+        value: String,
+    ) {
+        stringCommands.set(key, value)
+    }
+
+    fun del(key: String) {
+        keyCommands.del(key)
+    }
+
+    fun keys(pattern: String): List<String> = keyCommands.keys(pattern)
 }

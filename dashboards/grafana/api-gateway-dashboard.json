@@ -52,6 +52,66 @@
       "targets": [
         { "expr": "increase(gateway_auth_failures_total[5m])", "legendFormat": "{{reason}}" }
       ]
+    },
+    {
+      "type": "timeseries",
+      "title": "401 Unauthorized (rate)",
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "sum by (reason) (increase(gateway_auth_failures_total{reason=~\\"missing_or_invalid_header|invalid_token\\"}[5m]))", "legendFormat": "{{reason}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "403 Forbidden (rate)",
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "increase(gateway_auth_failures_total{reason=\\"forbidden\\"}[5m])", "legendFormat": "forbidden" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Backend Health (identity)",
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "gateway_backend_up{service=\\"identity-service\\"}", "legendFormat": "identity-service" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bool", "thresholds": { "mode": "absolute", "steps": [ {"color":"red","value":0}, {"color":"green","value":1} ] } } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Backends Overview",
+      "gridPos": { "x": 0, "y": 48, "w": 24, "h": 8 },
+      "targets": [
+        { "expr": "gateway_backend_up", "legendFormat": "{{service}}" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bool" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Redis Health & Latency",
+      "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "gateway_redis_up", "legendFormat": "redis up" },
+        { "expr": "gateway_redis_latency_ms", "legendFormat": "redis latency (ms)" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Proxy Retries by Route",
+      "gridPos": { "x": 0, "y": 40, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "increase(gateway_proxy_retries_total[5m])", "legendFormat": "{{route}}" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Circuit State & Opens",
+      "gridPos": { "x": 12, "y": 40, "w": 12, "h": 8 },
+      "targets": [
+        { "expr": "gateway_circuit_state", "legendFormat": "state {{route}}" },
+        { "expr": "increase(gateway_circuit_open_total[15m])", "legendFormat": "opens {{route}}" }
+      ]
     }
   ],
   "templating": { "list": [] }

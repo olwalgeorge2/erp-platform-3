@@ -2,6 +2,7 @@ package com.erp.apigateway.filter
 
 import com.erp.apigateway.config.RateLimitsConfig
 import com.erp.apigateway.context.TenantContext
+import com.erp.apigateway.infrastructure.RedisService
 import com.erp.apigateway.metrics.GatewayMetrics
 import com.erp.apigateway.ratelimit.RateLimiter
 import jakarta.annotation.Priority
@@ -33,6 +34,9 @@ class RateLimitFilter : ContainerRequestFilter {
     @Inject
     lateinit var rateLimitsConfig: Instance<RateLimitsConfig>
 
+    @Inject
+    lateinit var redis: RedisService
+
     override fun filter(requestContext: ContainerRequestContext) {
         val tenant = tenantContext.tenantId ?: "default"
         val endpointKey = requestContext.method + ":" + requestContext.uriInfo.path
@@ -59,7 +63,15 @@ class RateLimitFilter : ContainerRequestFilter {
         tenant: String,
         path: String,
     ): Pair<Int, Int> {
-        // 1) Endpoint override (first match)
+        // 1) Dynamic endpoint overrides (Redis)
+        val dynEndpoint = resolveDynamicEndpointOverride(path)
+        if (dynEndpoint != null) return dynEndpoint
+
+        // 2) Dynamic tenant override (Redis)
+        val dynTenant = resolveDynamicTenantOverride(tenant)
+        if (dynTenant != null) return dynTenant
+
+        // 3) Endpoint override (config, first match)
         val mapping = if (rateLimitsConfig.isResolvable) rateLimitsConfig.get() else null
         val endpointOverride =
             mapping
@@ -69,12 +81,12 @@ class RateLimitFilter : ContainerRequestFilter {
         if (endpointOverride != null) {
             return Pair(endpointOverride.requestsPerMinute(), endpointOverride.window().seconds.toInt())
         }
-        // 2) Tenant override
+        // 4) Tenant override (config)
         val tenantOverride = mapping?.overrides()?.tenants()?.get(tenant)
         if (tenantOverride != null) {
             return Pair(tenantOverride.requestsPerMinute(), tenantOverride.window().seconds.toInt())
         }
-        // 3) Default
+        // 5) Default
         if (mapping != null) {
             val def = mapping.default()
             return Pair(def.requestsPerMinute(), def.window().seconds.toInt())
@@ -84,6 +96,32 @@ class RateLimitFilter : ContainerRequestFilter {
         val window: Duration = config.getValue("gateway.rate-limits.default.window", Duration::class.java)
         return Pair(limit, window.seconds.toInt())
     }
+
+    private fun resolveDynamicTenantOverride(tenant: String): Pair<Int, Int>? =
+        redis.get("rl:tenant:$tenant")?.let { parseOverride(it) }
+
+    private fun resolveDynamicEndpointOverride(path: String): Pair<Int, Int>? {
+        val keys = redis.keys("rl:endpoint:*")
+        keys.forEach { k ->
+            val pattern = k.removePrefix("rl:endpoint:")
+            if (patternMatches(pattern, path)) {
+                val v = redis.get(k)
+                val p = parseOverride(v)
+                if (p != null) return p
+            }
+        }
+        return null
+    }
+
+    private fun parseOverride(value: String?): Pair<Int, Int>? =
+        try {
+            if (value.isNullOrBlank()) return null
+            val parts = value.split(":")
+            if (parts.size != 2) return null
+            Pair(parts[0].toInt(), parts[1].toInt())
+        } catch (_: Exception) {
+            null
+        }
 
     private fun patternMatches(
         pattern: String,

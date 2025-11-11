@@ -11,6 +11,7 @@ TOKENS_DIR="$ROOT_DIR/scripts/tokens"
 PRIV="$KEYS_DIR/dev-jwt-private.pem"
 PUB="$KEYS_DIR/dev-jwt-public.pem"
 OUT="$TOKENS_DIR/dev.jwt"
+GATEWAY_PUB_CLASSPATH="$ROOT_DIR/api-gateway/src/main/resources/keys/dev-jwt-public.pem"
 
 SUBJECT="${1:-dev-user}"
 ROLES_CSV="${2:-}"
@@ -57,3 +58,9 @@ printf '%s' "$token" > "$OUT"
 echo "[dev-jwt] Token written to $OUT"
 echo "$token"
 
+# Copy public key into gateway resources for classpath resolution
+if ! cp "$PUB" "$GATEWAY_PUB_CLASSPATH" 2>/dev/null; then
+  echo "[dev-jwt] Warning: could not copy public key to $GATEWAY_PUB_CLASSPATH"
+else
+  echo "[dev-jwt] Public key copied to $GATEWAY_PUB_CLASSPATH"
+fi

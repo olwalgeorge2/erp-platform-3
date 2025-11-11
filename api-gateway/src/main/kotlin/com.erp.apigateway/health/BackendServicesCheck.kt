@@ -1,5 +1,6 @@
 package com.erp.apigateway.health
 
+import com.erp.apigateway.metrics.GatewayMetrics
 import com.erp.apigateway.routing.RouteResolver
 import com.erp.apigateway.routing.ServiceRoute
 import jakarta.enterprise.context.ApplicationScoped
@@ -28,6 +29,7 @@ class BackendServicesCheck
     @Inject
     constructor(
         private val routeResolver: RouteResolver,
+        private val metrics: GatewayMetrics,
     ) : HealthCheck {
         private val logger = LoggerFactory.getLogger(BackendServicesCheck::class.java)
 
@@ -48,11 +50,17 @@ class BackendServicesCheck
             var allHealthy = true
 
             try {
-                // Check identity service health endpoint via route target
-                val identityHealth = checkService("/api/v1/identity/")
-                serviceChecks["identity-service"] = identityHealth.status
-                if (!identityHealth.healthy) {
-                    allHealthy = false
+                // Evaluate distinct backends derived from configured routes
+                val seen = mutableSetOf<String>()
+                routeResolver.routes().forEach { route ->
+                    val key = route.target.baseUrl.trimEnd('/')
+                    if (seen.add(key)) {
+                        val svcName = serviceNameFor(route)
+                        val health = checkTarget(route)
+                        serviceChecks[svcName] = health.status
+                        metrics.setBackendHealth(svcName, health.healthy)
+                        if (!health.healthy) allHealthy = false
+                    }
                 }
 
                 // Add more backend checks here as services are added
@@ -81,10 +89,9 @@ class BackendServicesCheck
             return builder.build()
         }
 
-        private fun checkService(path: String): ServiceHealth =
+        private fun checkTarget(route: ServiceRoute): ServiceHealth =
             try {
-                val route = routeResolver.resolve(path)
-                val healthUrl = buildHealthUrl(route, path)
+                val healthUrl = buildHealthUrl(route)
 
                 val request =
                     HttpRequest
@@ -106,10 +113,7 @@ class BackendServicesCheck
                 ServiceHealth(healthy = false, status = "DOWN (${e.javaClass.simpleName})")
             }
 
-        private fun buildHealthUrl(
-            route: ServiceRoute,
-            path: String,
-        ): String {
+        private fun buildHealthUrl(route: ServiceRoute): String {
             val baseUrl = route.target.baseUrl.trimEnd('/')
             val healthPath =
                 if (route.target.healthPath.startsWith("/")) {
@@ -118,6 +122,23 @@ class BackendServicesCheck
                     "/${route.target.healthPath}"
                 }
             return "$baseUrl$healthPath"
+        }
+
+        private fun serviceNameFor(route: ServiceRoute): String {
+            // Attempt to derive name from pattern like /api/v1/identity/* -> identity-service
+            val p = route.pattern.trim('/')
+            val parts = p.split('/')
+            val name = parts.lastOrNull { it.isNotEmpty() && it != "*" }
+            if (!name.isNullOrBlank() && name != "api" && name != "v1") {
+                return "$name-service"
+            }
+            // Fallback to host of baseUrl
+            return try {
+                val uri = URI.create(route.target.baseUrl)
+                uri.host ?: route.target.baseUrl
+            } catch (_: Exception) {
+                route.target.baseUrl
+            }
         }
 
         private data class ServiceHealth(

@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: erp-redis
+    ports:
+      - "6379:6379"
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    image: erp/api-gateway:dev
+    container_name: erp-api-gateway
+    depends_on:
+      - redis
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - IDENTITY_SERVICE_URL=http://host.docker.internal:8081
+      - JWT_ENABLED=false
+    ports:
+      - "8080:8080"
+

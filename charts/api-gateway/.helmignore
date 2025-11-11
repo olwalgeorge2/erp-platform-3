@@ -1,0 +1,6 @@
+.git/
+.svn/
+.idea/
+.vscode/
+node_modules/
+

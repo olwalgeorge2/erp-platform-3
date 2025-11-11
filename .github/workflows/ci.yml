@@ -11,6 +11,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  matrix-build:
+    name: Matrix Build (JDK 21)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Build (no containers)
+        run: ./gradlew build -PwithContainers=false --no-daemon
+
   # Phase 1: Dependency & Cache Warmup
   dependency-cache-warmup:
     name: Dependency Cache Warmup
@@ -195,11 +215,98 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  # Phase 6.5: Smoke (liveness only)
+  smoke:
+    name: Smoke (Liveness Only)
+    runs-on: ubuntu-latest
+    needs: build-and-unit-tests
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make scripts executable
+        run: chmod +x .github/scripts/smoke.sh
+
+      - name: Run smoke
+        run: bash .github/scripts/smoke.sh
+
+  proxy-smoke:
+    name: Proxy Smoke
+    runs-on: ubuntu-latest
+    needs: build-and-unit-tests
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make scripts executable
+        run: chmod +x .github/scripts/proxy-smoke.sh
+
+      - name: Run proxy smoke
+        run: bash .github/scripts/proxy-smoke.sh
+
+  k6-smoke:
+    name: k6 Smoke (Perf)
+    runs-on: ubuntu-latest
+    needs: build-and-unit-tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+      - name: Setup k6
+        uses: grafana/setup-k6-action@v1
+      - name: Run k6 smoke
+        run: |
+          chmod +x .github/scripts/k6-smoke.sh
+          bash .github/scripts/k6-smoke.sh
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+      - name: Summarize k6 metrics
+        run: |
+          if [ -f /tmp/k6-summary.json ]; then
+            AVG=$(jq -r '.metrics.http_req_duration.avg' /tmp/k6-summary.json)
+            P95=$(jq -r '.metrics.http_req_duration.p(95)' /tmp/k6-summary.json)
+            RPS=$(jq -r '.metrics.http_reqs.rate' /tmp/k6-summary.json)
+            {
+              echo "### k6 Smoke Summary"
+              echo "- Avg latency (ms): $AVG"
+              echo "- P95 latency (ms): $P95"
+              echo "- RPS: $RPS"
+            } >> $GITHUB_STEP_SUMMARY
+          fi
+
   # Phase 7: Final Status Check
   ci-status:
     name: CI Status
     runs-on: ubuntu-latest
-    needs: [code-style-check, build-and-unit-tests, architecture-governance, security-scan, integration-tests, publish-monitoring-assets]
+    needs: [matrix-build, code-style-check, build-and-unit-tests, architecture-governance, security-scan, integration-tests, publish-monitoring-assets, smoke, proxy-smoke, docker-publish, sbom, trivy-scan]
     if: always()
     steps:
       - name: "Check CI status"
@@ -210,9 +317,98 @@ jobs:
                 "${{ needs.architecture-governance.result }}" == "failure" || \\
                 "${{ needs.security-scan.result }}" == "failure" || \\
                 "${{ needs.integration-tests.result }}" == "failure" || \\
-                "${{ needs.publish-monitoring-assets.result }}" == "failure" ]]; then
+                "${{ needs.publish-monitoring-assets.result }}" == "failure" || \
+                "${{ needs.smoke.result }}" == "failure" || \
+                "${{ needs.proxy-smoke.result }}" == "failure" || \
+                "${{ needs.docker-publish.result }}" == "failure" || \
+                "${{ needs.sbom.result }}" == "failure" || \
+                "${{ needs.trivy-scan.result }}" == "failure" ]]; then
             echo "CI Pipeline Failed"
             exit 1
           else
             echo "CI Pipeline Passed"
           fi
+
+  docker-publish:
+    name: Docker Build & Publish (GHCR)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/api-gateway
+          docker build -t $IMAGE:${{ github.sha }} -f api-gateway/Dockerfile .
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+      - name: Push image (sha tag)
+        run: |
+          docker push $IMAGE:${{ github.sha }}
+      - name: Tag latest on default branch
+        if: github.ref_name == 'main' || github.ref_name == 'master'
+        run: |
+          docker tag $IMAGE:${{ github.sha }} $IMAGE:latest
+          docker push $IMAGE:latest
+
+  sbom:
+    name: SBOM (CycloneDX)
+    runs-on: ubuntu-latest
+    needs: docker-publish
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Generate SBOM from image
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/${{ github.repository_owner }}/api-gateway:${{ github.sha }}
+          format: cyclonedx-json
+          output-file: sbom-api-gateway.cdx.json
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-api-gateway
+          path: sbom-api-gateway.cdx.json
+
+  trivy-scan:
+    name: Trivy Container Scan
+    runs-on: ubuntu-latest
+    needs: docker-publish
+    steps:
+      - name: Scan image (fail on CRITICAL)
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/api-gateway:${{ github.sha }}
+          format: 'table'
+          ignore-unfixed: true
+          severity: 'CRITICAL'
+          exit-code: '1'
+
+  helm-package:
+    name: Helm Package
+    runs-on: ubuntu-latest
+    needs: [docker-publish]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+      - name: Lint chart
+        run: helm lint charts/api-gateway
+      - name: Package chart
+        run: helm package charts/api-gateway --destination dist
+      - name: Upload chart artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: helm-api-gateway
+          path: dist/*.tgz

@@ -5,6 +5,9 @@ import io.micrometer.core.instrument.Tags
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 @ApplicationScoped
 class GatewayMetrics {
@@ -40,5 +43,62 @@ class GatewayMetrics {
 
     fun markAuthFailure(reason: String) {
         registry.counter("gateway_auth_failures_total", Tags.of("reason", reason)).increment()
+    }
+
+    // Backend health (0/1) per service
+    private val backendUp: MutableMap<String, AtomicInteger> = ConcurrentHashMap()
+
+    fun setBackendHealth(
+        service: String,
+        up: Boolean,
+    ) {
+        val gauge =
+            backendUp.computeIfAbsent(service) {
+                val ref = AtomicInteger(0)
+                registry.gauge("gateway_backend_up", Tags.of("service", service), ref)
+                ref
+            }
+        gauge.set(if (up) 1 else 0)
+    }
+
+    // Redis health (0/1)
+    private val redisUpRef = AtomicInteger(0)
+    private val redisLatencyRef = AtomicLong(0)
+
+    init {
+        registry.gauge("gateway_redis_up", redisUpRef)
+        registry.gauge("gateway_redis_latency_ms", redisLatencyRef)
+    }
+
+    fun setRedisHealth(up: Boolean) {
+        redisUpRef.set(if (up) 1 else 0)
+    }
+
+    fun setRedisLatencyMs(latencyMs: Long) {
+        redisLatencyRef.set(latencyMs)
+    }
+
+    // Proxy retries per route
+    fun markRetry(routeKey: String) {
+        registry.counter("gateway_proxy_retries_total", Tags.of("route", routeKey)).increment()
+    }
+
+    // Circuit breaker metrics per route
+    private val circuitState: MutableMap<String, AtomicInteger> = ConcurrentHashMap()
+
+    fun setCircuitOpen(
+        routeKey: String,
+        open: Boolean,
+    ) {
+        val ref =
+            circuitState.computeIfAbsent(routeKey) {
+                val r = AtomicInteger(0)
+                registry.gauge("gateway_circuit_state", Tags.of("route", routeKey), r)
+                r
+            }
+        ref.set(if (open) 1 else 0)
+        if (open) {
+            registry.counter("gateway_circuit_open_total", Tags.of("route", routeKey)).increment()
+        }
     }
 }

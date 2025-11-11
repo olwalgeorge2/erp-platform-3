@@ -82,6 +82,7 @@ Write-Host "Launching API Gateway on port $port" -ForegroundColor Green
 
 # Set environment variables for the gateway
 $env:QUARKUS_HTTP_PORT = $port
+$env:QUARKUS_ANALYTICS_DISABLED = 'true'
 $env:REDIS_URL = "redis://localhost:6379"
 $env:IDENTITY_SERVICE_URL = "http://localhost:8081"
 

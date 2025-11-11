@@ -40,6 +40,13 @@ interface GatewayRoutesConfig {
 
         @WithDefault("50")
         fun backoffJitterMs(): Long
+
+        // Circuit breaker: open after consecutive failures, reset after interval
+        @WithDefault("5")
+        fun cbFailureThreshold(): Int
+
+        @WithDefault("30000")
+        fun cbResetMs(): Long
     }
 
     interface Rewrite {

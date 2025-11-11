@@ -72,6 +72,22 @@ gateway:
           window: 60s
 ```
 
+#### Admin API (secure)
+- Manage dynamic overrides at runtime (stored in Redis). Requires a JWT with `admin` role.
+
+Endpoints:
+- `GET /admin/ratelimits/tenants` → list tenant overrides
+- `GET /admin/ratelimits/tenants/{tenant}` → get override
+- `PUT /admin/ratelimits/tenants/{tenant}` body `{ "requestsPerMinute": 200, "windowSeconds": 60 }`
+- `DELETE /admin/ratelimits/tenants/{tenant}`
+- `GET /admin/ratelimits/endpoints` → list endpoint overrides
+- `GET /admin/ratelimits/endpoints/{pattern}`
+- `PUT /admin/ratelimits/endpoints/{pattern}` body `{ "requestsPerMinute": 5, "windowSeconds": 60 }`
+- `DELETE /admin/ratelimits/endpoints/{pattern}`
+
+Resolution order:
+1) Dynamic endpoint (Redis) → 2) Dynamic tenant (Redis) → 3) Config endpoint → 4) Config tenant → 5) Config default → 6) Legacy MP config
+
 ### Trace Headers
 - Gateway sets/echoes:
   - `X-Trace-Id`: generated if missing and returned in responses
@@ -113,6 +129,12 @@ Metric visibility:
 ```
 curl -s http://localhost:8080/q/metrics | rg gateway_auth_failures_total
 ```
+
+### JWT Verification (Prod vs Dev)
+- Prod (default): verifies tokens against Identity JWKS at `${JWT_PUBLIC_KEY_URL}` and `issuer=${JWT_ISSUER}`. Optional audiences via `${JWT_AUDIENCES}`. Allowed clock skew via `${JWT_ALLOWED_CLOCK_SKEW}`.
+  - See: `api-gateway/src/main/resources/application.yml`
+- Dev: disabled by default (`JWT_ENABLED=false`). When enabled, verifies against classpath key `classpath:keys/dev-jwt-public.pem` (copied by `scripts/dev-jwt.*`).
+  - See: `api-gateway/src/main/resources/application-dev.yml`
 
 ## Dashboards & Alerts
 
@@ -177,6 +199,46 @@ docker run -d --name grafana -p 3000:3000 \
   - `grafana-api-gateway-dashboard` → `dashboards/grafana/api-gateway-dashboard.json`
   - `prometheus-api-gateway-alerts` → `monitoring/prometheus/api-gateway-alerts.yml`
 - Retrieve: Actions → specific run → Artifacts sidebar.
+
+## Run with Docker
+- Build and run via Compose (gateway + redis):
+```
+docker compose -f docker-compose-gateway.yml up --build -d
+```
+- Env defaults: `REDIS_URL=redis://redis:6379`, `IDENTITY_SERVICE_URL=http://host.docker.internal:8081`, `JWT_ENABLED=false`.
+
+## Kubernetes Manifests
+- Minimal manifests under `deploy/k8s/api-gateway/`:
+  - `deployment.yaml` with readiness/liveness probes
+  - `service.yaml` exposing port 80 → 8080
+- Build and push your image as `erp/api-gateway:dev` or override in the Deployment spec.
+
+## Linux note (Prometheus)
+- If `host.docker.internal` is not available on Linux, use the host IP or a user-defined Docker network to reach the host service.
+
+## Route Config Validation (pitfalls)
+- healthPath must start with `/`.
+- timeoutSeconds must be between 1 and 120.
+- Overlapping `/*` patterns are rejected (e.g., `/api/*` and `/api/v1/*`).
+
+## Helm Chart
+- Minimal chart in `charts/api-gateway`:
+  - Values: image repo/tag, env (REDIS_URL, IDENTITY_SERVICE_URL, JWT_ENABLED)
+  - Usage example:
+```
+helm upgrade --install gateway charts/api-gateway \
+  --set image.repository=ghcr.io/<owner>/api-gateway \
+  --set image.tag=latest
+```
+
+## Load Test (k6)
+- Simple smoke at `load/k6/gateway-smoke.js`:
+```
+k6 run -e GW_URL=http://localhost:8080 load/k6/gateway-smoke.js
+```
+
+## Logging Hygiene
+- Request/response logging masks sensitive headers (Authorization) and adds correlation ID via `X-Trace-Id` to MDC.
 
 **Related Documentation:**
 - 📐 [ADR-004: API Gateway Pattern](../docs/adr/ADR-004-api-gateway-pattern.md)

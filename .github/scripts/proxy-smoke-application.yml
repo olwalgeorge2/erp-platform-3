@@ -11,6 +11,9 @@ gateway:
       retries: 0
       auth-required: false
       health-path: "/"
+      rewrite:
+        remove-prefix: "/mock"
+        add-prefix: ""
 
   public-prefixes:
     - "/mock"

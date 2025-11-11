@@ -14,8 +14,16 @@ dependencyCheck {
     format = "ALL"
     failBuildOnCVSS = 7.0f
     suppressionFile = file("$rootDir/dependency-check-suppressions.xml").takeIf { it.exists() }?.absolutePath
-    // Skip automatic updates to avoid NVD API issues in CI
-    autoUpdate = false
+    
+    // CI-friendly configuration
+    autoUpdate = false  // Don't auto-update in CI to avoid API issues
+    
+    analyzers {
+        // Keep essential analyzers, disable problematic ones
+        assemblyEnabled = false
+        nuspecEnabled = false 
+        nugetconfEnabled = false
+    }
 }
 
 allprojects {

@@ -63,7 +63,6 @@ gateway:
     protected-prefixes:
       - "/api/v1/identity"
       - "/api/v1/tenancy"
-  
-  # Timing guard configuration (flat property for @ConfigProperty)
-  timing-guard:
-    min-failure-duration-ms: 100
+
+# Flat property for @ConfigProperty injection (not nested)
+gateway.timing-guard.min-failure-duration-ms: 100

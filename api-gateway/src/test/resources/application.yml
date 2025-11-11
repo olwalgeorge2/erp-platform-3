@@ -19,6 +19,10 @@ quarkus:
 
 # Gateway test defaults (merged)
 gateway:
+  auth:
+    protected-prefixes:
+      - "/api/v1/identity"
+      - "/api/v1/tenancy"
   public-prefixes:
     - "/test/"
   rate-limits:

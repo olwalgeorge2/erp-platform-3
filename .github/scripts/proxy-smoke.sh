@@ -22,6 +22,28 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Wait for Python HTTP server to be ready
+echo "Waiting for Python HTTP server on :18081..."
+for i in {1..30}; do
+  if curl -fsS "http://localhost:18081/" >/dev/null 2>&1; then
+    echo "Python HTTP server ready"
+    break
+  fi
+  if [ $i -eq 30 ]; then
+    echo "Python HTTP server failed to start. Logs:" >&2
+    cat "$PY_LOG" >&2
+    exit 1
+  fi
+  sleep 1
+done
+
+# Test that mock directory is accessible
+if ! curl -fsS "http://localhost:18081/mock/" >/dev/null 2>&1; then
+  echo "Warning: Mock directory not accessible at http://localhost:18081/mock/" >&2
+  echo "Available paths:" >&2
+  curl -s "http://localhost:18081/" | head -20 >&2 || true
+fi
+
 # Run gateway with a simple route to the mock backend
 PORT=8080
 export QUARKUS_HTTP_PORT=$PORT

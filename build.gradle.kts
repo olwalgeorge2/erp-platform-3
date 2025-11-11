@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.quarkus) apply false
     alias(libs.plugins.kover) apply false
     id("org.jlleitschuh.gradle.ktlint") version "12.1.1" apply false
-    id("org.owasp.dependencycheck") version "10.0.4"
+    id("org.owasp.dependencycheck") version "9.0.9"
 }
 
 // Configure OWASP Dependency Check
@@ -17,19 +17,6 @@ dependencyCheck {
     
     // CI-friendly configuration
     autoUpdate = false  // Don't auto-update in CI to avoid API issues
-    
-    analyzers {
-        // Keep essential analyzers, disable problematic ones for CI
-        assemblyEnabled = false
-        nuspecEnabled = false 
-        nugetconfEnabled = false
-        nodeAuditEnabled = false  // Disable Node.js analyzer to avoid issues
-        
-        // Keep core analyzers for JVM ecosystem
-        jarEnabled = true
-        archiveEnabled = true
-        centralEnabled = true
-    }
 }
 
 allprojects {

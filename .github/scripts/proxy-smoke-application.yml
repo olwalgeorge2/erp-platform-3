@@ -1,0 +1,30 @@
+quarkus:
+  http:
+    port: ${API_GATEWAY_PORT:8080}
+    host: ${API_GATEWAY_HOST:0.0.0.0}
+
+gateway:
+  routes:
+    - pattern: "/mock/*"
+      base-url: "http://localhost:18081"
+      timeout: 3s
+      retries: 0
+      auth-required: false
+      health-path: "/"
+
+  public-prefixes:
+    - "/mock"
+    - "/q"
+    - "/q/health"
+    - "/q/metrics"
+
+  rate-limits:
+    default:
+      requests-per-minute: 1000
+      window: 60s
+
+  auth:
+    protected-prefixes: []
+
+# Remove timing guard property - it has a default value in the code
+# gateway.timing-guard.min-failure-duration-ms: 50

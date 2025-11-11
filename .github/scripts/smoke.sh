@@ -17,7 +17,7 @@ if [ ! -f "$JAR" ]; then
 fi
 
 echo "Starting API Gateway (fast-jar) on :$PORT"
-java -Dgateway.timing-guard.min-failure-duration-ms=50 -jar "$JAR" >/tmp/gateway.log 2>&1 &
+java -Dquarkus.config.locations=".github/scripts/smoke-application.yml" -jar "$JAR" >/tmp/gateway.log 2>&1 &
 PID=$!
 echo "PID=$PID"
 

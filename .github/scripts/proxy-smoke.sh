@@ -22,24 +22,14 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Run gateway with a single route to the mock backend
+# Run gateway with a simple route to the mock backend
 PORT=8080
 export QUARKUS_HTTP_PORT=$PORT
 export JWT_ENABLED=false
 JAR="api-gateway/build/quarkus-app/quarkus-run.jar"
+CONFIG_FILE=".github/scripts/proxy-smoke-application.yml"
 
-JAVA_OPTS=(
-  -Dgateway.routes[0].pattern=/mock/*
-  -Dgateway.routes[0].base-url=http://localhost:18081
-  -Dgateway.routes[0].timeout=PT3S
-  -Dgateway.routes[0].retries=0
-  -Dgateway.routes[0].auth-required=false
-  -Dgateway.routes[0].health-path=/
-  -Dgateway.public-prefixes[0]=/mock
-  -Dgateway.timing-guard.min-failure-duration-ms=50
-)
-
-java "${JAVA_OPTS[@]}" -jar "$JAR" >/tmp/gateway-proxy-smoke.log 2>&1 &
+java -Dquarkus.config.locations="$CONFIG_FILE" -jar "$JAR" >/tmp/gateway-proxy-smoke.log 2>&1 &
 GW_PID=$!
 
 # Wait for live with early error detection

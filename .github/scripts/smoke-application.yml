@@ -1,0 +1,23 @@
+quarkus:
+  http:
+    port: ${API_GATEWAY_PORT:8080}
+    host: ${API_GATEWAY_HOST:0.0.0.0}
+
+gateway:
+  routes: []
+
+  public-prefixes:
+    - "/q"
+    - "/q/health"
+    - "/q/metrics"
+
+  rate-limits:
+    default:
+      requests-per-minute: 1000
+      window: 60s
+
+  auth:
+    protected-prefixes: []
+
+# Remove timing guard property - it has a default value in the code (100ms)
+# The @ConfigProperty annotation provides defaultValue = "100"

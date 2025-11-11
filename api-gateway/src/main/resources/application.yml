@@ -49,6 +49,11 @@ gateway:
         remove-prefix: "/api/v1/identity"
         add-prefix: "/api"
 
+  public-prefixes:
+    - "/api/v1/health"
+    - "/api/v1/metrics"
+    - "/q/health"
+
   rate-limits:
     default:
       requests-per-minute: ${RATE_LIMIT_DEFAULT_REQUESTS:100}
@@ -59,5 +64,6 @@ gateway:
       - "/api/v1/identity"
       - "/api/v1/tenancy"
   
+  # Timing guard configuration (flat property for @ConfigProperty)
   timing-guard:
     min-failure-duration-ms: 100

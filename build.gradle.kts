@@ -5,6 +5,17 @@ plugins {
     alias(libs.plugins.quarkus) apply false
     alias(libs.plugins.kover) apply false
     id("org.jlleitschuh.gradle.ktlint") version "12.1.1" apply false
+    id("org.owasp.dependencycheck") version "10.0.4"
+}
+
+// Configure OWASP Dependency Check
+dependencyCheck {
+    outputDirectory = "${project.layout.buildDirectory.get()}/reports/dependency-check"
+    format = "ALL"
+    failBuildOnCVSS = 7.0f
+    suppressionFile = file("$rootDir/dependency-check-suppressions.xml").takeIf { it.exists() }?.absolutePath
+    // Skip automatic updates to avoid NVD API issues in CI
+    autoUpdate = false
 }
 
 allprojects {

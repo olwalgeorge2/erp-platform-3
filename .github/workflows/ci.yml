@@ -28,8 +28,15 @@ jobs:
           java-version: '21'
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
-      - name: Build (no containers)
+      - name: Make gradlew executable (non-Windows)
+        if: runner.os != 'Windows'
+        run: chmod +x gradlew
+      - name: Build (Linux)
+        if: runner.os != 'Windows'
         run: ./gradlew build -PwithContainers=false --no-daemon
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: .\gradlew.bat build -PwithContainers=false --no-daemon
 
   # Phase 1: Dependency & Cache Warmup
   dependency-cache-warmup:
@@ -312,21 +319,10 @@ jobs:
       - name: "Check CI status"
         shell: bash
         run: |
-          if [[ "${{ needs.code-style-check.result }}" == "failure" || \\
-                "${{ needs.build-and-unit-tests.result }}" == "failure" || \\
-                "${{ needs.architecture-governance.result }}" == "failure" || \\
-                "${{ needs.security-scan.result }}" == "failure" || \\
-                "${{ needs.integration-tests.result }}" == "failure" || \\
-                "${{ needs.publish-monitoring-assets.result }}" == "failure" || \
-                "${{ needs.smoke.result }}" == "failure" || \
-                "${{ needs.proxy-smoke.result }}" == "failure" || \
-                "${{ needs.docker-publish.result }}" == "failure" || \
-                "${{ needs.sbom.result }}" == "failure" || \
-                "${{ needs.trivy-scan.result }}" == "failure" ]]; then
-            echo "CI Pipeline Failed"
-            exit 1
+          if [[ "${{ needs.code-style-check.result }}" == "failure" || "${{ needs.build-and-unit-tests.result }}" == "failure" || "${{ needs.architecture-governance.result }}" == "failure" || "${{ needs.security-scan.result }}" == "failure" || "${{ needs.integration-tests.result }}" == "failure" || "${{ needs.publish-monitoring-assets.result }}" == "failure" || "${{ needs.smoke.result }}" == "failure" || "${{ needs.proxy-smoke.result }}" == "failure" || "${{ needs.docker-publish.result }}" == "failure" || "${{ needs.sbom.result }}" == "failure" || "${{ needs.trivy-scan.result }}" == "failure" ]]; then
+            echo "CI Pipeline Failed"; exit 1;
           else
-            echo "CI Pipeline Passed"
+            echo "CI Pipeline Passed";
           fi
 
   docker-publish:

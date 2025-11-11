@@ -109,7 +109,7 @@ class BackendServicesCheck
                     ServiceHealth(healthy = false, status = "DOWN (HTTP ${response.statusCode()})")
                 }
             } catch (e: Exception) {
-                logger.debug("Service health check failed for {}: {}", path, e.message)
+                logger.debug("Service health check failed for {}: {}", route.pattern, e.message)
                 ServiceHealth(healthy = false, status = "DOWN (${e.javaClass.simpleName})")
             }
 

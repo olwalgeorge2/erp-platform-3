@@ -14,8 +14,8 @@ class RateLimitAdminService {
         windowSeconds: Int,
     ): String = "$rpm:$windowSeconds"
 
-    private fun decode(value: String?): Pair<Int, Int>? =
-        try {
+    private fun decode(value: String?): Pair<Int, Int>? {
+        return try {
             if (value.isNullOrBlank()) return null
             val parts = value.split(":")
             if (parts.size != 2) return null
@@ -23,6 +23,7 @@ class RateLimitAdminService {
         } catch (_: Exception) {
             null
         }
+    }
 
     fun setTenantOverride(
         tenant: String,

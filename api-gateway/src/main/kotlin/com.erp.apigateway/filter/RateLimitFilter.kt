@@ -113,8 +113,8 @@ class RateLimitFilter : ContainerRequestFilter {
         return null
     }
 
-    private fun parseOverride(value: String?): Pair<Int, Int>? =
-        try {
+    private fun parseOverride(value: String?): Pair<Int, Int>? {
+        return try {
             if (value.isNullOrBlank()) return null
             val parts = value.split(":")
             if (parts.size != 2) return null
@@ -122,6 +122,7 @@ class RateLimitFilter : ContainerRequestFilter {
         } catch (_: Exception) {
             null
         }
+    }
 
     private fun patternMatches(
         pattern: String,

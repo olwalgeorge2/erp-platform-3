@@ -9,7 +9,6 @@ class RedisService {
     @Inject
     lateinit var redis: RedisDataSource
 
-    private val stringCommands by lazy { redis.value(String::class.java) }
     private val longCommands by lazy { redis.value(Long::class.java) }
     private val keyCommands by lazy { redis.key() }
     private val stringCommands by lazy { redis.value(String::class.java) }

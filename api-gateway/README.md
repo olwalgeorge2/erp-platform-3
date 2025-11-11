@@ -1168,3 +1168,8 @@ CI artifacts
 - From each run:
   - `grafana-api-gateway-dashboard` → `dashboards/grafana/api-gateway-dashboard.json`
   - `prometheus-api-gateway-alerts` → `monitoring/prometheus/api-gateway-alerts.yml`
+
+CI workflow (manual runs)
+
+- The CI workflow supports on-demand runs via GitHub Actions → CI → Run workflow (workflow_dispatch enabled).
+  Use this to kick off the full pipeline (matrix, unit tests, containers IT, images, SBOM, scans) without pushing commits.

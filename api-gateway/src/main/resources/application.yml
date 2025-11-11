@@ -58,4 +58,6 @@ gateway:
     protected-prefixes:
       - "/api/v1/identity"
       - "/api/v1/tenancy"
+  
+  timing-guard:
     min-failure-duration-ms: 100

@@ -5,7 +5,7 @@ import org.eclipse.microprofile.config.inject.ConfigProperty
 
 @ApplicationScoped
 class AuthenticationTimingGuard(
-    @ConfigProperty(name = "gateway.auth.min-failure-duration-ms", defaultValue = "100")
+    @ConfigProperty(name = "gateway.timing-guard.min-failure-duration-ms", defaultValue = "100")
     private val minFailureMs: Long,
 ) {
     fun guard(startMillis: Long) {

@@ -1139,3 +1139,32 @@ Following tenancy-identity review patterns (achieved Grade A- through 4 review c
 2. Ensure tests pass: `./gradlew :api-gateway:test`
 3. Verify build: `./gradlew :api-gateway:build --warning-mode all`
 4. Follow security patterns from DEVELOPER_ADVISORY.md (anti-enumeration, PII-free logging)
+Dev JWT and protected-prefixes
+
+- Mint a short-lived dev token:
+
+  - PowerShell: `scripts/dev-jwt.ps1` writes to `scripts/tokens/dev.jwt`
+  - Bash: `scripts/dev-jwt.sh` prints a JWT using `scripts/keys/dev-jwt-private.pem`
+
+- Toggle protected prefixes (non-prod):
+
+  In `application-dev.yml` or via env:
+
+  `gateway.auth.protected-prefixes: ["/api/v1/identity/"]`
+
+Grafana provisioning (dev)
+
+- Example provisioning is under `provisioning/grafana/`.
+- Run Grafana:
+
+  docker run -it --rm -p 3000:3000 \
+    -v $PWD/provisioning/grafana/datasources:/etc/grafana/provisioning/datasources \
+    -v $PWD/provisioning/grafana/dashboards:/etc/grafana/provisioning/dashboards \
+    -v $PWD/dashboards/grafana:/var/lib/grafana/dashboards \
+    grafana/grafana:10.4.2
+
+CI artifacts
+
+- From each run:
+  - `grafana-api-gateway-dashboard` → `dashboards/grafana/api-gateway-dashboard.json`
+  - `prometheus-api-gateway-alerts` → `monitoring/prometheus/api-gateway-alerts.yml`

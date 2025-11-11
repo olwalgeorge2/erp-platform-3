@@ -8,8 +8,19 @@ class KafkaTestResource : QuarkusTestResourceLifecycleManager {
     private lateinit var kafka: KafkaContainer
 
     override fun start(): Map<String, String> {
+        // Check if containers are disabled
+        val withContainers = System.getProperty("withContainers", "false")
+        if (withContainers != "true") {
+            // Return empty map to skip container startup
+            return emptyMap()
+        }
+
         kafka =
-            KafkaContainer(DockerImageName.parse("docker.redpanda.com/redpandadata/redpanda:v24.2.11")).apply {
+            KafkaContainer(
+                DockerImageName
+                    .parse("docker.redpanda.com/redpandadata/redpanda:v24.2.11")
+                    .asCompatibleSubstituteFor("confluentinc/cp-kafka"),
+            ).apply {
                 withReuse(true)
                 start()
             }

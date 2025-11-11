@@ -8,9 +8,11 @@ import io.restassured.http.ContentType
 import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import java.util.UUID
 
 @QuarkusTest
+@EnabledIfSystemProperty(named = "withContainers", matches = "true")
 @QuarkusTestResource(PostgresTestResource::class)
 class AuthIntegrationTest {
     @Test

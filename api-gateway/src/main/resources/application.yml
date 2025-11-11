@@ -55,4 +55,7 @@ gateway:
       window: ${RATE_LIMIT_DEFAULT_WINDOW:60s}
 
   auth:
+    protected-prefixes:
+      - "/api/v1/identity"
+      - "/api/v1/tenancy"
     min-failure-duration-ms: 100

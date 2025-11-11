@@ -15,10 +15,12 @@ import org.apache.kafka.common.serialization.StringSerializer
 import org.eclipse.microprofile.config.ConfigProvider
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import java.time.Duration
 import java.util.Properties
 
 @QuarkusTest
+@EnabledIfSystemProperty(named = "withContainers", matches = "true")
 @QuarkusTestResource(PostgresTestResource::class)
 @QuarkusTestResource(KafkaTestResource::class)
 class IdentityEventConsumerKafkaIT {

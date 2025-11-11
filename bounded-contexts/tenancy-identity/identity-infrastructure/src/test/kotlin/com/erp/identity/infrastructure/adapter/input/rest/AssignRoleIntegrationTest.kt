@@ -11,6 +11,7 @@ import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.notNullValue
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import java.util.UUID
 
 /**
@@ -24,6 +25,7 @@ import java.util.UUID
  * 5. Verification of role assignment
  */
 @QuarkusTest
+@EnabledIfSystemProperty(named = "withContainers", matches = "true")
 @QuarkusTestResource(PostgresTestResource::class)
 class AssignRoleIntegrationTest {
     @Inject

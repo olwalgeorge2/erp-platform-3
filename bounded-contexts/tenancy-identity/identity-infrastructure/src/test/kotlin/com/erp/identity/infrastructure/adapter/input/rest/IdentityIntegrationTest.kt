@@ -11,8 +11,10 @@ import org.hamcrest.Matchers.equalTo
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 
 @QuarkusTest
+@EnabledIfSystemProperty(named = "withContainers", matches = "true")
 @QuarkusTestResource(PostgresTestResource::class)
 class IdentityIntegrationTest {
     @Inject

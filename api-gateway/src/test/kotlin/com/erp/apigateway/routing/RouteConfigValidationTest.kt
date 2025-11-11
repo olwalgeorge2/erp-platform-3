@@ -14,7 +14,11 @@ class RouteConfigValidationTest {
                 ServiceRoute("/api/*", ServiceTarget("http://a"), authRequired = false),
                 ServiceRoute("/api/v1/*", ServiceTarget("http://b"), authRequired = false),
             )
-        val m = RouteConfiguration::class.java.getDeclaredMethod("validateRoutes", List::class.java)
+        val m =
+            RouteConfiguration::class.java.getDeclaredMethod(
+                "validateRoutes",
+                List::class.java,
+            )
         m.isAccessible = true
         val ex: InvocationTargetException =
             assertThrows(InvocationTargetException::class.java) {
@@ -34,7 +38,11 @@ class RouteConfigValidationTest {
                     authRequired = false,
                 ),
             )
-        val m = RouteConfiguration::class.java.getDeclaredMethod("validateRoutes", List::class.java)
+        val m =
+            RouteConfiguration::class.java.getDeclaredMethod(
+                "validateRoutes",
+                List::class.java,
+            )
         m.isAccessible = true
         val ex: InvocationTargetException =
             assertThrows(InvocationTargetException::class.java) {

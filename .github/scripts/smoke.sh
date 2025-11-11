@@ -21,10 +21,18 @@ java -jar "$JAR" >/tmp/gateway.log 2>&1 &
 PID=$!
 echo "PID=$PID"
 
-# Wait for liveness (readiness may fail without deps)
+# Wait for liveness with early error detection
 tries=0
-until curl -fsS "http://localhost:$PORT/q/health/live" >/dev/null; do
+until curl -fsS "http://localhost:$PORT/q/health/live" >/dev/null 2>&1; do
   tries=$((tries+1))
+  
+  # Check if process died early
+  if ! kill -0 "$PID" 2>/dev/null; then
+    echo "Gateway process died during startup. First 50 lines of error:" >&2
+    head -n 50 /tmp/gateway.log >&2
+    exit 1
+  fi
+  
   if [ $tries -gt 60 ]; then
     echo "Gateway did not become live in time. Logs:" >&2
     tail -n 200 /tmp/gateway.log || true

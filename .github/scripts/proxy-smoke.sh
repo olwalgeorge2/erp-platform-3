@@ -40,13 +40,26 @@ JAVA_OPTS=(
 java "${JAVA_OPTS[@]}" -jar "$JAR" >/tmp/gateway-proxy-smoke.log 2>&1 &
 GW_PID=$!
 
-# Wait for live
+# Wait for live with early error detection
 for i in {1..60}; do
-  if curl -fsS "http://localhost:$PORT/q/health/live" >/dev/null; then
+  if curl -fsS "http://localhost:$PORT/q/health/live" >/dev/null 2>&1; then
     break
+  fi
+  # Check if process died early
+  if ! kill -0 "$GW_PID" 2>/dev/null; then
+    echo "Gateway process died during startup. First 50 lines of error:" >&2
+    head -n 50 /tmp/gateway-proxy-smoke.log >&2
+    exit 1
   fi
   sleep 1
 done
+
+# Final check if we never connected
+if ! curl -fsS "http://localhost:$PORT/q/health/live" >/dev/null 2>&1; then
+  echo "Gateway did not become live in time. Logs:" >&2
+  tail -n 100 /tmp/gateway-proxy-smoke.log >&2
+  exit 1
+fi
 
 # Probe proxy
 curl -fsS -o /dev/null -w "%{http_code}\n" "http://localhost:$PORT/mock/" | grep -q '^200$' || {

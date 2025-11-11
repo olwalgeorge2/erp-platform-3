@@ -23,8 +23,9 @@ gateway:
       requests-per-minute: 1000
       window: 60s
 
-  auth:
-    protected-prefixes: []
+  # Remove auth section - let main application.yml provide defaults
+  # auth:
+  #   protected-prefixes: []  # Empty arrays cause SRCFG00040 validation errors
 
 # Remove timing guard property - it has a default value in the code
 # gateway.timing-guard.min-failure-duration-ms: 50

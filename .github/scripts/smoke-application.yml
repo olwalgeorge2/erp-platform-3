@@ -4,7 +4,8 @@ quarkus:
     host: ${API_GATEWAY_HOST:0.0.0.0}
 
 gateway:
-  routes: []
+  # Remove routes property - let main application.yml provide defaults
+  # routes: []  # Empty arrays cause SRCFG00050 mapping errors
 
   public-prefixes:
     - "/q"
@@ -16,8 +17,9 @@ gateway:
       requests-per-minute: 1000
       window: 60s
 
-  auth:
-    protected-prefixes: []
+  # Remove auth section - let main application.yml provide defaults  
+  # auth:
+  #   protected-prefixes: []  # Empty arrays cause SRCFG00040 validation errors
 
 # Remove timing guard property - it has a default value in the code (100ms)
 # The @ConfigProperty annotation provides defaultValue = "100"

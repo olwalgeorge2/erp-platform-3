@@ -3,6 +3,7 @@ package com.erp.apigateway.security
 import com.erp.apigateway.config.GatewayAuthConfig
 import com.erp.apigateway.metrics.GatewayMetrics
 import jakarta.annotation.Priority
+import jakarta.enterprise.inject.Instance
 import jakarta.inject.Inject
 import jakarta.ws.rs.Priorities
 import jakarta.ws.rs.container.ContainerRequestContext
@@ -14,13 +15,14 @@ import jakarta.ws.rs.ext.Provider
 @Priority(Priorities.AUTHORIZATION)
 class AuthorizationFilter : ContainerRequestFilter {
     @Inject
-    lateinit var authConfig: GatewayAuthConfig
+    lateinit var authConfig: Instance<GatewayAuthConfig>
 
     @Inject
     lateinit var metrics: GatewayMetrics
 
     override fun filter(requestContext: ContainerRequestContext) {
-        val protectedPrefixes: List<String> = authConfig.protectedPrefixes()
+        val protectedPrefixes: List<String> =
+            if (authConfig.isResolvable) authConfig.get().protectedPrefixes() else emptyList()
         if (protectedPrefixes.isEmpty()) return
 
         val path = requestContext.uriInfo.path.let { if (it.startsWith("/")) it else "/$it" }

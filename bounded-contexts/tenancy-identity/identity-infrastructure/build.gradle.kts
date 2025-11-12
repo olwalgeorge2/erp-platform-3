@@ -37,6 +37,7 @@ dependencies {
     implementation("io.quarkus:quarkus-smallrye-health")
     implementation("io.quarkus:quarkus-messaging-kafka")
     implementation("io.quarkus:quarkus-config-yaml")
+    implementation(libs.quarkus.smallrye.openapi)
 
     // Security: Credential hashing (Argon2id)
     implementation("de.mkammerer:argon2-jvm:2.11")

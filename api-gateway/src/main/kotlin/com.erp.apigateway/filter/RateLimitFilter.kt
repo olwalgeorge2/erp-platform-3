@@ -38,24 +38,30 @@ class RateLimitFilter : ContainerRequestFilter {
     lateinit var redis: RedisService
 
     override fun filter(requestContext: ContainerRequestContext) {
-        val tenant = tenantContext.tenantId ?: "default"
-        val endpointKey = requestContext.method + ":" + requestContext.uriInfo.path
+        try {
+            val tenant = tenantContext.tenantId ?: "default"
+            val endpointKey = requestContext.method + ":" + requestContext.uriInfo.path
 
-        val (limit, windowSeconds) = resolveLimitAndWindow(tenant, requestContext.uriInfo.path)
-        val result = rateLimiter.checkLimit(tenant, endpointKey, limit, windowSeconds)
+            val (limit, windowSeconds) = resolveLimitAndWindow(tenant, requestContext.uriInfo.path)
+            val result = rateLimiter.checkLimit(tenant, endpointKey, limit, windowSeconds)
 
-        requestContext.headers.add("X-RateLimit-Limit", limit.toString())
-        requestContext.headers.add("X-RateLimit-Remaining", result.remaining.toString())
-        requestContext.headers.add("X-RateLimit-Reset", result.resetAtEpochSeconds.toString())
+            requestContext.headers.add("X-RateLimit-Limit", limit.toString())
+            requestContext.headers.add("X-RateLimit-Remaining", result.remaining.toString())
+            requestContext.headers.add("X-RateLimit-Reset", result.resetAtEpochSeconds.toString())
 
-        if (!result.allowed) {
-            metrics.markRateLimitExceeded(tenant)
-            requestContext.abortWith(
-                Response
-                    .status(Response.Status.TOO_MANY_REQUESTS)
-                    .entity(mapOf("code" to "RATE_LIMIT_EXCEEDED", "message" to "Too many requests"))
-                    .build(),
-            )
+            if (!result.allowed) {
+                metrics.markRateLimitExceeded(tenant)
+                requestContext.abortWith(
+                    Response
+                        .status(Response.Status.TOO_MANY_REQUESTS)
+                        .entity(mapOf("code" to "RATE_LIMIT_EXCEEDED", "message" to "Too many requests"))
+                        .build(),
+                )
+            }
+        } catch (_: Exception) {
+            // If Redis or configuration lookups fail, do not fail the request path.
+            // Record an error metric and continue without enforcing a limit.
+            metrics.markError("ratelimit_unavailable")
         }
     }
 
@@ -98,19 +104,27 @@ class RateLimitFilter : ContainerRequestFilter {
     }
 
     private fun resolveDynamicTenantOverride(tenant: String): Pair<Int, Int>? =
-        redis.get("rl:tenant:$tenant")?.let { parseOverride(it) }
+        try {
+            redis.get("rl:tenant:$tenant")?.let { parseOverride(it) }
+        } catch (_: Exception) {
+            null
+        }
 
     private fun resolveDynamicEndpointOverride(path: String): Pair<Int, Int>? {
-        val keys = redis.keys("rl:endpoint:*")
-        keys.forEach { k ->
-            val pattern = k.removePrefix("rl:endpoint:")
-            if (patternMatches(pattern, path)) {
-                val v = redis.get(k)
-                val p = parseOverride(v)
-                if (p != null) return p
+        return try {
+            val keys = redis.keys("rl:endpoint:*")
+            keys.forEach { k ->
+                val pattern = k.removePrefix("rl:endpoint:")
+                if (patternMatches(pattern, path)) {
+                    val v = redis.get(k)
+                    val p = parseOverride(v)
+                    if (p != null) return p
+                }
             }
+            null
+        } catch (_: Exception) {
+            null
         }
-        return null
     }
 
     private fun parseOverride(value: String?): Pair<Int, Int>? {

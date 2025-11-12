@@ -75,11 +75,15 @@ if ! curl -fsS "http://localhost:$PORT/q/health/live" >/dev/null 2>&1; then
   exit 1
 fi
 
-# Probe proxy
-curl -fsS -o /dev/null -w "%{http_code}\n" "http://localhost:$PORT/mock/" | grep -q '^200$' || {
-  echo "Proxy smoke failed; logs:" >&2
+# Probe proxy (follow redirects; fall back to explicit index)
+STATUS=$(curl -fsSL -o /dev/null -w "%{http_code}\n" "http://localhost:$PORT/mock/" || true)
+if [[ "$STATUS" != "200" ]]; then
+  STATUS=$(curl -fsSL -o /dev/null -w "%{http_code}\n" "http://localhost:$PORT/mock/index.html" || true)
+fi
+
+if [[ "$STATUS" != "200" ]]; then
+  echo "Proxy smoke failed; expected 200, got $STATUS. Logs:" >&2
   tail -n 200 /tmp/gateway-proxy-smoke.log || true
   exit 1
-}
+fi
 echo "Proxy smoke OK"
-

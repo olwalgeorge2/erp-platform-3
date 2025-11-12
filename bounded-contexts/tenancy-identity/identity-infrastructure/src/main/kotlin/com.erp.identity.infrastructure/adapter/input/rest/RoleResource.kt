@@ -5,6 +5,7 @@ import com.erp.identity.application.port.input.query.ListRolesQuery
 import com.erp.identity.domain.model.identity.RoleId
 import com.erp.identity.domain.model.tenant.TenantId
 import com.erp.identity.infrastructure.adapter.input.rest.dto.CreateRoleRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.RoleResponse
 import com.erp.identity.infrastructure.adapter.input.rest.dto.UpdateRoleRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.toResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
@@ -27,6 +28,11 @@ import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.UriInfo
 import org.eclipse.microprofile.openapi.annotations.Operation
+import org.eclipse.microprofile.openapi.annotations.media.Content
+import org.eclipse.microprofile.openapi.annotations.media.Schema
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
 import kotlin.math.max
 
@@ -44,8 +50,27 @@ class RoleResource
     ) {
         @POST
         @Operation(summary = "Create role")
+        @APIResponses(
+            value = [
+                APIResponse(
+                    responseCode = "201",
+                    description = "Role created",
+                    content = [
+                        Content(
+                            schema = Schema(implementation = RoleResponse::class),
+                        ),
+                    ],
+                ),
+                APIResponse(
+                    responseCode = "400",
+                    description = "Invalid request",
+                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+                ),
+            ],
+        )
         fun createRole(
             @PathParam("tenantId") tenantIdRaw: String,
+            @RequestBody(description = "Create role payload", required = true)
             request: CreateRoleRequest,
             @Context uriInfo: UriInfo,
         ): Response =
@@ -73,10 +98,25 @@ class RoleResource
 
         @PUT
         @Operation(summary = "Update role")
+        @APIResponses(
+            value = [
+                APIResponse(
+                    responseCode = "200",
+                    description = "Updated",
+                    content = [Content(schema = Schema(implementation = RoleResponse::class))],
+                ),
+                APIResponse(
+                    responseCode = "400",
+                    description = "Invalid identifier or request",
+                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+                ),
+            ],
+        )
         @Path("/{roleId}")
         fun updateRole(
             @PathParam("tenantId") tenantIdRaw: String,
             @PathParam("roleId") roleIdRaw: String,
+            @RequestBody(description = "Update role payload", required = true)
             request: UpdateRoleRequest,
         ): Response =
             withTenantAndRole(tenantIdRaw, roleIdRaw) { tenantId, roleId ->
@@ -89,6 +129,16 @@ class RoleResource
 
         @DELETE
         @Operation(summary = "Delete role")
+        @APIResponses(
+            value = [
+                APIResponse(responseCode = "204", description = "Deleted"),
+                APIResponse(
+                    responseCode = "400",
+                    description = "Invalid identifier",
+                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+                ),
+            ],
+        )
         @Path("/{roleId}")
         fun deleteRole(
             @PathParam("tenantId") tenantIdRaw: String,
@@ -109,6 +159,7 @@ class RoleResource
 
         @GET
         @Operation(summary = "List roles")
+        @APIResponses(value = [APIResponse(responseCode = "200", description = "OK")])
         fun listRoles(
             @PathParam("tenantId") tenantIdRaw: String,
             @QueryParam("limit") limit: Int?,
@@ -132,6 +183,20 @@ class RoleResource
 
         @GET
         @Operation(summary = "Get role by ID")
+        @APIResponses(
+            value = [
+                APIResponse(
+                    responseCode = "200",
+                    description = "OK",
+                    content = [Content(schema = Schema(implementation = RoleResponse::class))],
+                ),
+                APIResponse(
+                    responseCode = "404",
+                    description = "Not found",
+                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+                ),
+            ],
+        )
         @Path("/{roleId}")
         fun getRole(
             @PathParam("tenantId") tenantIdRaw: String,

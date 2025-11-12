@@ -5,6 +5,7 @@ import com.erp.identity.infrastructure.adapter.input.rest.dto.AssignRoleRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.AuthenticateRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.CreateUserRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.UpdateCredentialsRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.UserResponse
 import com.erp.identity.infrastructure.adapter.input.rest.dto.toResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.shared.types.results.Result
@@ -20,6 +21,11 @@ import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.UriInfo
 import org.eclipse.microprofile.openapi.annotations.Operation
+import org.eclipse.microprofile.openapi.annotations.media.Content
+import org.eclipse.microprofile.openapi.annotations.media.Schema
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
 import java.util.UUID
 
@@ -35,8 +41,27 @@ class AuthResource
     ) {
         @POST
         @Operation(summary = "Create user")
+        @APIResponses(
+            value = [
+                APIResponse(
+                    responseCode = "201",
+                    description = "User created",
+                    content = [
+                        Content(
+                            schema = Schema(implementation = UserResponse::class),
+                        ),
+                    ],
+                ),
+                APIResponse(
+                    responseCode = "400",
+                    description = "Invalid request",
+                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+                ),
+            ],
+        )
         @Path("/users")
         fun createUser(
+            @RequestBody(description = "Create user payload", required = true)
             request: CreateUserRequest,
             uriInfo: UriInfo,
         ): Response =
@@ -60,8 +85,21 @@ class AuthResource
 
         @POST
         @Operation(summary = "Authenticate user")
+        @APIResponses(
+            value = [
+                APIResponse(responseCode = "200", description = "Authenticated"),
+                APIResponse(
+                    responseCode = "401",
+                    description = "Invalid credentials",
+                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+                ),
+            ],
+        )
         @Path("/login")
-        fun authenticate(request: AuthenticateRequest): Response =
+        fun authenticate(
+            @RequestBody(description = "Authenticate payload", required = true)
+            request: AuthenticateRequest,
+        ): Response =
             when (val result = commandService.authenticate(request.toCommand())) {
                 is Result.Success -> Response.ok(result.value.toResponse()).build()
                 is Result.Failure -> result.failureResponse()
@@ -69,9 +107,20 @@ class AuthResource
 
         @POST
         @Operation(summary = "Assign role to user")
+        @APIResponses(
+            value = [
+                APIResponse(responseCode = "200", description = "Assigned"),
+                APIResponse(
+                    responseCode = "400",
+                    description = "Invalid identifier or request",
+                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+                ),
+            ],
+        )
         @Path("/users/{userId}/roles")
         fun assignRole(
             @PathParam("userId") userIdRaw: String,
+            @RequestBody(description = "Assign role payload", required = true)
             request: AssignRoleRequest,
         ): Response =
             parseUuid(userIdRaw)
@@ -85,9 +134,11 @@ class AuthResource
 
         @POST
         @Operation(summary = "Activate user")
+        @APIResponses(value = [APIResponse(responseCode = "200", description = "Activated")])
         @Path("/users/{userId}/activate")
         fun activateUser(
             @PathParam("userId") userIdRaw: String,
+            @RequestBody(description = "Activation payload", required = true)
             request: ActivateUserRequest,
         ): Response =
             parseUuid(userIdRaw)
@@ -101,9 +152,11 @@ class AuthResource
 
         @PUT
         @Operation(summary = "Update user credentials")
+        @APIResponses(value = [APIResponse(responseCode = "200", description = "Updated")])
         @Path("/users/{userId}/credentials")
         fun updateCredentials(
             @PathParam("userId") userIdRaw: String,
+            @RequestBody(description = "Update credentials payload", required = true)
             request: UpdateCredentialsRequest,
         ): Response =
             parseUuid(userIdRaw)

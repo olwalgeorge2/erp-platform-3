@@ -9,6 +9,7 @@ import com.erp.identity.infrastructure.adapter.input.rest.dto.ActivateTenantRequ
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ProvisionTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ResumeTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.SuspendTenantRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.TenantResponse
 import com.erp.identity.infrastructure.adapter.input.rest.dto.toResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.identity.infrastructure.service.IdentityQueryService
@@ -27,6 +28,11 @@ import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.UriInfo
 import org.eclipse.microprofile.openapi.annotations.Operation
+import org.eclipse.microprofile.openapi.annotations.media.Content
+import org.eclipse.microprofile.openapi.annotations.media.Schema
+import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
 
 @ApplicationScoped
@@ -42,7 +48,30 @@ class TenantResource
     ) {
         @POST
         @Operation(summary = "Provision tenant")
+        @APIResponses(
+            value = [
+                APIResponse(
+                    responseCode = "201",
+                    description = "Tenant created",
+                    content = [
+                        Content(
+                            schema = Schema(implementation = TenantResponse::class),
+                        ),
+                    ],
+                ),
+                APIResponse(
+                    responseCode = "400",
+                    description = "Invalid request",
+                    content = [
+                        Content(
+                            schema = Schema(implementation = ErrorResponse::class),
+                        ),
+                    ],
+                ),
+            ],
+        )
         fun provisionTenant(
+            @RequestBody(description = "Provision tenant payload", required = true)
             request: ProvisionTenantRequest,
             @Context uriInfo: UriInfo,
         ): Response =
@@ -65,6 +94,28 @@ class TenantResource
 
         @GET
         @Operation(summary = "Get tenant by ID")
+        @APIResponses(
+            value = [
+                APIResponse(
+                    responseCode = "200",
+                    description = "OK",
+                    content = [
+                        Content(
+                            schema = Schema(implementation = TenantResponse::class),
+                        ),
+                    ],
+                ),
+                APIResponse(
+                    responseCode = "404",
+                    description = "Not found",
+                    content = [
+                        Content(
+                            schema = Schema(implementation = ErrorResponse::class),
+                        ),
+                    ],
+                ),
+            ],
+        )
         @Path("/{tenantId}")
         fun getTenant(
             @PathParam("tenantId") tenantIdRaw: String,
@@ -83,6 +134,14 @@ class TenantResource
 
         @GET
         @Operation(summary = "List tenants")
+        @APIResponses(
+            value = [
+                APIResponse(
+                    responseCode = "200",
+                    description = "OK",
+                ),
+            ],
+        )
         fun listTenants(
             @QueryParam("status") statusRaw: String?,
             @QueryParam("limit") limit: Int?,
@@ -106,9 +165,20 @@ class TenantResource
 
         @POST
         @Operation(summary = "Activate tenant")
+        @APIResponses(
+            value = [
+                APIResponse(responseCode = "200", description = "Activated"),
+                APIResponse(
+                    responseCode = "400",
+                    description = "Invalid identifier or request",
+                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+                ),
+            ],
+        )
         @Path("/{tenantId}/activate")
         fun activateTenant(
             @PathParam("tenantId") tenantIdRaw: String,
+            @RequestBody(description = "Activation payload", required = true)
             request: ActivateTenantRequest,
         ): Response =
             parseTenantId(tenantIdRaw)
@@ -120,9 +190,20 @@ class TenantResource
 
         @POST
         @Operation(summary = "Suspend tenant")
+        @APIResponses(
+            value = [
+                APIResponse(responseCode = "200", description = "Suspended"),
+                APIResponse(
+                    responseCode = "400",
+                    description = "Invalid identifier or request",
+                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+                ),
+            ],
+        )
         @Path("/{tenantId}/suspend")
         fun suspendTenant(
             @PathParam("tenantId") tenantIdRaw: String,
+            @RequestBody(description = "Suspension payload", required = true)
             request: SuspendTenantRequest,
         ): Response =
             parseTenantId(tenantIdRaw)
@@ -134,9 +215,20 @@ class TenantResource
 
         @POST
         @Operation(summary = "Resume tenant")
+        @APIResponses(
+            value = [
+                APIResponse(responseCode = "200", description = "Resumed"),
+                APIResponse(
+                    responseCode = "400",
+                    description = "Invalid identifier or request",
+                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+                ),
+            ],
+        )
         @Path("/{tenantId}/resume")
         fun resumeTenant(
             @PathParam("tenantId") tenantIdRaw: String,
+            @RequestBody(description = "Resume payload", required = true)
             request: ResumeTenantRequest,
         ): Response =
             parseTenantId(tenantIdRaw)

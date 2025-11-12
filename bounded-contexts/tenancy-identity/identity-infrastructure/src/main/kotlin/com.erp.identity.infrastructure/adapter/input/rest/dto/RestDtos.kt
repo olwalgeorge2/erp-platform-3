@@ -20,9 +20,11 @@ import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSetter
 import com.fasterxml.jackson.annotation.Nulls
+import org.eclipse.microprofile.openapi.annotations.media.Schema
 import java.time.Instant
 import java.util.UUID
 
+@Schema(name = "ProvisionTenantRequest")
 data class ProvisionTenantRequest
     @JsonCreator
     constructor(
@@ -39,6 +41,7 @@ data class ProvisionTenantRequest
         @JsonProperty("requestedBy")
         val requestedBy: UUID? = null,
     ) {
+        @Schema(hidden = true)
         fun toCommand() =
             com.erp.identity.application.port.input.command.ProvisionTenantCommand(
                 name = name,
@@ -50,6 +53,7 @@ data class ProvisionTenantRequest
             )
     }
 
+@Schema(name = "Subscription")
 data class SubscriptionPayload
     @JsonCreator
     constructor(
@@ -66,6 +70,7 @@ data class SubscriptionPayload
         @JsonProperty("features")
         val features: Set<String> = emptySet(),
     ) {
+        @Schema(hidden = true)
         fun toDomain(): Subscription =
             Subscription(
                 plan = plan,
@@ -77,6 +82,7 @@ data class SubscriptionPayload
             )
     }
 
+@Schema(name = "Organization")
 data class OrganizationPayload
     @JsonCreator
     constructor(
@@ -93,6 +99,7 @@ data class OrganizationPayload
         @JsonProperty("contactPhone")
         val contactPhone: String? = null,
     ) {
+        @Schema(hidden = true)
         fun toDomain(): Organization =
             Organization(
                 legalName = legalName,
@@ -104,6 +111,7 @@ data class OrganizationPayload
             )
     }
 
+@Schema(name = "Address")
 data class AddressPayload
     @JsonCreator
     constructor(
@@ -118,6 +126,7 @@ data class AddressPayload
         @JsonProperty("country")
         val country: String,
     ) {
+        @Schema(hidden = true)
         fun toDomain(): Address =
             Address(
                 street = street,
@@ -140,6 +149,7 @@ data class TenantResponse(
     val metadata: Map<String, String>,
 )
 
+@Schema(name = "Permission")
 data class PermissionPayload
     @JsonCreator
     constructor(
@@ -148,11 +158,14 @@ data class PermissionPayload
         @JsonProperty("action")
         val action: String,
         @JsonProperty("scope")
+        @field:Schema(description = "Scope", implementation = String::class)
         val scope: PermissionScope = PermissionScope.TENANT,
     ) {
+        @Schema(hidden = true)
         fun toDomain(): Permission = Permission(resource = resource, action = action, scope = scope)
     }
 
+@Schema(name = "CreateRoleRequest")
 data class CreateRoleRequest
     @JsonCreator
     constructor(
@@ -171,6 +184,7 @@ data class CreateRoleRequest
         @JsonProperty("createdBy")
         val createdBy: String? = null,
     ) {
+        @Schema(hidden = true)
         fun toCommand(tenantId: TenantId) =
             com.erp.identity.application.port.input.command.CreateRoleCommand(
                 tenantId = tenantId,
@@ -183,6 +197,7 @@ data class CreateRoleRequest
             )
     }
 
+@Schema(name = "UpdateRoleRequest")
 data class UpdateRoleRequest
     @JsonCreator
     constructor(
@@ -199,6 +214,7 @@ data class UpdateRoleRequest
         @JsonProperty("updatedBy")
         val updatedBy: String? = null,
     ) {
+        @Schema(hidden = true)
         fun toCommand(
             tenantId: TenantId,
             roleId: RoleId,
@@ -213,6 +229,7 @@ data class UpdateRoleRequest
         )
     }
 
+@Schema(name = "Role")
 data class RoleResponse(
     val id: String,
     val tenantId: String,
@@ -225,12 +242,14 @@ data class RoleResponse(
     val updatedAt: Instant,
 )
 
+@Schema(name = "ActivateTenantRequest")
 data class ActivateTenantRequest
     @JsonCreator
     constructor(
         @JsonProperty("requestedBy")
         val requestedBy: String? = null,
     ) {
+        @Schema(hidden = true)
         fun toCommand(tenantId: UUID) =
             com.erp.identity.application.port.input.command.ActivateTenantCommand(
                 tenantId = TenantId(tenantId),
@@ -238,6 +257,7 @@ data class ActivateTenantRequest
             )
     }
 
+@Schema(name = "SuspendTenantRequest")
 data class SuspendTenantRequest
     @JsonCreator
     constructor(
@@ -254,6 +274,7 @@ data class SuspendTenantRequest
             )
     }
 
+@Schema(name = "ResumeTenantRequest")
 data class ResumeTenantRequest
     @JsonCreator
     constructor(
@@ -293,6 +314,7 @@ data class AddressResponse(
     val country: String,
 )
 
+@Schema(name = "CreateUserRequest")
 data class CreateUserRequest
     @JsonCreator
     constructor(
@@ -328,6 +350,7 @@ data class CreateUserRequest
             )
     }
 
+@Schema(name = "AssignRoleRequest")
 data class AssignRoleRequest
     @JsonCreator
     constructor(
@@ -338,6 +361,7 @@ data class AssignRoleRequest
         @JsonProperty("assignedBy")
         val assignedBy: String? = null,
     ) {
+        @Schema(hidden = true)
         fun toCommand(userId: UUID) =
             com.erp.identity.application.port.input.command.AssignRoleCommand(
                 tenantId = TenantId(tenantId),
@@ -347,6 +371,7 @@ data class AssignRoleRequest
             )
     }
 
+@Schema(name = "ActivateUserRequest")
 data class ActivateUserRequest
     @JsonCreator
     constructor(
@@ -357,6 +382,7 @@ data class ActivateUserRequest
         @JsonProperty("requirePasswordReset")
         val requirePasswordReset: Boolean? = true,
     ) {
+        @Schema(hidden = true)
         fun toCommand(userId: UUID) =
             ActivateUserCommand(
                 tenantId = TenantId(tenantId),
@@ -366,6 +392,7 @@ data class ActivateUserRequest
             )
     }
 
+@Schema(name = "UpdateCredentialsRequest")
 data class UpdateCredentialsRequest
     @JsonCreator
     constructor(
@@ -378,6 +405,7 @@ data class UpdateCredentialsRequest
         @JsonProperty("requestedBy")
         val requestedBy: String? = null,
     ) {
+        @Schema(hidden = true)
         fun toCommand(userId: UUID) =
             com.erp.identity.application.port.input.command.UpdateCredentialsCommand(
                 tenantId = TenantId(tenantId),
@@ -388,6 +416,7 @@ data class UpdateCredentialsRequest
             )
     }
 
+@Schema(name = "AuthenticateRequest")
 data class AuthenticateRequest
     @JsonCreator
     constructor(
@@ -402,6 +431,7 @@ data class AuthenticateRequest
         @JsonProperty("userAgent")
         val userAgent: String? = null,
     ) {
+        @Schema(hidden = true)
         fun toCommand() =
             com.erp.identity.application.port.input.command.AuthenticateUserCommand(
                 tenantId = TenantId(tenantId),
@@ -412,6 +442,7 @@ data class AuthenticateRequest
             )
     }
 
+@Schema(name = "User")
 data class UserResponse(
     val id: String,
     val tenantId: String,

@@ -72,3 +72,9 @@ gateway:
 
 # Flat property for @ConfigProperty injection (not nested)
 gateway.timing-guard.min-failure-duration-ms: 100
+
+"%dev":
+  quarkus:
+    kafka:
+      devservices:
+        enabled: false

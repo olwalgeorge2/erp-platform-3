@@ -237,6 +237,15 @@ helm upgrade --install gateway charts/api-gateway \
 k6 run -e GW_URL=http://localhost:8080 load/k6/gateway-smoke.js
 ```
 
+## Smoke/Proxy Troubleshooting
+- 301 on `/mock/`: Python’s SimpleHTTP server redirects directory paths. The smoke script follows redirects and falls back to `/mock/index.html`.
+- 500 during smoke: When Redis is not running, rate limiting now tolerates failures and skips enforcement, emitting `gateway_errors_total{type="ratelimit_unavailable"}` instead of failing the request. If you see 500s on older commits, start Redis or update to latest.
+- Logs: The proxy smoke script prints `/tmp/gateway-proxy-smoke.log` on failure. Check Quarkus startup lines and any exception stack traces.
+
+## Running Without Redis (Local Smoke)
+- Redis is not required for proxy smoke. The gateway will continue without rate limit enforcement if Redis is unavailable.
+- Health readiness (`/q/health/ready`) still checks Redis when configured; for pure proxy smoke, rely on liveness (`/q/health/live`) in scripts.
+
 ## Logging Hygiene
 - Request/response logging masks sensitive headers (Authorization) and adds correlation ID via `X-Trace-Id` to MDC.
 

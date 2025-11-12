@@ -199,6 +199,49 @@ Warning: The `set-output` command is deprecated and will be disabled soon.
 Warning: gradle/wrapper-validation-action uses deprecated functionality
 ```
 
+---
+
+## Smoke Job Failures (proxy-smoke.sh / k6-smoke.sh)
+
+### Symptom A: Proxy smoke fails with HTTP 500
+
+Example log lines:
+```
+Proxy smoke failed; logs:
+... RequestLoggingFilter ... response status=500 headers={Content-Type=[application/json]}
+```
+
+Root cause:
+- Rate limiting consulted Redis during requests. When Redis isn’t running in smoke, calls threw exceptions which the global exception mapper returned as 500.
+
+Resolution:
+- Gateway behavior has been hardened: when Redis or dynamic override lookups fail, rate limiting is skipped and a metric is emitted (`gateway_errors_total{type="ratelimit_unavailable"}`).
+- If using an older commit, either start Redis for the smoke job or update to the latest main where this tolerance is implemented.
+
+Verification:
+- Re-run `.github/scripts/proxy-smoke.sh`. Expect `Proxy smoke OK` and a 200 from `/mock/`.
+- Check metrics endpoint `/q/metrics` for `gateway_errors_total{type="ratelimit_unavailable"}` during smoke.
+
+### Symptom B: Proxy smoke fails expecting 200 but receives 301
+
+Example log lines:
+```
+response status=301 headers={location=[/mock/]}
+Proxy smoke failed; expected 200, got 301
+```
+
+Root cause:
+- Python SimpleHTTP server redirects directory requests (`/mock/`) with 301. The previous script asserted strictly on 200.
+
+Resolution:
+- The script now follows redirects and falls back to `/mock/index.html`.
+- If on a branch without this change, modify the probe to use `curl -L` and/or target `/mock/index.html` explicitly.
+
+### Quick Debugging Tips
+- Inspect gateway logs captured by the script: `/tmp/gateway-proxy-smoke.log` (script prints tail or head on failure).
+- Check Quarkus health: `curl -sSf http://localhost:8080/q/health/live`.
+- Ensure the smoke config is in use: `.github/scripts/proxy-smoke-application.yml` (routes `/mock/*` to `http://localhost:18081`).
+
 **Status:** ✅ All actions pinned to latest versions (v3.0)
 
 **If new warnings appear:**

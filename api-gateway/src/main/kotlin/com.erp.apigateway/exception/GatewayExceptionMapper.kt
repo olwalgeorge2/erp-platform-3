@@ -7,10 +7,15 @@ import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.ext.ExceptionMapper
 import jakarta.ws.rs.ext.Provider
+import org.eclipse.microprofile.openapi.annotations.media.Schema
 
+@Schema(name = "ErrorResponse", description = "Standard error payload returned by the gateway")
 data class ErrorResponse(
+    @field:Schema(description = "Stable error code string", example = "ROUTE_NOT_FOUND")
     val code: String,
+    @field:Schema(description = "Human-readable message", example = "Route not found")
     val message: String,
+    @field:Schema(description = "Trace identifier for correlation", example = "6f8e7b0d2c7a4b0dbe0edc3d3a0f9d21")
     val traceId: String? = null,
 )
 

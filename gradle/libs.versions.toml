@@ -36,6 +36,7 @@ quarkus-smallrye-jwt-build = { group = "io.quarkus", name = "quarkus-smallrye-jw
 quarkus-redis-client = { group = "io.quarkus", name = "quarkus-redis-client", version.ref = "quarkus" }
 quarkus-micrometer-registry-prometheus = { group = "io.quarkus", name = "quarkus-micrometer-registry-prometheus", version.ref = "quarkus" }
 quarkus-smallrye-health = { group = "io.quarkus", name = "quarkus-smallrye-health", version.ref = "quarkus" }
+quarkus-smallrye-openapi = { group = "io.quarkus", name = "quarkus-smallrye-openapi", version.ref = "quarkus" }
 slf4j-api = { group = "org.slf4j", name = "slf4j-api", version.ref = "slf4j" }
 slf4j-simple = { group = "org.slf4j", name = "slf4j-simple", version.ref = "slf4j" }
 junit-bom = { group = "org.junit", name = "junit-bom", version.ref = "junit" }

@@ -19,6 +19,12 @@ quarkus:
       json: ${QUARKUS_LOG_CONSOLE_JSON:true}
     level: ${QUARKUS_LOG_LEVEL:INFO}
 
+  smallrye-openapi:
+    path: /q/openapi
+  swagger-ui:
+    path: /q/swagger-ui
+    always-include: true
+
 mp:
   jwt:
     verify:

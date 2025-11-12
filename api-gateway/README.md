@@ -17,6 +17,7 @@ The API Gateway serves as the single entry point for all external client request
 - ✅ Structured request logging (Epic 4)
 - ✅ HTTP proxy for GET/POST/PUT/PATCH/DELETE
 - ✅ Error standardization with GatewayExceptionMapper
+ - ✅ OpenAPI spec and Swagger UI
 
 ### Metrics (Micrometer/Prometheus)
 - `gateway_requests_total{method,endpoint,status}`
@@ -26,6 +27,14 @@ The API Gateway serves as the single entry point for all external client request
 - `gateway_auth_failures_total{reason}`
 
 Prometheus scrape: `/q/metrics` (enabled via `quarkus-micrometer-registry-prometheus`).
+
+### API Docs (OpenAPI/Swagger)
+- Spec: `GET /q/openapi`
+- UI: `GET /q/swagger-ui`
+- Configuration (application.yml):
+  - `quarkus.smallrye-openapi.path: /q/openapi`
+  - `quarkus.swagger-ui.path: /q/swagger-ui`
+  - `quarkus.swagger-ui.always-include: true`
 
 ### Routing & Rewrites
 - Identity route maps `/api/v1/identity/*` → upstream `/api/*` via `pathRewrite`.

@@ -33,6 +33,7 @@ dependencies {
     implementation(libs.quarkus.logging.json)
     implementation(libs.quarkus.config.yaml)
     implementation(libs.quarkus.smallrye.health)
+    implementation(libs.quarkus.smallrye.openapi)
 
     // Logging API
     implementation(libs.slf4j.api)

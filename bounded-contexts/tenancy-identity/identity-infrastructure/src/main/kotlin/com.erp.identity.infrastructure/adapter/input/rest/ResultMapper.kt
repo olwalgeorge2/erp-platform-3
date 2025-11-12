@@ -8,6 +8,7 @@ import jakarta.ws.rs.core.Response.Status
 import jakarta.ws.rs.core.Response.Status.Family
 import jakarta.ws.rs.core.Response.StatusType
 import org.eclipse.microprofile.config.ConfigProvider
+import org.eclipse.microprofile.openapi.annotations.media.Schema
 
 fun <T, R> Result<T>.toResponse(
     successStatus: Status = Status.OK,
@@ -79,16 +80,26 @@ private val environment: Environment by lazy {
 
 private fun currentEnvironment(): Environment = environment
 
+@Schema(name = "ErrorResponse", description = "Standard error payload for identity service")
 data class ErrorResponse(
+    @field:Schema(description = "Stable error code", example = "TENANT_NOT_FOUND")
     val code: String,
+    @field:Schema(description = "Human-readable message", example = "Tenant not found")
     val message: String,
+    @field:Schema(description = "Additional error details")
     val details: Map<String, String> = emptyMap(),
+    @field:Schema(description = "Validation errors, if any")
     val validationErrors: List<ValidationErrorResponse> = emptyList(),
 )
 
+@Schema(name = "ValidationErrorResponse")
 data class ValidationErrorResponse(
+    @field:Schema(description = "Field name")
     val field: String,
+    @field:Schema(description = "Validation code", example = "NOT_BLANK")
     val code: String,
+    @field:Schema(description = "Validation message")
     val message: String,
+    @field:Schema(description = "Rejected value")
     val rejectedValue: String?,
 )

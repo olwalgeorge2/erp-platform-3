@@ -26,11 +26,14 @@ import jakarta.ws.rs.core.Context
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.UriInfo
+import org.eclipse.microprofile.openapi.annotations.Operation
+import org.eclipse.microprofile.openapi.annotations.tags.Tag
 
 @ApplicationScoped
 @Path("/api/tenants")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(name = "Tenants", description = "Tenant provisioning and lifecycle")
 class TenantResource
     @Inject
     constructor(
@@ -38,6 +41,7 @@ class TenantResource
         private val queryService: IdentityQueryService,
     ) {
         @POST
+        @Operation(summary = "Provision tenant")
         fun provisionTenant(
             request: ProvisionTenantRequest,
             @Context uriInfo: UriInfo,
@@ -60,6 +64,7 @@ class TenantResource
             }
 
         @GET
+        @Operation(summary = "Get tenant by ID")
         @Path("/{tenantId}")
         fun getTenant(
             @PathParam("tenantId") tenantIdRaw: String,
@@ -77,6 +82,7 @@ class TenantResource
                 } ?: invalidIdentifierResponse("tenantId", tenantIdRaw)
 
         @GET
+        @Operation(summary = "List tenants")
         fun listTenants(
             @QueryParam("status") statusRaw: String?,
             @QueryParam("limit") limit: Int?,
@@ -99,6 +105,7 @@ class TenantResource
             }
 
         @POST
+        @Operation(summary = "Activate tenant")
         @Path("/{tenantId}/activate")
         fun activateTenant(
             @PathParam("tenantId") tenantIdRaw: String,
@@ -112,6 +119,7 @@ class TenantResource
                 }?.toTenantResponse() ?: invalidIdentifierResponse("tenantId", tenantIdRaw)
 
         @POST
+        @Operation(summary = "Suspend tenant")
         @Path("/{tenantId}/suspend")
         fun suspendTenant(
             @PathParam("tenantId") tenantIdRaw: String,
@@ -125,6 +133,7 @@ class TenantResource
                 }?.toTenantResponse() ?: invalidIdentifierResponse("tenantId", tenantIdRaw)
 
         @POST
+        @Operation(summary = "Resume tenant")
         @Path("/{tenantId}/resume")
         fun resumeTenant(
             @PathParam("tenantId") tenantIdRaw: String,

@@ -26,12 +26,15 @@ import jakarta.ws.rs.core.Context
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.UriInfo
+import org.eclipse.microprofile.openapi.annotations.Operation
+import org.eclipse.microprofile.openapi.annotations.tags.Tag
 import kotlin.math.max
 
 @ApplicationScoped
 @Path("/api/tenants/{tenantId}/roles")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(name = "Roles", description = "Role management per tenant")
 class RoleResource
     @Inject
     constructor(
@@ -40,6 +43,7 @@ class RoleResource
         private val authorizationService: AuthorizationService,
     ) {
         @POST
+        @Operation(summary = "Create role")
         fun createRole(
             @PathParam("tenantId") tenantIdRaw: String,
             request: CreateRoleRequest,
@@ -68,6 +72,7 @@ class RoleResource
             }
 
         @PUT
+        @Operation(summary = "Update role")
         @Path("/{roleId}")
         fun updateRole(
             @PathParam("tenantId") tenantIdRaw: String,
@@ -83,6 +88,7 @@ class RoleResource
             }
 
         @DELETE
+        @Operation(summary = "Delete role")
         @Path("/{roleId}")
         fun deleteRole(
             @PathParam("tenantId") tenantIdRaw: String,
@@ -102,6 +108,7 @@ class RoleResource
             }
 
         @GET
+        @Operation(summary = "List roles")
         fun listRoles(
             @PathParam("tenantId") tenantIdRaw: String,
             @QueryParam("limit") limit: Int?,
@@ -124,6 +131,7 @@ class RoleResource
             }
 
         @GET
+        @Operation(summary = "Get role by ID")
         @Path("/{roleId}")
         fun getRole(
             @PathParam("tenantId") tenantIdRaw: String,

@@ -19,18 +19,22 @@ import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.UriInfo
+import org.eclipse.microprofile.openapi.annotations.Operation
+import org.eclipse.microprofile.openapi.annotations.tags.Tag
 import java.util.UUID
 
 @ApplicationScoped
 @Path("/api/auth")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Tag(name = "Auth", description = "Authentication and user lifecycle endpoints")
 class AuthResource
     @Inject
     constructor(
         private val commandService: IdentityCommandService,
     ) {
         @POST
+        @Operation(summary = "Create user")
         @Path("/users")
         fun createUser(
             request: CreateUserRequest,
@@ -55,6 +59,7 @@ class AuthResource
             }
 
         @POST
+        @Operation(summary = "Authenticate user")
         @Path("/login")
         fun authenticate(request: AuthenticateRequest): Response =
             when (val result = commandService.authenticate(request.toCommand())) {
@@ -63,6 +68,7 @@ class AuthResource
             }
 
         @POST
+        @Operation(summary = "Assign role to user")
         @Path("/users/{userId}/roles")
         fun assignRole(
             @PathParam("userId") userIdRaw: String,
@@ -78,6 +84,7 @@ class AuthResource
                 } ?: invalidUuidResponse("userId", userIdRaw)
 
         @POST
+        @Operation(summary = "Activate user")
         @Path("/users/{userId}/activate")
         fun activateUser(
             @PathParam("userId") userIdRaw: String,
@@ -93,6 +100,7 @@ class AuthResource
                 } ?: invalidUuidResponse("userId", userIdRaw)
 
         @PUT
+        @Operation(summary = "Update user credentials")
         @Path("/users/{userId}/credentials")
         fun updateCredentials(
             @PathParam("userId") userIdRaw: String,

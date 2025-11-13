@@ -20,6 +20,8 @@
 4.2 Timing guard: a minimum response budget is applied to normalize successful vs failed attempts and reduce timing side-channels.
 4.3 Lockout & throttling: successive failures increment counters for lockout/throttle policies (see application configuration for thresholds).
 4.4 Multi-tenant context: tenant is resolved from the request context (gateway header), and auth decisions are scoped per-tenant.
+4.5 Admin password reset: `POST /api/auth/users/{userId}/reset-password` allows tenant administrators to provision a temporary password; set `requirePasswordChange=false` to permit immediate login or leave default `true` to force rotation before access.
+4.6 Lifecycle controls: `POST /api/auth/users/{userId}/suspend` and `/reactivate` let administrators pause or resume accounts (suspension blocks logins until reactivated). Audit metadata (`reason`, `requestedBy`) is stored in user metadata for downstream reporting.
 
 ## 4. Reference
 4.1 `docs/ARCHITECTURE.md` (Tenancy & Identity) details the security model and integration points.

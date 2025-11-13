@@ -1,0 +1,62 @@
+components:
+  schemas:
+    IdentityErrorResponse:
+      description: Canonical identity-service error payload (see docs/contracts/error-responses.yaml).
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable identifier (e.g., TENANT_NOT_FOUND).
+        message:
+          type: string
+          description: Human-readable description safe for clients.
+        details:
+          type: object
+          additionalProperties:
+            type: string
+          description: Optional metadata (tenantId, field name, etc.).
+        validationErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+        errorId:
+          type: string
+          nullable: true
+          description: Correlation identifier logged in server-side telemetry.
+      example:
+        code: TENANT_NOT_FOUND
+        message: Tenant abc123 was not found
+        details:
+          tenantId: abc123
+        validationErrors: []
+        errorId: 9f8d5fbd-e7d3-49bb-8b7d-9c0fe7f2194b
+
+    ValidationError:
+      type: object
+      required:
+        - field
+        - code
+        - message
+      properties:
+        field:
+          type: string
+          description: Name of the invalid field or parameter.
+        code:
+          type: string
+          description: Validation token (e.g., NOT_BLANK, PASSWORD_POLICY_VIOLATION).
+        message:
+          type: string
+          description: Human-readable explanation for the failure.
+        rejectedValue:
+          type: string
+          nullable: true
+          description: Sanitized value that failed validation (if safe to echo).
+      example:
+        field: password
+        code: PASSWORD_POLICY_VIOLATION
+        message: Password must include upper, lower, number, and symbol characters
+        rejectedValue: "********"
+paths: {}

@@ -4,6 +4,9 @@ import com.erp.identity.application.port.input.command.ActivateUserCommand
 import com.erp.identity.application.port.input.command.AssignRoleCommand
 import com.erp.identity.application.port.input.command.AuthenticateUserCommand
 import com.erp.identity.application.port.input.command.CreateUserCommand
+import com.erp.identity.application.port.input.command.ReactivateUserCommand
+import com.erp.identity.application.port.input.command.ResetPasswordCommand
+import com.erp.identity.application.port.input.command.SuspendUserCommand
 import com.erp.identity.application.port.input.command.UpdateCredentialsCommand
 import com.erp.identity.application.port.output.CredentialCryptoPort
 import com.erp.identity.application.port.output.EventPublisherPort
@@ -266,6 +269,118 @@ class UserCommandHandler(
                 )
             }
     }
+
+    fun suspendUser(command: SuspendUserCommand): Result<User> =
+        when (val userResult = userRepository.findById(command.tenantId, command.userId)) {
+            is Result.Failure -> userResult
+            is Result.Success -> {
+                val user =
+                    userResult.value
+                        ?: return failure(
+                            code = "USER_NOT_FOUND",
+                            message = "User not found",
+                            details =
+                                mapOf(
+                                    "tenantId" to command.tenantId.toString(),
+                                    "userId" to command.userId.toString(),
+                                ),
+                        )
+                val updated = user.suspend(command.reason)
+                userRepository
+                    .save(updated)
+                    .onSuccess { savedUser ->
+                        publishEvents(
+                            UserUpdatedEvent(
+                                tenantId = savedUser.tenantId,
+                                userId = savedUser.id,
+                                updatedFields = setOf("status"),
+                                status = savedUser.status,
+                            ),
+                        )
+                    }
+            }
+        }
+
+    fun reactivateUser(command: ReactivateUserCommand): Result<User> =
+        when (val userResult = userRepository.findById(command.tenantId, command.userId)) {
+            is Result.Failure -> userResult
+            is Result.Success -> {
+                val user =
+                    userResult.value
+                        ?: return failure(
+                            code = "USER_NOT_FOUND",
+                            message = "User not found",
+                            details =
+                                mapOf(
+                                    "tenantId" to command.tenantId.toString(),
+                                    "userId" to command.userId.toString(),
+                                ),
+                        )
+                val updated = user.reactivate()
+                userRepository
+                    .save(updated)
+                    .onSuccess { savedUser ->
+                        publishEvents(
+                            UserUpdatedEvent(
+                                tenantId = savedUser.tenantId,
+                                userId = savedUser.id,
+                                updatedFields = setOf("status"),
+                                status = savedUser.status,
+                            ),
+                        )
+                    }
+            }
+        }
+
+    fun resetPassword(command: ResetPasswordCommand): Result<User> =
+        when (val userResult = userRepository.findById(command.tenantId, command.userId)) {
+            is Result.Failure -> userResult
+            is Result.Success -> {
+                val user =
+                    userResult.value
+                        ?: return failure(
+                            code = "USER_NOT_FOUND",
+                            message = "User not found",
+                            details =
+                                mapOf(
+                                    "tenantId" to command.tenantId.toString(),
+                                    "userId" to command.userId.toString(),
+                                ),
+                        )
+
+                validatePassword(command.newPassword).let { validation ->
+                    if (validation is Result.Failure) {
+                        return validation
+                    }
+                }
+
+                val hashed =
+                    credentialCryptoPort.hashPassword(
+                        tenantId = command.tenantId,
+                        userId = command.userId,
+                        rawPassword = command.newPassword,
+                        algorithm = HashAlgorithm.ARGON2,
+                    )
+
+                var updated = user.resetPassword(hashed.hash, hashed.salt)
+                if (!command.requirePasswordChange) {
+                    updated = updated.clearPasswordChangeRequirement()
+                }
+
+                userRepository
+                    .save(updated)
+                    .onSuccess { savedUser ->
+                        publishEvents(
+                            UserUpdatedEvent(
+                                tenantId = savedUser.tenantId,
+                                userId = savedUser.id,
+                                updatedFields = setOf("credential"),
+                                status = savedUser.status,
+                            ),
+                        )
+                    }
+            }
+        }
 
     fun authenticate(command: AuthenticateUserCommand): Result<User> {
         val userResult = findUserByIdentifier(command.tenantId, command.usernameOrEmail)

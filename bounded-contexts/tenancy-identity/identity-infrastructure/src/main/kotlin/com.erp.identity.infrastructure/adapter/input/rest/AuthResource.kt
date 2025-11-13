@@ -4,6 +4,9 @@ import com.erp.identity.infrastructure.adapter.input.rest.dto.ActivateUserReques
 import com.erp.identity.infrastructure.adapter.input.rest.dto.AssignRoleRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.AuthenticateRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.CreateUserRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.ReactivateUserRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.ResetPasswordRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.SuspendUserRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.UpdateCredentialsRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.UserResponse
 import com.erp.identity.infrastructure.adapter.input.rest.dto.toResponse
@@ -161,6 +164,60 @@ class AuthResource
         ): Response =
             parseUuid(userIdRaw)
                 ?.let { userId -> commandService.updateCredentials(request.toCommand(userId)) }
+                ?.let { result ->
+                    when (result) {
+                        is Result.Success -> Response.ok(result.value.toResponse()).build()
+                        is Result.Failure -> result.failureResponse()
+                    }
+                } ?: invalidUuidResponse("userId", userIdRaw)
+
+        @POST
+        @Operation(summary = "Reset user password (admin)")
+        @APIResponses(value = [APIResponse(responseCode = "200", description = "Password reset")])
+        @Path("/users/{userId}/reset-password")
+        fun resetPassword(
+            @PathParam("userId") userIdRaw: String,
+            @RequestBody(description = "Reset password payload", required = true)
+            request: ResetPasswordRequest,
+        ): Response =
+            parseUuid(userIdRaw)
+                ?.let { userId -> commandService.resetPassword(request.toCommand(userId)) }
+                ?.let { result ->
+                    when (result) {
+                        is Result.Success -> Response.ok(result.value.toResponse()).build()
+                        is Result.Failure -> result.failureResponse()
+                    }
+                } ?: invalidUuidResponse("userId", userIdRaw)
+
+        @POST
+        @Operation(summary = "Suspend user")
+        @APIResponses(value = [APIResponse(responseCode = "200", description = "Suspended")])
+        @Path("/users/{userId}/suspend")
+        fun suspendUser(
+            @PathParam("userId") userIdRaw: String,
+            @RequestBody(description = "Suspend payload", required = true)
+            request: SuspendUserRequest,
+        ): Response =
+            parseUuid(userIdRaw)
+                ?.let { userId -> commandService.suspendUser(request.toCommand(userId)) }
+                ?.let { result ->
+                    when (result) {
+                        is Result.Success -> Response.ok(result.value.toResponse()).build()
+                        is Result.Failure -> result.failureResponse()
+                    }
+                } ?: invalidUuidResponse("userId", userIdRaw)
+
+        @POST
+        @Operation(summary = "Reactivate user")
+        @APIResponses(value = [APIResponse(responseCode = "200", description = "Reactivated")])
+        @Path("/users/{userId}/reactivate")
+        fun reactivateUser(
+            @PathParam("userId") userIdRaw: String,
+            @RequestBody(description = "Reactivation payload", required = true)
+            request: ReactivateUserRequest,
+        ): Response =
+            parseUuid(userIdRaw)
+                ?.let { userId -> commandService.reactivateUser(request.toCommand(userId)) }
                 ?.let { result ->
                     when (result) {
                         is Result.Success -> Response.ok(result.value.toResponse()).build()

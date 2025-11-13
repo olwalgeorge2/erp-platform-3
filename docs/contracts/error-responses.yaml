@@ -1,0 +1,93 @@
+openapi: 3.0.0
+info:
+  title: ERP Platform Error Payload Contracts
+  version: 0.1.0
+  description: >
+    Canonical error payloads returned by the API Gateway and tenancy-identity services.
+    These schemas are referenced by service-level OpenAPI documents via `$ref`
+    (e.g., `#/components/schemas/GatewayErrorResponse`).
+components:
+  schemas:
+    GatewayErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable error identifier (e.g., ROUTE_NOT_FOUND).
+        message:
+          type: string
+          description: Sanitized, human-readable description of the failure.
+        traceId:
+          type: string
+          nullable: true
+          description: >
+            Correlation identifier echoed from the incoming request (X-Trace-Id/traceparent).
+            Helpful for cross-service tracing.
+      example:
+        code: ROUTE_NOT_FOUND
+        message: Route not found
+        traceId: 6f8e7b0d2c7a4b0dbe0edc3d3a0f9d21
+
+    IdentityErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable error identifier (e.g., TENANT_NOT_FOUND).
+        message:
+          type: string
+          description: Human-readable explanation safe for clients.
+        details:
+          type: object
+          additionalProperties:
+            type: string
+          description: Optional key/value metadata (tenantId, field names, etc.).
+        validationErrors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+        errorId:
+          type: string
+          nullable: true
+          description: Opaque identifier written to logs/metrics for correlation.
+      example:
+        code: TENANT_NOT_FOUND
+        message: Tenant abc123 was not found
+        details:
+          tenantId: abc123
+        validationErrors: []
+        errorId: 9f8d5fbd-e7d3-49bb-8b7d-9c0fe7f2194b
+
+    ValidationError:
+      type: object
+      required:
+        - field
+        - code
+        - message
+      properties:
+        field:
+          type: string
+          description: Name of the invalid field or parameter.
+        code:
+          type: string
+          description: Validation token (e.g., NOT_BLANK, INVALID_FORMAT).
+        message:
+          type: string
+          description: Human-readable explanation.
+        rejectedValue:
+          type: string
+          nullable: true
+          description: Optional sanitized value that failed validation.
+      example:
+        field: password
+        code: PASSWORD_POLICY_VIOLATION
+        message: Password must include upper, lower, number, and symbol characters
+        rejectedValue: "********"
+
+paths: {}

@@ -416,6 +416,67 @@ data class UpdateCredentialsRequest
             )
     }
 
+@Schema(name = "SuspendUserRequest")
+data class SuspendUserRequest
+    @JsonCreator
+    constructor(
+        @JsonProperty("tenantId")
+        val tenantId: UUID,
+        @JsonProperty("reason")
+        val reason: String,
+        @JsonProperty("requestedBy")
+        val requestedBy: String? = null,
+    ) {
+        fun toCommand(userId: UUID) =
+            com.erp.identity.application.port.input.command.SuspendUserCommand(
+                tenantId = TenantId(tenantId),
+                userId = UserId(userId),
+                reason = reason,
+                requestedBy = requestedBy,
+            )
+    }
+
+@Schema(name = "ReactivateUserRequest")
+data class ReactivateUserRequest
+    @JsonCreator
+    constructor(
+        @JsonProperty("tenantId")
+        val tenantId: UUID,
+        @JsonProperty("requestedBy")
+        val requestedBy: String? = null,
+    ) {
+        fun toCommand(userId: UUID) =
+            com.erp.identity.application.port.input.command.ReactivateUserCommand(
+                tenantId = TenantId(tenantId),
+                userId = UserId(userId),
+                requestedBy = requestedBy,
+            )
+    }
+
+@Schema(name = "ResetPasswordRequest")
+data class ResetPasswordRequest
+    @JsonCreator
+    constructor(
+        @JsonProperty("tenantId")
+        val tenantId: UUID,
+        @JsonProperty("newPassword")
+        val newPassword: String,
+        @JsonProperty("requirePasswordChange")
+        val requirePasswordChange: Boolean = true,
+        @JsonProperty("requestedBy")
+        val requestedBy: String? = null,
+    ) {
+        @Schema(hidden = true)
+        fun toCommand(userId: UUID) =
+            com.erp.identity.application.port.input.command.ResetPasswordCommand(
+                tenantId = TenantId(tenantId),
+                userId = UserId(userId),
+                newPassword = newPassword,
+                requirePasswordChange = requirePasswordChange,
+                requestedBy = requestedBy,
+            )
+    }
+
 @Schema(name = "AuthenticateRequest")
 data class AuthenticateRequest
     @JsonCreator

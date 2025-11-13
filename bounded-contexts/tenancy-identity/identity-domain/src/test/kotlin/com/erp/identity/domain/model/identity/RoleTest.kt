@@ -10,125 +10,166 @@ import java.time.Instant
 
 class RoleTest {
     private val tenantId = TenantId.generate()
-    private val userRead = Permission.read("user")
-    private val userManage = Permission.manage("user")
+    private val manageUsers = Permission.manage("users")
+    private val readAudit = Permission.read("audit")
 
     @Test
-    fun `grantPermission adds permission for tenant roles`() {
-        val role = Role.create(tenantId, "Viewer", "Read only")
-
-        val updated = role.grantPermission(userRead)
-
-        assertTrue(updated.permissions.contains(userRead))
-        assertTrue(!updated.updatedAt.isBefore(role.updatedAt))
-    }
-
-    @Test
-    fun `grantPermission rejects system roles`() {
-        val systemRole =
-            Role(
-                id = RoleId.generate(),
-                tenantId = tenantId,
-                name = "System Admin",
-                description = "Immutable role",
-                permissions = setOf(userRead),
-                isSystem = true,
-                metadata = emptyMap(),
-                createdAt = Instant.now(),
-                updatedAt = Instant.now(),
-            )
-
-        assertThrows(IllegalArgumentException::class.java) {
-            systemRole.grantPermission(userManage)
-        }
-    }
-
-    @Test
-    fun `revokePermission removes permission when present`() {
-        val role = Role.create(tenantId, "Editor", "Edit users", setOf(userManage))
-
-        val updated = role.revokePermission(userManage)
-
-        assertFalse(updated.permissions.contains(userManage))
-    }
-
-    @Test
-    fun `revokePermission rejects missing permissions`() {
-        val role = Role.create(tenantId, "Viewer", "Read only", setOf(userRead))
-
-        assertThrows(IllegalArgumentException::class.java) {
-            role.revokePermission(userManage)
-        }
-    }
-
-    @Test
-    fun `updateDescription updates text for tenant roles`() {
-        val role = Role.create(tenantId, "Viewer", "Read only")
-
-        val updated = role.updateDescription("Broader read access")
-
-        assertEquals("Broader read access", updated.description)
-        assertTrue(!updated.updatedAt.isBefore(role.updatedAt))
-    }
-
-    @Test
-    fun `updateDescription rejects system roles`() {
-        val systemRole =
-            Role(
-                id = RoleId.generate(),
-                tenantId = tenantId,
-                name = "System Admin",
-                description = "Immutable role",
-                permissions = setOf(userRead),
-                isSystem = true,
-                metadata = emptyMap(),
-                createdAt = Instant.now(),
-                updatedAt = Instant.now(),
-            )
-
-        assertThrows(IllegalArgumentException::class.java) {
-            systemRole.updateDescription("New description")
-        }
-    }
-
-    @Test
-    fun `hasPermission and helpers reflect membership`() {
-        val role =
-            Role.create(
-                tenantId = tenantId,
-                name = "Auditor",
-                description = "Audit role",
-                permissions = setOf(userRead, userManage),
-            )
-
-        assertTrue(role.hasPermission(userRead))
-        assertTrue(role.hasAnyPermission(setOf(Permission.manage("tenant"), userRead)))
-        assertFalse(role.hasAllPermissions(setOf(Permission.read("foo"), userRead)))
-    }
-
-    @Test
-    fun `system roles must declare permissions`() {
+    fun `create validates role name and description`() {
         assertThrows(IllegalArgumentException::class.java) {
             Role.create(
                 tenantId = tenantId,
-                name = "System",
+                name = "",
+                description = "desc",
+            )
+        }
+
+        assertThrows(IllegalArgumentException::class.java) {
+            Role.create(
+                tenantId = tenantId,
+                name = "a",
+                description = "desc",
+            )
+        }
+
+        val tooLongDescription = "x".repeat(501)
+        assertThrows(IllegalArgumentException::class.java) {
+            Role.create(
+                tenantId = tenantId,
+                name = "valid-name",
+                description = tooLongDescription,
+            )
+        }
+    }
+
+    @Test
+    fun `system role requires at least one permission`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            Role.create(
+                tenantId = tenantId,
+                name = "system-admin",
                 description = "System role",
+                permissions = emptySet(),
                 isSystem = true,
             )
         }
     }
 
     @Test
-    fun `hasPermission by resource and action`() {
-        val role =
+    fun `grantPermission adds permission and updates timestamp`() {
+        val role = baseRole()
+
+        val updated = role.grantPermission(manageUsers)
+
+        assertTrue(updated.permissions.contains(manageUsers))
+        assertTrue(updated.updatedAt.isAfter(role.updatedAt))
+    }
+
+    @Test
+    fun `grantPermission rejects duplicates and system roles`() {
+        val roleWithPermission = baseRole().grantPermission(manageUsers)
+
+        assertThrows(IllegalArgumentException::class.java) {
+            roleWithPermission.grantPermission(manageUsers)
+        }
+
+        val systemRole =
             Role.create(
                 tenantId = tenantId,
-                name = "Auditor",
-                description = "Audit role",
-                permissions = setOf(userRead, userManage),
+                name = "system-role",
+                description = "System role",
+                permissions = setOf(manageUsers),
+                isSystem = true,
             )
-
-        assertTrue(role.hasPermission("user", "read"))
-        assertFalse(role.hasPermission("tenant", "manage"))
+        assertThrows(IllegalArgumentException::class.java) {
+            systemRole.grantPermission(readAudit)
+        }
     }
+
+    @Test
+    fun `revokePermission removes permission`() {
+        val role =
+            baseRole()
+                .grantPermission(manageUsers)
+                .grantPermission(readAudit)
+
+        val updated = role.revokePermission(manageUsers)
+
+        assertFalse(updated.permissions.contains(manageUsers))
+        assertTrue(updated.permissions.contains(readAudit))
+        assertTrue(updated.updatedAt.isAfter(role.updatedAt))
+    }
+
+    @Test
+    fun `revokePermission rejects missing permission and system role`() {
+        val role = baseRole()
+        assertThrows(IllegalArgumentException::class.java) {
+            role.revokePermission(manageUsers)
+        }
+
+        val systemRole =
+            Role.create(
+                tenantId = tenantId,
+                name = "system-role",
+                description = "System role",
+                permissions = setOf(manageUsers),
+                isSystem = true,
+            )
+        assertThrows(IllegalArgumentException::class.java) {
+            systemRole.revokePermission(manageUsers)
+        }
+    }
+
+    @Test
+    fun `updateDescription enforces length and system immutability`() {
+        val role = baseRole()
+        val updated = role.updateDescription("Updated description")
+        assertEquals("Updated description", updated.description)
+        assertTrue(updated.updatedAt.isAfter(role.updatedAt))
+
+        val tooLong = "x".repeat(501)
+        assertThrows(IllegalArgumentException::class.java) {
+            role.updateDescription(tooLong)
+        }
+
+        val systemRole =
+            Role.create(
+                tenantId = tenantId,
+                name = "system-role",
+                description = "System role",
+                permissions = setOf(manageUsers),
+                isSystem = true,
+            )
+        assertThrows(IllegalArgumentException::class.java) {
+            systemRole.updateDescription("no-op")
+        }
+    }
+
+    @Test
+    fun `hasPermission helpers inspect permissions set`() {
+        val role =
+            baseRole()
+                .grantPermission(manageUsers)
+                .grantPermission(readAudit)
+
+        assertTrue(role.hasPermission(manageUsers))
+        assertTrue(role.hasPermission("users", "manage"))
+        assertTrue(role.hasAnyPermission(setOf(Permission.read("users"), readAudit)))
+        assertTrue(role.hasAllPermissions(setOf(manageUsers, readAudit)))
+
+        assertFalse(role.hasPermission(Permission.delete("users")))
+        assertFalse(role.hasPermission("audit", "delete"))
+        assertFalse(role.hasAnyPermission(setOf(Permission.delete("users"))))
+        assertFalse(role.hasAllPermissions(setOf(manageUsers, Permission.delete("users"))))
+    }
+
+    private fun baseRole(): Role =
+        Role(
+            id = RoleId.generate(),
+            tenantId = tenantId,
+            name = "tenant-role",
+            description = "Tenant scoped role",
+            permissions = emptySet(),
+            createdAt = Instant.now().minusSeconds(60),
+            updatedAt = Instant.now().minusSeconds(60),
+        )
 }

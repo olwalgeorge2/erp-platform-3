@@ -87,3 +87,20 @@ tasks.withType<Test>().configureEach {
 tasks.named<Test>("test") {
     enabled = true
 }
+
+// Quarkus code generation expects the Java classes output directory to exist even when the module is Kotlin-only.
+val ensureJavaClassesDir by tasks.registering {
+    val classesDir = layout.buildDirectory.dir("classes/java/main")
+    outputs.dir(classesDir)
+    doLast {
+        classesDir.get().asFile.mkdirs()
+    }
+}
+
+tasks.named("quarkusGenerateCodeTests") {
+    dependsOn(ensureJavaClassesDir)
+}
+
+tasks.named("classes") {
+    dependsOn(ensureJavaClassesDir)
+}

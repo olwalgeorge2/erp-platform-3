@@ -7,8 +7,11 @@ import com.erp.identity.application.port.input.command.CreateRoleCommand
 import com.erp.identity.application.port.input.command.CreateUserCommand
 import com.erp.identity.application.port.input.command.DeleteRoleCommand
 import com.erp.identity.application.port.input.command.ProvisionTenantCommand
+import com.erp.identity.application.port.input.command.ReactivateUserCommand
+import com.erp.identity.application.port.input.command.ResetPasswordCommand
 import com.erp.identity.application.port.input.command.ResumeTenantCommand
 import com.erp.identity.application.port.input.command.SuspendTenantCommand
+import com.erp.identity.application.port.input.command.SuspendUserCommand
 import com.erp.identity.application.port.input.command.UpdateRoleCommand
 import com.erp.identity.application.service.command.RoleCommandHandler
 import com.erp.identity.application.service.command.TenantCommandHandler
@@ -105,6 +108,40 @@ class IdentityCommandServiceTest {
     }
 
     @Test
+    fun `suspendUser delegates to handler`() {
+        val command =
+            SuspendUserCommand(
+                tenantId = TenantId.generate(),
+                userId = UserId.generate(),
+                reason = "policy audit",
+                requestedBy = "admin",
+            )
+        val user = sampleUser(command.tenantId)
+        whenever(userHandler.suspendUser(eq(command))).thenReturn(Result.success(user))
+
+        val result = service.suspendUser(command)
+
+        assertTrue(result is Result.Success<User>)
+        verify(userHandler).suspendUser(eq(command))
+    }
+
+    @Test
+    fun `reactivateUser delegates to handler`() {
+        val command =
+            ReactivateUserCommand(
+                tenantId = TenantId.generate(),
+                userId = UserId.generate(),
+                requestedBy = "admin",
+            )
+        val user = sampleUser(command.tenantId)
+        whenever(userHandler.reactivateUser(eq(command))).thenReturn(Result.success(user))
+
+        val result = service.reactivateUser(command)
+
+        assertTrue(result is Result.Success<User>)
+        verify(userHandler).reactivateUser(eq(command))
+    }
+
     fun `activateUser delegates to handler`() {
         val command =
             ActivateUserCommand(
@@ -119,6 +156,25 @@ class IdentityCommandServiceTest {
 
         assertTrue(result is Result.Success<User>)
         verify(userHandler).activateUser(eq(command))
+    }
+
+    @Test
+    fun `resetPassword delegates to handler`() {
+        val command =
+            ResetPasswordCommand(
+                tenantId = TenantId.generate(),
+                userId = UserId.generate(),
+                newPassword = "TempPass123!",
+                requirePasswordChange = false,
+                requestedBy = "admin@example.com",
+            )
+        val user = sampleUser(command.tenantId)
+        whenever(userHandler.resetPassword(eq(command))).thenReturn(Result.success(user))
+
+        val result = service.resetPassword(command)
+
+        assertTrue(result is Result.Success<User>)
+        verify(userHandler).resetPassword(eq(command))
     }
 
     @Test

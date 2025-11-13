@@ -83,6 +83,69 @@ class UserCredentialIntegrationTest {
             .body("username", equalTo(username))
     }
 
+    @Test
+    fun `suspend user blocks login until reactivated`() {
+        val tenantId = provisionTenant("creds-suspend")
+        val (userId, username, _) = createAndActivateUser(tenantId)
+
+        suspendUser(tenantId, userId, reason = "policy violation")
+
+        login(tenantId, username, INITIAL_PASSWORD)
+            .then()
+            .statusCode(403)
+            .body("code", equalTo("USER_NOT_ALLOWED"))
+
+        reactivateUser(tenantId, userId)
+
+        login(tenantId, username, INITIAL_PASSWORD)
+            .then()
+            .statusCode(200)
+            .body("username", equalTo(username))
+    }
+
+    @Test
+    fun `admin reset password allows immediate login when change not required`() {
+        val tenantId = provisionTenant("creds-reset-nochange")
+        val (userId, username, _) = createAndActivateUser(tenantId)
+
+        resetPassword(
+            tenantId = tenantId,
+            userId = userId,
+            newPassword = RESET_PASSWORD,
+            requireChange = false,
+        )
+
+        // Old password blocked
+        login(tenantId, username, INITIAL_PASSWORD)
+            .then()
+            .statusCode(401)
+
+        // New password works immediately
+        login(tenantId, username, RESET_PASSWORD)
+            .then()
+            .statusCode(200)
+            .body("username", equalTo(username))
+    }
+
+    @Test
+    fun `admin reset password enforces change when require flag true`() {
+        val tenantId = provisionTenant("creds-reset-require")
+        val (userId, username, _) = createAndActivateUser(tenantId)
+
+        resetPassword(
+            tenantId = tenantId,
+            userId = userId,
+            newPassword = RESET_PASSWORD,
+            requireChange = true,
+        )
+
+        // Login blocked until password change completed
+        login(tenantId, username, RESET_PASSWORD)
+            .then()
+            .statusCode(403)
+            .body("code", equalTo("USER_NOT_ALLOWED"))
+    }
+
     private fun createAndActivateUser(tenantId: String): Triple<String, String, String> {
         val username = "integration_${UUID.randomUUID().toString().take(8)}"
         val email = "$username@example.com"
@@ -177,9 +240,74 @@ class UserCredentialIntegrationTest {
     companion object {
         private const val INITIAL_PASSWORD = "Password123!"
         private const val ROTATED_PASSWORD = "Password456!"
+        private const val RESET_PASSWORD = "ResetPassword789!"
 
         init {
             RestAssured.enableLoggingOfRequestAndResponseIfValidationFails()
         }
+    }
+
+    private fun suspendUser(
+        tenantId: String,
+        userId: String,
+        reason: String,
+    ) {
+        RestAssured
+            .given()
+            .contentType(ContentType.JSON)
+            .body(
+                """
+                {
+                  "tenantId": "$tenantId",
+                  "reason": "$reason"
+                }
+                """.trimIndent(),
+            ).post("/api/auth/users/$userId/suspend")
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("SUSPENDED"))
+    }
+
+    private fun reactivateUser(
+        tenantId: String,
+        userId: String,
+    ) {
+        RestAssured
+            .given()
+            .contentType(ContentType.JSON)
+            .body(
+                """
+                {
+                  "tenantId": "$tenantId"
+                }
+                """.trimIndent(),
+            ).post("/api/auth/users/$userId/reactivate")
+            .then()
+            .statusCode(200)
+            .body("status", equalTo("ACTIVE"))
+    }
+
+    private fun resetPassword(
+        tenantId: String,
+        userId: String,
+        newPassword: String,
+        requireChange: Boolean,
+    ) {
+        RestAssured
+            .given()
+            .contentType(ContentType.JSON)
+            .body(
+                """
+                {
+                  "tenantId": "$tenantId",
+                  "newPassword": "$newPassword",
+                  "requirePasswordChange": $requireChange
+                }
+                """.trimIndent(),
+            ).post("/api/auth/users/$userId/reset-password")
+            .then()
+            .statusCode(200)
+            .body("id", equalTo(userId))
+            .body("tenantId", equalTo(tenantId))
     }
 }

@@ -167,6 +167,18 @@ class UserTest {
     }
 
     @Test
+    fun `delete transitions user to deleted and prevents repeated deletes`() {
+        val user = activeUser(credential())
+
+        val deleted = user.delete()
+
+        assertEquals(UserStatus.DELETED, deleted.status)
+        assertThrows(IllegalArgumentException::class.java) {
+            deleted.delete()
+        }
+    }
+
+    @Test
     fun `delete moves user to deleted state`() {
         val user = activeUser(credential())
 
@@ -245,6 +257,31 @@ class UserTest {
     }
 
     @Test
+    fun `suspend requires active user`() {
+        val pending =
+            User.create(
+                tenantId,
+                "pending-suspend",
+                "pending.suspend@example.com",
+                "Pending Suspend",
+                credential(),
+            )
+
+        assertThrows(IllegalArgumentException::class.java) {
+            pending.suspend("not allowed")
+        }
+    }
+
+    @Test
+    fun `reactivate requires suspended user`() {
+        val active = activeUser(credential())
+
+        assertThrows(IllegalArgumentException::class.java) {
+            active.reactivate()
+        }
+    }
+
+    @Test
     fun `canLogin honours credential requirements and lock state`() {
         val readyUser = activeUser(credential())
         assertTrue(readyUser.canLogin())
@@ -307,6 +344,19 @@ class UserTest {
                 credential = user.credential.requireChangeOnNextLogin(),
             )
         assertTrue(flagged.requiresPasswordChange())
+    }
+
+    @Test
+    fun `clearPasswordChangeRequirement resets credential flag`() {
+        val flagged =
+            activeUser(
+                credential = credential().requireChangeOnNextLogin(),
+            )
+
+        val cleared = flagged.clearPasswordChangeRequirement()
+
+        assertFalse(cleared.credential.mustChangeOnNextLogin)
+        assertTrue(cleared.updatedAt.isAfter(flagged.updatedAt))
     }
 
     @Test

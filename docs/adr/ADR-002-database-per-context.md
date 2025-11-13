@@ -53,6 +53,24 @@ We will implement **logical database separation** using PostgreSQL **schemas per
 - ❌ Cost prohibitive during development
 - ❌ Over-engineering before traffic patterns known
 
+## 2025-11-13 Addendum (Schema Isolation Review)
+
+### Identity/Tenancy Context
+- **Current state:** Runs in shared Postgres instance using schema `tenancy_identity`; Flyway migrations scoped to that schema (see `bounded-contexts/tenancy-identity/identity-infrastructure/src/main/resources/db/migration`).
+- **Rationale for staying on schema model (Phase 2-3):**
+  - Strong coupling to other contexts is minimal; identity owns its tables and exposes everything via APIs/events.
+  - Operational work (backups, PITR) already bundles all schemas; splitting now would add HA complexity before we have cross-context load.
+  - Schema-level isolation satisfies current compliance requirements when combined with per-user DB credentials.
+- **Migration trigger:** When concurrency exceeds 2k RPS sustained or regulatory guidance mandates encryption boundary per tenant, move Tenancy‑Identity to its own Postgres instance. No code changes required—update connection URL + credentials.
+- **Schema naming:** `tenancy_identity` is reserved for this context across all environments. No other context may create objects inside it.
+
+### Enforcement
+- Database role `tenancy_identity_app` has privileges limited to `tenancy_identity.*`.
+- CI check ensures Flyway migrations only touch `tenancy_identity` objects.
+- Observability dashboards track per-schema size + slow queries (ties into `docs/OBSERVABILITY_BASELINE.md`).
+
+---
+
 ## Consequences
 
 ### Positive

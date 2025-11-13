@@ -8,8 +8,11 @@ import com.erp.identity.application.port.input.command.CreateRoleCommand
 import com.erp.identity.application.port.input.command.CreateUserCommand
 import com.erp.identity.application.port.input.command.DeleteRoleCommand
 import com.erp.identity.application.port.input.command.ProvisionTenantCommand
+import com.erp.identity.application.port.input.command.ReactivateUserCommand
+import com.erp.identity.application.port.input.command.ResetPasswordCommand
 import com.erp.identity.application.port.input.command.ResumeTenantCommand
 import com.erp.identity.application.port.input.command.SuspendTenantCommand
+import com.erp.identity.application.port.input.command.SuspendUserCommand
 import com.erp.identity.application.port.input.command.UpdateCredentialsCommand
 import com.erp.identity.application.port.input.command.UpdateRoleCommand
 import com.erp.identity.application.service.command.RoleCommandHandler
@@ -124,6 +127,81 @@ class IdentityCommandService(
         logResult(
             traceId = traceId,
             operation = "updateCredentials",
+            startNano = start,
+            result = result,
+            successContext = { user ->
+                "tenant=${user.tenantId}, userId=${user.id}"
+            },
+            failureContext = { _ ->
+                "tenant=${command.tenantId}, userId=${command.userId}"
+            },
+        )
+        return result
+    }
+
+    @Transactional(TxType.REQUIRED)
+    fun suspendUser(
+        @Valid command: SuspendUserCommand,
+    ): Result<User> {
+        val traceId = ensureTraceId()
+        ensureTenantMdc(command.tenantId.toString())
+        Log.infof(
+            "[%s] suspendUser - tenant=%s, userId=%s reason=%s",
+            traceId,
+            command.tenantId,
+            command.userId,
+            command.reason,
+        )
+        val start = System.nanoTime()
+        val result = userCommandHandler.suspendUser(command)
+        logResult(
+            traceId = traceId,
+            operation = "suspendUser",
+            startNano = start,
+            result = result,
+            successContext = { user -> "tenant=${user.tenantId}, userId=${user.id}, status=${user.status}" },
+            failureContext = { _ -> "tenant=${command.tenantId}, userId=${command.userId}" },
+        )
+        return result
+    }
+
+    @Transactional(TxType.REQUIRED)
+    fun reactivateUser(
+        @Valid command: ReactivateUserCommand,
+    ): Result<User> {
+        val traceId = ensureTraceId()
+        ensureTenantMdc(command.tenantId.toString())
+        Log.infof("[%s] reactivateUser - tenant=%s, userId=%s", traceId, command.tenantId, command.userId)
+        val start = System.nanoTime()
+        val result = userCommandHandler.reactivateUser(command)
+        logResult(
+            traceId = traceId,
+            operation = "reactivateUser",
+            startNano = start,
+            result = result,
+            successContext = { user -> "tenant=${user.tenantId}, userId=${user.id}, status=${user.status}" },
+            failureContext = { _ -> "tenant=${command.tenantId}, userId=${command.userId}" },
+        )
+        return result
+    }
+
+    fun resetPassword(
+        @Valid command: ResetPasswordCommand,
+    ): Result<User> {
+        val traceId = ensureTraceId()
+        ensureTenantMdc(command.tenantId.toString())
+        Log.infof(
+            "[%s] resetPassword - tenant=%s, userId=%s, requireChange=%s",
+            traceId,
+            command.tenantId,
+            command.userId,
+            command.requirePasswordChange,
+        )
+        val start = System.nanoTime()
+        val result = userCommandHandler.resetPassword(command)
+        logResult(
+            traceId = traceId,
+            operation = "resetPassword",
             startNano = start,
             result = result,
             successContext = { user ->

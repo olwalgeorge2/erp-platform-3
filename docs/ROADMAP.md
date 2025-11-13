@@ -209,7 +209,8 @@
    - Redpanda metrics available at port 19644
    - Test logging enabled with individual test output
    
-4.4 📋 Document data retention, archival, and recovery strategies aligned with compliance requirements. (Planned)
+4.4 ✅ Document data retention, archival, and recovery strategies aligned with compliance requirements.  
+   - See [DATA_RETENTION.md](DATA_RETENTION.md) for Postgres PITR, Redpanda topic retention, and drill cadence.
 
 ### Infrastructure Specifications
 - **PostgreSQL:** 16-alpine on port 5432 with persistent volumes
@@ -224,14 +225,18 @@
 - **Startup Time:** 3-5 seconds (vs 30-60s for Kafka)
 - **Container Health:** All services healthy with automatic health checks
 
-4.5 Decide on schema isolation (separate databases vs. schemas vs. hybrid) per context, record the decision as an ADR, and update deployment playbooks accordingly.
-4.6 Establish event versioning and schema registry practices so downstream consumers can evolve safely; capture governance in docs/ARCHITECTURE.md.
-4.7 Define RPO/RTO objectives and operational SLOs for data services, using them as the go/no-go criteria for moving into Phase 4.
+4.5 ✅ Decide on schema isolation (separate databases vs. schemas vs. hybrid) per context, record the decision as an ADR, and update deployment playbooks accordingly.  
+   - 2025‑11‑13 addendum added to [ADR-002](adr/ADR-002-database-per-context.md) confirming `tenancy_identity` schema ownership + migration triggers.
+4.6 ✅ Establish event versioning and schema registry practices so downstream consumers can evolve safely; capture governance in docs/ARCHITECTURE.md.  
+   - Reference: [EVENT_VERSIONING_POLICY.md](EVENT_VERSIONING_POLICY.md) (registry workflow, compatibility modes).
+4.7 ✅ Define RPO/RTO objectives and operational SLOs for data services, using them as the go/no-go criteria for moving into Phase 4.  
+   - Consolidated in [SECURITY_SLA.md](SECURITY_SLA.md) (SLO table) and [DATA_RETENTION.md](DATA_RETENTION.md) (RPO/RTO plan).
 4.8 Cross-links: docs/ARCHITECTURE.md#data-consistency, docs/ARCHITECTURE.md#deployment-architecture, docs/ARCHITECTURE.md#future-enhancements.
 4.9 Related ADRs: ADR-002 Database Per Bounded Context, ADR-003 Event-Driven Integration Between Contexts, ADR-005 Multi-Tenancy Data Isolation Strategy.
 
 ## 5. Phase 4 - First Bounded Context Slice
-5.1 Select a high-value bounded context (e.g., financial-management/financial-accounting) and model aggregates.
+5.1 Select a high-value bounded context (e.g., financial-management/financial-accounting) and model aggregates.  
+    - ☑ See [PHASE4_READINESS.md](PHASE4_READINESS.md) for the pre-flight checklist and selected slice.
 5.2 Implement application services, API endpoints, and persistence adapters for the selected context.
 5.3 Expose the slice through the API gateway with authentication, authorization, and validation.
 5.4 Create contract, integration, and acceptance tests covering the end-to-end flow.
@@ -300,4 +305,3 @@
 9.7 Confirm post-launch success metrics (e.g., p95 latency, support ticket volume, tenant onboarding time) and iterate on the backlog based on observed outcomes.
 9.8 Cross-links: docs/ARCHITECTURE.md#deployment-architecture, docs/ARCHITECTURE.md#future-enhancements, docs/ARCHITECTURE.md#architecture-decision-records.
 9.9 Related ADRs: ADR-004 API Gateway Pattern, ADR-005 Multi-Tenancy Data Isolation Strategy.
-

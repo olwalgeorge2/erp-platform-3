@@ -70,6 +70,24 @@ class UserTest {
     }
 
     @Test
+    fun `recordSuccessfulLogin requires active status`() {
+        val suspended =
+            User
+                .create(
+                    tenantId,
+                    "pending_user",
+                    "pending@example.com",
+                    "Pending User",
+                    credential(),
+                ).activate()
+                .suspend("policy hold")
+
+        assertThrows(IllegalArgumentException::class.java) {
+            suspended.recordSuccessfulLogin()
+        }
+    }
+
+    @Test
     fun `recordFailedLogin locks user after threshold`() {
         var user = activeUser(credential())
 
@@ -80,6 +98,17 @@ class UserTest {
         assertEquals(5, user.failedLoginAttempts)
         assertEquals(UserStatus.LOCKED, user.status)
         assertNotNull(user.lockedUntil)
+    }
+
+    @Test
+    fun `recordFailedLogin increments attempts before lock threshold`() {
+        val user = activeUser(credential())
+
+        val afterAttempt = user.recordFailedLogin()
+
+        assertEquals(1, afterAttempt.failedLoginAttempts)
+        assertEquals(UserStatus.ACTIVE, afterAttempt.status)
+        assertEquals(null, afterAttempt.lockedUntil)
     }
 
     @Test
@@ -115,6 +144,17 @@ class UserTest {
         assertThrows(IllegalArgumentException::class.java) {
             pending.changePassword("hash", "salt")
         }
+    }
+
+    @Test
+    fun `changePassword updates credential for active user`() {
+        val user = activeUser(credential())
+
+        val updated = user.changePassword("new-hash", "new-salt")
+
+        assertEquals("new-hash", updated.credential.passwordHash)
+        assertEquals("new-salt", updated.credential.salt)
+        assertTrue(updated.updatedAt.isAfter(user.updatedAt) || updated.updatedAt == user.updatedAt)
     }
 
     @Test
@@ -244,6 +284,84 @@ class UserTest {
 
         assertTrue(user.hasRole(roleId))
         assertFalse(user.hasRole(RoleId.generate()))
+    }
+
+    @Test
+    fun `canLogin returns false for suspended user`() {
+        val suspended =
+            User
+                .create(tenantId, "suspend_me", "suspend@example.com", "Suspended", credential())
+                .activate()
+                .suspend("policy")
+
+        assertFalse(suspended.canLogin())
+    }
+
+    @Test
+    fun `requiresPasswordChange reflects credential flag`() {
+        val user = activeUser(credential())
+        assertFalse(user.requiresPasswordChange())
+
+        val flagged =
+            user.copy(
+                credential = user.credential.requireChangeOnNextLogin(),
+            )
+        assertTrue(flagged.requiresPasswordChange())
+    }
+
+    @Test
+    fun `create enforces username and email validation`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            User.create(
+                tenantId,
+                username = "",
+                email = "user@example.com",
+                fullName = "Test User",
+                credential = credential(),
+            )
+        }
+
+        assertThrows(IllegalArgumentException::class.java) {
+            User.create(
+                tenantId,
+                username = "us",
+                email = "user@example.com",
+                fullName = "Test User",
+                credential = credential(),
+            )
+        }
+
+        assertThrows(IllegalArgumentException::class.java) {
+            User.create(
+                tenantId,
+                username = "valid_user",
+                email = "not-an-email",
+                fullName = "Test User",
+                credential = credential(),
+            )
+        }
+    }
+
+    @Test
+    fun `create enforces full name length`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            User.create(
+                tenantId,
+                username = "valid_user",
+                email = "user@example.com",
+                fullName = "",
+                credential = credential(),
+            )
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            User.create(
+                tenantId,
+                username = "valid_user",
+                email = "user@example.com",
+                fullName = "a",
+                credential = credential(),
+            )
+        }
     }
 
     private fun activeUser(credential: Credential): User =

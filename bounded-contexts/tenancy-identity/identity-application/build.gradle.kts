@@ -7,6 +7,11 @@ dependencies {
     implementation(project(":platform-shared:common-types"))
     implementation("io.quarkus:quarkus-hibernate-validator")
     implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
+
+    // Database dependencies needed for Quarkus build
+    implementation("io.quarkus:quarkus-jdbc-postgresql")
+    implementation("io.quarkus:quarkus-flyway")
+    implementation("io.quarkus:quarkus-hibernate-orm")
 }
 
 tasks.withType<Test>().configureEach {

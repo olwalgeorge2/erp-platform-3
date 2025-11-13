@@ -5,7 +5,7 @@
 @identityUrl = http://localhost:8081
 
 ###############################################################################
-# Health Check Endpoints
+# Health Check Endpoints - ✅ UPDATED FOR CURRENT SERVICES
 ###############################################################################
 
 ### 1. Full Health Check (All checks)
@@ -13,14 +13,10 @@ GET {{baseUrl}}/q/health
 Accept: application/json
 
 ### 2. Liveness Check (JVM Health - Memory & Threads)
-# This should always be UP unless JVM is in critical state
 GET {{baseUrl}}/q/health/live
 Accept: application/json
 
 ### 3. Readiness Check (Redis + Backend Services)
-# This checks if Gateway is ready to handle requests
-# - RedisReadinessCheck: Verifies Redis connectivity
-# - BackendServicesCheck: Verifies Identity service availability
 GET {{baseUrl}}/q/health/ready
 Accept: application/json
 
@@ -29,20 +25,36 @@ GET {{baseUrl}}/q/health/started
 Accept: application/json
 
 ###############################################################################
+# Quarkus Dev UI - ✅ ADDED FOR DEVELOPMENT
+###############################################################################
+
+### 5. API Gateway Quarkus Dev UI
+GET {{baseUrl}}/q/dev-ui/
+Accept: text/html
+
+### 6. API Gateway Swagger UI
+GET {{baseUrl}}/q/swagger-ui/
+Accept: text/html
+
+###############################################################################
 # Direct Identity Service Health (Bypassing Gateway)
 ###############################################################################
 
-### 5. Identity Service - Full Health
+### 7. Identity Service - Full Health
 GET {{identityUrl}}/q/health
 Accept: application/json
 
-### 6. Identity Service - Liveness
+### 8. Identity Service - Liveness
 GET {{identityUrl}}/q/health/live
 Accept: application/json
 
-### 7. Identity Service - Readiness
+### 9. Identity Service - Readiness
 GET {{identityUrl}}/q/health/ready
 Accept: application/json
+
+### 10. Identity Service Quarkus Dev UI
+GET {{identityUrl}}/q/dev-ui/
+Accept: text/html
 
 ###############################################################################
 # API Gateway - Metrics & Monitoring
@@ -57,29 +69,62 @@ GET {{baseUrl}}/q/openapi
 Accept: application/json
 
 ###############################################################################
-# API Gateway - Routing Tests
+# API Gateway - Routing Tests (Identity via versioned aliases)
 ###############################################################################
 
-### 10. Test Gateway Routing to Identity Service
-# This route should be configured in RouteConfiguration.kt
-GET {{baseUrl}}/api/identity/health
+### 13a. Identity Health (alias) -> /q/health
+GET {{baseUrl}}/api/v1/identity/health
 Accept: application/json
 
-### 11. Test Gateway Root
-GET {{baseUrl}}/
+### 13b. Identity Readiness (alias) -> /q/health/ready
+GET {{baseUrl}}/api/v1/identity/health/ready
+Accept: application/json
+
+### 13c. Identity Liveness (alias) -> /q/health/live
+GET {{baseUrl}}/api/v1/identity/health/live
+Accept: application/json
+
+### 13d. Identity Health (raw platform path) -> /q/health/ready
+GET {{baseUrl}}/api/v1/identity/q/health/ready
 Accept: application/json
 
 ###############################################################################
-# Identity Service - API Tests (Through Gateway)
+# API Tests - ✅ UPDATED WITH ACTUAL ENDPOINTS
 ###############################################################################
 
-### 12. List Users (if endpoint exists)
-GET {{baseUrl}}/api/identity/users
+### 11. Test Identity Service API - List Tenants (Direct)
+GET {{identityUrl}}/api/tenants
 Accept: application/json
 
-### 13. Get User by ID (if endpoint exists)
-GET {{baseUrl}}/api/identity/users/1
+### 12. Test Identity Service API - Role Templates (Direct)
+GET {{identityUrl}}/api/roles/templates
 Accept: application/json
+
+### 13. Test through API Gateway - List Tenants (if proxied)
+GET {{baseUrl}}/api/v1/identity/tenants
+Accept: application/json
+
+### 14. Create a Test Tenant (Direct to Identity Service)
+POST {{identityUrl}}/api/tenants
+Content-Type: application/json
+
+{
+  "name": "Test Tenant {{$randomInt 1000 9999}}",
+  "slug": "test-{{$randomInt 100000 999999}}",
+  "subscription": {
+    "plan": "STARTER",
+    "startDate": "{{$datetime rfc3339}}",
+    "maxUsers": 10,
+    "maxStorage": 1000,
+    "features": ["rbac"]
+  }
+}
+
+> {%
+  if (response.status === 201 && response.body && response.body.id) {
+    client.global.set("testTenantId", response.body.id);
+  }
+%}
 
 ###############################################################################
 # Redis Health Simulation Tests

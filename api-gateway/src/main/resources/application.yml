@@ -33,6 +33,8 @@ mp:
       issuer: ${JWT_ISSUER:erp-platform}
       # Accept only these audiences (comma-separated). Leave empty to skip audience check.
       audiences: ${JWT_AUDIENCES:}
+  openapi:
+    filter: com.erp.apigateway.openapi.DefaultResponsesFilter
 
 smallrye:
   jwt:
@@ -42,23 +44,68 @@ smallrye:
 
 gateway:
   routes:
-    - pattern: "/api/v1/identity/*"
+    # Identity platform endpoints (health, openapi, swagger)
+    - pattern: "/api/v1/identity/q/*"
       base-url: ${IDENTITY_SERVICE_URL:http://localhost:8081}
       timeout: 5s
-      retries: 2
+      retries: 0
       auth-required: false
-      health-path: "/q/health"
+      health-path: "/q/health/ready"
       backoff-initial-ms: 100
       backoff-max-ms: 1000
       backoff-jitter-ms: 50
       rewrite:
         remove-prefix: "/api/v1/identity"
-        add-prefix: "/api"
+        add-prefix: "/"
+
+    # Identity health aliases under versioned API (clean external contract)
+    - pattern: "/api/v1/identity/health"
+      base-url: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+      timeout: 5s
+      retries: 0
+      auth-required: false
+      health-path: "/q/health/ready"
+      backoff-initial-ms: 100
+      backoff-max-ms: 1000
+      backoff-jitter-ms: 50
+      rewrite:
+        remove-prefix: "/api/v1/identity/health"
+        add-prefix: "/q/health"
+
+    - pattern: "/api/v1/identity/health/*"
+      base-url: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+      timeout: 5s
+      retries: 0
+      auth-required: false
+      health-path: "/q/health/ready"
+      backoff-initial-ms: 100
+      backoff-max-ms: 1000
+      backoff-jitter-ms: 50
+      rewrite:
+        remove-prefix: "/api/v1/identity/health"
+        add-prefix: "/q/health"
+    # Identity business API endpoints under /api/*
+    - pattern: "/api/v1/identity/api/*"
+      base-url: ${IDENTITY_SERVICE_URL:http://localhost:8081}
+      timeout: 5s
+      retries: 2
+      auth-required: false
+      health-path: "/q/health/ready"
+      backoff-initial-ms: 100
+      backoff-max-ms: 1000
+      backoff-jitter-ms: 50
+      rewrite:
+        remove-prefix: "/api/v1/identity"
+        add-prefix: "/"
 
   public-prefixes:
     - "/api/v1/health"
     - "/api/v1/metrics"
     - "/q/health"
+    - "/api/v1/identity/q"
+    - "/api/v1/identity/health"
+    # Dev convenience: open auth endpoints on identity business API
+    - "/api/v1/identity/api/auth"
 
   rate-limits:
     default:
@@ -78,3 +125,6 @@ gateway.timing-guard.min-failure-duration-ms: 100
     kafka:
       devservices:
         enabled: false
+  gateway:
+    auth:
+      protected-prefixes: []

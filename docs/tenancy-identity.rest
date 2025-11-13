@@ -9,6 +9,22 @@
 @userRoles = SYSTEM_ADMIN
 @userPermissions = roles:manage,roles:read
 
+###############################################################################
+# Health Check - ✅ VERIFY SERVICE IS RUNNING
+###############################################################################
+
+### Check Identity Service Health
+GET {{host}}/q/health
+Accept: application/json
+
+### Check Identity Service Dev UI
+GET {{host}}/q/dev-ui/
+Accept: text/html
+
+###############################################################################
+# API Tests
+###############################################################################
+
 ### Auth: expect 401 for unknown user (sanitized)
 POST {{host}}/api/auth/login
 Content-Type: application/json

@@ -1,7 +1,6 @@
 package com.erp.identity.infrastructure.consumer
 
 import io.quarkus.logging.Log
-import io.smallrye.mutiny.Uni
 import io.smallrye.reactive.messaging.annotations.Blocking
 import io.smallrye.reactive.messaging.kafka.api.IncomingKafkaRecordMetadata
 import jakarta.enterprise.context.ApplicationScoped
@@ -10,6 +9,7 @@ import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.eclipse.microprofile.reactive.messaging.Message
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.util.concurrent.CompletionStage
 
 @ApplicationScoped
 class IdentityEventConsumer(
@@ -18,7 +18,7 @@ class IdentityEventConsumer(
     @Incoming("identity-events-in")
     @Blocking
     @Transactional
-    fun onEvent(message: Message<String>): Uni<Void> {
+    fun onEvent(message: Message<String>): CompletionStage<Void> {
         val metadata = message.getMetadata(IncomingKafkaRecordMetadata::class.java).orElse(null)
         val headers = metadata?.headers
 
@@ -45,33 +45,32 @@ class IdentityEventConsumer(
         val payload = message.payload
         val fingerprint = fingerprint("$eventType|$version|${aggregateId ?: "n/a"}|$payload")
 
-        return Uni
-            .createFrom()
-            .item {
-                if (processedRepo.alreadyProcessed(fingerprint)) {
-                    Log.debugf(
-                        "Skip duplicate event: type=%s, version=%s, aggregateId=%s",
-                        eventType,
-                        version,
-                        aggregateId,
-                    )
-                } else {
-                    // Place holder for idempotent handling (update read models, projections, etc.)
-                    Log.debugf(
-                        "Consume event: type=%s, version=%s, aggregateId=%s, payloadSize=%d",
-                        eventType,
-                        version,
-                        aggregateId,
-                        payload.length,
-                    )
-                    processedRepo.markProcessed(fingerprint)
-                }
-            }.replaceWithVoid()
-            .onFailure()
-            .invoke { ex ->
-                // Let the framework route to DLQ when configured
-                Log.errorf(ex, "Failed to process event: type=%s", eventType)
+        return try {
+            if (processedRepo.alreadyProcessed(fingerprint)) {
+                Log.debugf(
+                    "Skip duplicate event: type=%s, version=%s, aggregateId=%s",
+                    eventType,
+                    version,
+                    aggregateId,
+                )
+            } else {
+                // Place holder for idempotent handling (update read models, projections, etc.)
+                Log.debugf(
+                    "Consume event: type=%s, version=%s, aggregateId=%s, payloadSize=%d",
+                    eventType,
+                    version,
+                    aggregateId,
+                    payload.length,
+                )
+                processedRepo.markProcessed(fingerprint)
             }
+            // Ack on success
+            message.ack()
+        } catch (ex: Exception) {
+            Log.errorf(ex, "Failed to process event: type=%s", eventType)
+            // Nack so the framework can route to DLQ if configured
+            message.nack(ex)
+        }
     }
 
     private fun fingerprint(input: String): String {

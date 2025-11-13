@@ -58,6 +58,8 @@ quarkus:
       level: WARN
 
 mp:
+  openapi:
+    filter: com.erp.identity.infrastructure.openapi.DefaultResponsesFilter
   messaging:
     outgoing:
       identity-events-out:
@@ -110,5 +112,3 @@ mp:
 
 app:
   environment: PRODUCTION
-
-

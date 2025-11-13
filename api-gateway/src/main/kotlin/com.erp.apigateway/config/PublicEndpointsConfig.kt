@@ -36,6 +36,7 @@ class PublicEndpointsConfig {
 
     fun isPublic(path: String): Boolean {
         val normalized = if (path.startsWith("/")) path else "/$path"
-        return defaults.any { normalized.startsWith(it) }
+        val withSlash = if (normalized.endsWith("/")) normalized else "$normalized/"
+        return defaults.any { normalized.startsWith(it) || withSlash.startsWith(it) }
     }
 }

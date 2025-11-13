@@ -21,10 +21,10 @@ class IdentityEventConsumerTest {
         val consumer = IdentityEventConsumer(repo)
 
         val msg = Message.of("{\"hello\":\"world\"}")
-        assertDoesNotThrow { consumer.onEvent(msg).await().indefinitely() }
+        assertDoesNotThrow { consumer.onEvent(msg).toCompletableFuture().join() }
 
         // second pass should be treated as duplicate (no exception)
-        assertDoesNotThrow { consumer.onEvent(msg).await().indefinitely() }
+        assertDoesNotThrow { consumer.onEvent(msg).toCompletableFuture().join() }
     }
 
     // Header-aware duplicate detection covered implicitly by same-message reprocessing

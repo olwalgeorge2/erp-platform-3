@@ -36,245 +36,288 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponses
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
 import kotlin.math.max
 
+open class BaseRoleResource() {
+    @Inject
+    protected lateinit var commandService: IdentityCommandService
+
+    @Inject
+    protected lateinit var queryService: IdentityQueryService
+
+    @Inject
+    protected lateinit var authorizationService: AuthorizationService
+
+    constructor(
+        commandService: IdentityCommandService,
+        queryService: IdentityQueryService,
+        authorizationService: AuthorizationService,
+    ) : this() {
+        this.commandService = commandService
+        this.queryService = queryService
+        this.authorizationService = authorizationService
+    }
+
+    @POST
+    @Operation(summary = "Create role")
+    @APIResponses(
+        value = [
+            APIResponse(
+                responseCode = "201",
+                description = "Role created",
+                content = [
+                    Content(
+                        schema = Schema(implementation = RoleResponse::class),
+                    ),
+                ],
+            ),
+            APIResponse(
+                responseCode = "400",
+                description = "Invalid request",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    fun createRole(
+        @PathParam("tenantId") tenantIdRaw: String,
+        @RequestBody(description = "Create role payload", required = true)
+        request: CreateRoleRequest,
+        @Context uriInfo: UriInfo,
+    ): Response =
+        withTenant(tenantIdRaw) { tenantId ->
+            authorizationService.requireRoleManagement(tenantId)?.let { return@withTenant it }
+            when (val result = commandService.createRole(request.toCommand(tenantId))) {
+                is Result.Success -> {
+                    val role = result.value
+                    val location =
+                        uriInfo
+                            .absolutePathBuilder
+                            .path(role.id.toString())
+                            .build()
+                    Response
+                        .created(location)
+                        .entity(role.toResponse())
+                        .build()
+                }
+                is Result.Failure -> result.failureResponse()
+            }
+        }
+
+    @PUT
+    @Operation(summary = "Update role")
+    @APIResponses(
+        value = [
+            APIResponse(
+                responseCode = "200",
+                description = "Updated",
+                content = [Content(schema = Schema(implementation = RoleResponse::class))],
+            ),
+            APIResponse(
+                responseCode = "400",
+                description = "Invalid identifier or request",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    @Path("/{roleId}")
+    fun updateRole(
+        @PathParam("tenantId") tenantIdRaw: String,
+        @PathParam("roleId") roleIdRaw: String,
+        @RequestBody(description = "Update role payload", required = true)
+        request: UpdateRoleRequest,
+    ): Response =
+        withTenantAndRole(tenantIdRaw, roleIdRaw) { tenantId, roleId ->
+            authorizationService.requireRoleManagement(tenantId)?.let { return@withTenantAndRole it }
+            when (val result = commandService.updateRole(request.toCommand(tenantId, roleId))) {
+                is Result.Success -> Response.ok(result.value.toResponse()).build()
+                is Result.Failure -> result.failureResponse()
+            }
+        }
+
+    @DELETE
+    @Operation(summary = "Delete role")
+    @APIResponses(
+        value = [
+            APIResponse(responseCode = "204", description = "Deleted"),
+            APIResponse(
+                responseCode = "400",
+                description = "Invalid identifier",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    @Path("/{roleId}")
+    fun deleteRole(
+        @PathParam("tenantId") tenantIdRaw: String,
+        @PathParam("roleId") roleIdRaw: String,
+    ): Response =
+        withTenantAndRole(tenantIdRaw, roleIdRaw) { tenantId, roleId ->
+            authorizationService.requireRoleManagement(tenantId)?.let { return@withTenantAndRole it }
+            val command =
+                DeleteRoleCommand(
+                    tenantId = tenantId,
+                    roleId = roleId,
+                )
+            when (val result = commandService.deleteRole(command)) {
+                is Result.Success -> Response.noContent().build()
+                is Result.Failure -> result.failureResponse()
+            }
+        }
+
+    @GET
+    @Operation(summary = "List roles")
+    @APIResponses(value = [APIResponse(responseCode = "200", description = "OK")])
+    fun listRoles(
+        @PathParam("tenantId") tenantIdRaw: String,
+        @QueryParam("limit") limit: Int?,
+        @QueryParam("offset") offset: Int?,
+    ): Response =
+        withTenant(tenantIdRaw) { tenantId ->
+            authorizationService.requireRoleRead(tenantId)?.let { return@withTenant it }
+            val safeLimit = limit?.coerceIn(1, 200) ?: 50
+            val safeOffset = offset?.let { max(0, it) } ?: 0
+            val query =
+                ListRolesQuery(
+                    tenantId = tenantId,
+                    limit = safeLimit,
+                    offset = safeOffset,
+                )
+            when (val result = queryService.listRoles(query)) {
+                is Result.Success -> Response.ok(result.value.map { it.toResponse() }).build()
+                is Result.Failure -> result.failureResponse()
+            }
+        }
+
+    @GET
+    @Operation(summary = "Get role by ID")
+    @APIResponses(
+        value = [
+            APIResponse(
+                responseCode = "200",
+                description = "OK",
+                content = [Content(schema = Schema(implementation = RoleResponse::class))],
+            ),
+            APIResponse(
+                responseCode = "404",
+                description = "Not found",
+                content = [Content(schema = Schema(implementation = ErrorResponse::class))],
+            ),
+        ],
+    )
+    @Path("/{roleId}")
+    fun getRole(
+        @PathParam("tenantId") tenantIdRaw: String,
+        @PathParam("roleId") roleIdRaw: String,
+    ): Response =
+        withTenantAndRole(tenantIdRaw, roleIdRaw) { tenantId, roleId ->
+            authorizationService.requireRoleRead(tenantId)?.let { return@withTenantAndRole it }
+            when (val result = queryService.getRole(tenantId, roleId)) {
+                is Result.Success -> {
+                    val role = result.value ?: return@withTenantAndRole notFoundResponse(roleId.toString())
+                    Response.ok(role.toResponse()).build()
+                }
+                is Result.Failure -> result.failureResponse()
+            }
+        }
+
+    private fun withTenant(
+        tenantIdRaw: String,
+        block: (TenantId) -> Response,
+    ): Response {
+        val tenantId = parseTenantId(tenantIdRaw) ?: return invalidTenantResponse(tenantIdRaw)
+        return block(tenantId)
+    }
+
+    private fun withTenantAndRole(
+        tenantIdRaw: String,
+        roleIdRaw: String,
+        block: (TenantId, RoleId) -> Response,
+    ): Response {
+        val tenantId = parseTenantId(tenantIdRaw) ?: return invalidTenantResponse(tenantIdRaw)
+        val roleId = parseRoleId(roleIdRaw) ?: return invalidRoleResponse(roleIdRaw)
+        return block(tenantId, roleId)
+    }
+
+    private fun parseTenantId(raw: String): TenantId? =
+        try {
+            TenantId.from(raw)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+
+    private fun parseRoleId(raw: String): RoleId? =
+        try {
+            RoleId.from(raw)
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+
+    private fun invalidTenantResponse(value: String): Response =
+        Response
+            .status(Response.Status.BAD_REQUEST)
+            .entity(
+                ErrorResponse(
+                    code = "INVALID_TENANT_ID",
+                    message = "Invalid tenant identifier",
+                    details = mapOf("tenantId" to value),
+                ),
+            ).build()
+
+    private fun invalidRoleResponse(value: String): Response =
+        Response
+            .status(Response.Status.BAD_REQUEST)
+            .entity(
+                ErrorResponse(
+                    code = "INVALID_ROLE_ID",
+                    message = "Invalid role identifier",
+                    details = mapOf("roleId" to value),
+                ),
+            ).build()
+
+    private fun notFoundResponse(roleId: String): Response =
+        Response
+            .status(Response.Status.NOT_FOUND)
+            .entity(
+                ErrorResponse(
+                    code = "ROLE_NOT_FOUND",
+                    message = "Role not found",
+                    details = mapOf("roleId" to roleId),
+                ),
+            ).build()
+}
+
 @ApplicationScoped
-@Path("/api/tenants/{tenantId}/roles")
+@Path("$IDENTITY_API_V1_PREFIX/tenants/{tenantId}/roles")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @Tag(name = "Roles", description = "Role management per tenant")
-class RoleResource
-    @Inject
+open class RoleResource() : BaseRoleResource() {
     constructor(
-        private val commandService: IdentityCommandService,
-        private val queryService: IdentityQueryService,
-        private val authorizationService: AuthorizationService,
-    ) {
-        @POST
-        @Operation(summary = "Create role")
-        @APIResponses(
-            value = [
-                APIResponse(
-                    responseCode = "201",
-                    description = "Role created",
-                    content = [
-                        Content(
-                            schema = Schema(implementation = RoleResponse::class),
-                        ),
-                    ],
-                ),
-                APIResponse(
-                    responseCode = "400",
-                    description = "Invalid request",
-                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
-                ),
-            ],
-        )
-        fun createRole(
-            @PathParam("tenantId") tenantIdRaw: String,
-            @RequestBody(description = "Create role payload", required = true)
-            request: CreateRoleRequest,
-            @Context uriInfo: UriInfo,
-        ): Response =
-            withTenant(tenantIdRaw) { tenantId ->
-                authorizationService.requireRoleManagement(tenantId)?.let { return@withTenant it }
-                when (val result = commandService.createRole(request.toCommand(tenantId))) {
-                    is Result.Success -> {
-                        val role = result.value
-                        val location =
-                            uriInfo.baseUriBuilder
-                                .path("api")
-                                .path("tenants")
-                                .path(role.tenantId.toString())
-                                .path("roles")
-                                .path(role.id.toString())
-                                .build()
-                        Response
-                            .created(location)
-                            .entity(role.toResponse())
-                            .build()
-                    }
-                    is Result.Failure -> result.failureResponse()
-                }
-            }
-
-        @PUT
-        @Operation(summary = "Update role")
-        @APIResponses(
-            value = [
-                APIResponse(
-                    responseCode = "200",
-                    description = "Updated",
-                    content = [Content(schema = Schema(implementation = RoleResponse::class))],
-                ),
-                APIResponse(
-                    responseCode = "400",
-                    description = "Invalid identifier or request",
-                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
-                ),
-            ],
-        )
-        @Path("/{roleId}")
-        fun updateRole(
-            @PathParam("tenantId") tenantIdRaw: String,
-            @PathParam("roleId") roleIdRaw: String,
-            @RequestBody(description = "Update role payload", required = true)
-            request: UpdateRoleRequest,
-        ): Response =
-            withTenantAndRole(tenantIdRaw, roleIdRaw) { tenantId, roleId ->
-                authorizationService.requireRoleManagement(tenantId)?.let { return@withTenantAndRole it }
-                when (val result = commandService.updateRole(request.toCommand(tenantId, roleId))) {
-                    is Result.Success -> Response.ok(result.value.toResponse()).build()
-                    is Result.Failure -> result.failureResponse()
-                }
-            }
-
-        @DELETE
-        @Operation(summary = "Delete role")
-        @APIResponses(
-            value = [
-                APIResponse(responseCode = "204", description = "Deleted"),
-                APIResponse(
-                    responseCode = "400",
-                    description = "Invalid identifier",
-                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
-                ),
-            ],
-        )
-        @Path("/{roleId}")
-        fun deleteRole(
-            @PathParam("tenantId") tenantIdRaw: String,
-            @PathParam("roleId") roleIdRaw: String,
-        ): Response =
-            withTenantAndRole(tenantIdRaw, roleIdRaw) { tenantId, roleId ->
-                authorizationService.requireRoleManagement(tenantId)?.let { return@withTenantAndRole it }
-                val command =
-                    DeleteRoleCommand(
-                        tenantId = tenantId,
-                        roleId = roleId,
-                    )
-                when (val result = commandService.deleteRole(command)) {
-                    is Result.Success -> Response.noContent().build()
-                    is Result.Failure -> result.failureResponse()
-                }
-            }
-
-        @GET
-        @Operation(summary = "List roles")
-        @APIResponses(value = [APIResponse(responseCode = "200", description = "OK")])
-        fun listRoles(
-            @PathParam("tenantId") tenantIdRaw: String,
-            @QueryParam("limit") limit: Int?,
-            @QueryParam("offset") offset: Int?,
-        ): Response =
-            withTenant(tenantIdRaw) { tenantId ->
-                authorizationService.requireRoleRead(tenantId)?.let { return@withTenant it }
-                val safeLimit = limit?.coerceIn(1, 200) ?: 50
-                val safeOffset = offset?.let { max(0, it) } ?: 0
-                val query =
-                    ListRolesQuery(
-                        tenantId = tenantId,
-                        limit = safeLimit,
-                        offset = safeOffset,
-                    )
-                when (val result = queryService.listRoles(query)) {
-                    is Result.Success -> Response.ok(result.value.map { it.toResponse() }).build()
-                    is Result.Failure -> result.failureResponse()
-                }
-            }
-
-        @GET
-        @Operation(summary = "Get role by ID")
-        @APIResponses(
-            value = [
-                APIResponse(
-                    responseCode = "200",
-                    description = "OK",
-                    content = [Content(schema = Schema(implementation = RoleResponse::class))],
-                ),
-                APIResponse(
-                    responseCode = "404",
-                    description = "Not found",
-                    content = [Content(schema = Schema(implementation = ErrorResponse::class))],
-                ),
-            ],
-        )
-        @Path("/{roleId}")
-        fun getRole(
-            @PathParam("tenantId") tenantIdRaw: String,
-            @PathParam("roleId") roleIdRaw: String,
-        ): Response =
-            withTenantAndRole(tenantIdRaw, roleIdRaw) { tenantId, roleId ->
-                authorizationService.requireRoleRead(tenantId)?.let { return@withTenantAndRole it }
-                when (val result = queryService.getRole(tenantId, roleId)) {
-                    is Result.Success -> {
-                        val role = result.value ?: return@withTenantAndRole notFoundResponse(roleId.toString())
-                        Response.ok(role.toResponse()).build()
-                    }
-                    is Result.Failure -> result.failureResponse()
-                }
-            }
-
-        private fun withTenant(
-            tenantIdRaw: String,
-            block: (TenantId) -> Response,
-        ): Response {
-            val tenantId = parseTenantId(tenantIdRaw) ?: return invalidTenantResponse(tenantIdRaw)
-            return block(tenantId)
-        }
-
-        private fun withTenantAndRole(
-            tenantIdRaw: String,
-            roleIdRaw: String,
-            block: (TenantId, RoleId) -> Response,
-        ): Response {
-            val tenantId = parseTenantId(tenantIdRaw) ?: return invalidTenantResponse(tenantIdRaw)
-            val roleId = parseRoleId(roleIdRaw) ?: return invalidRoleResponse(roleIdRaw)
-            return block(tenantId, roleId)
-        }
-
-        private fun parseTenantId(raw: String): TenantId? =
-            try {
-                TenantId.from(raw)
-            } catch (_: IllegalArgumentException) {
-                null
-            }
-
-        private fun parseRoleId(raw: String): RoleId? =
-            try {
-                RoleId.from(raw)
-            } catch (_: IllegalArgumentException) {
-                null
-            }
-
-        private fun invalidTenantResponse(value: String): Response =
-            Response
-                .status(Response.Status.BAD_REQUEST)
-                .entity(
-                    ErrorResponse(
-                        code = "INVALID_TENANT_ID",
-                        message = "Invalid tenant identifier",
-                        details = mapOf("tenantId" to value),
-                    ),
-                ).build()
-
-        private fun invalidRoleResponse(value: String): Response =
-            Response
-                .status(Response.Status.BAD_REQUEST)
-                .entity(
-                    ErrorResponse(
-                        code = "INVALID_ROLE_ID",
-                        message = "Invalid role identifier",
-                        details = mapOf("roleId" to value),
-                    ),
-                ).build()
-
-        private fun notFoundResponse(roleId: String): Response =
-            Response
-                .status(Response.Status.NOT_FOUND)
-                .entity(
-                    ErrorResponse(
-                        code = "ROLE_NOT_FOUND",
-                        message = "Role not found",
-                        details = mapOf("roleId" to roleId),
-                    ),
-                ).build()
+        commandService: IdentityCommandService,
+        queryService: IdentityQueryService,
+        authorizationService: AuthorizationService,
+    ) : this() {
+        this.commandService = commandService
+        this.queryService = queryService
+        this.authorizationService = authorizationService
     }
+}
+
+@ApplicationScoped
+@Path("$IDENTITY_API_COMPAT_PREFIX/tenants/{tenantId}/roles")
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+@Tag(
+    name = "Roles (legacy)",
+    description = "Temporary alias for /api/v1/identity/tenants/{tenantId}/roles",
+)
+@Deprecated("Use /api/v1/identity/tenants/{tenantId}/roles")
+open class LegacyRoleResource() : BaseRoleResource() {
+    constructor(
+        commandService: IdentityCommandService,
+        queryService: IdentityQueryService,
+        authorizationService: AuthorizationService,
+    ) : this() {
+        this.commandService = commandService
+        this.queryService = queryService
+        this.authorizationService = authorizationService
+    }
+}

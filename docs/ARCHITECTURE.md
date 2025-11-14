@@ -351,7 +351,7 @@ The tenancy-identity context exposes a uniform RBAC model that is shared by ever
 - **Permissions** are `resource:action[:scope]` tuples (e.g. `roles:manage:TENANT`). Supported actions are `create`, `read`, `update`, `delete`, `list`, `execute`, and `manage`.
 - **Scopes** currently include `SYSTEM`, `TENANT`, and `USER`. `SYSTEM` scoped permissions grant cross-tenant access, while `TENANT` scoped permissions are constrained to the caller’s tenant.
 - **Role Enforcement** happens inside the service layer. Each request carries identity metadata using the headers `X-User-Id`, `X-User-Roles`, `X-User-Permissions`, and `X-Tenant-ID`. The `AuthorizationService` derives the effective principal and ensures the caller has both tenant access and the required permission before executing a command/query.
-- **Templates**: The service publishes `/api/roles/templates`, exposing curated presets such as `TENANT_ADMIN`, `SUPPORT_AGENT`, and `BILLING_MANAGER`. These templates define recommended permission sets and can be applied during tenant onboarding.
+- **Templates**: The service publishes `/api/v1/identity/roles/templates`, exposing curated presets such as `TENANT_ADMIN`, `SUPPORT_AGENT`, and `BILLING_MANAGER`. These templates define recommended permission sets and can be applied during tenant onboarding.
 
 > **Future work:** once the centralized OAuth/OIDC provider is integrated, these headers will be populated automatically from the access token. Until then the header contract keeps local development and integration tests deterministic.
 3. **Data Level** - Tenant isolation and encryption

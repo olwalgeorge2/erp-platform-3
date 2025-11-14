@@ -23,7 +23,7 @@ Adopt a layered AuthN/AuthZ strategy:
 
 ### Gateway Responsibilities
 - Validate JWT and set trusted headers for downstream (e.g., `X-User-Id`, `X-User-Roles`, `X-User-Permissions`, `X-Tenant-ID`).
-- Enforce rate-limits on `/api/auth/*` and registration endpoints.
+- Enforce rate-limits on `/api/v1/identity/auth/*` and registration endpoints.
 - Propagate correlation ID and sanitize gateway-level errors.
 
 ### Service Responsibilities (Tenancy-Identity)
@@ -54,4 +54,3 @@ Risks / Follow-ups:
 - ADR-004: API Gateway Pattern
 - ADR-005: Multi-Tenancy Data Isolation Strategy
 - ADR-006: Platform-Shared Governance Rules
-

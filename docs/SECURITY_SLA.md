@@ -10,8 +10,8 @@ This document records the non-functional contracts the API Gateway and Tenancy�
 
 | Tier | Path Prefix (Gateway) | Requirements | SLA Targets |
 |------|-----------------------|--------------|-------------|
-| **Public** | `/api/v1/health`, `/api/v1/metrics`, `/q/*`, `/api/v1/identity/api/auth/login` | Anonymous GET/POST, throttled via default rate-limit only. | Availability ≥ 99.5%, latency p95 ≤ 500 ms. |
-| **Protected** | `/api/v1/identity/api/**`, `/api/v1/tenancy/**` | Valid `Authorization: Bearer` JWT issued by Tenancy‑Identity. Gateway enforces `X-Tenant-Id` header, auto-injected from claims. | Availability ≥ 99.9%, latency p95 ≤ 400 ms, strong auth failure alarm (>1% 401/403). |
+| **Public** | `/api/v1/health`, `/api/v1/metrics`, `/q/*`, `/api/v1/identity/auth/login` | Anonymous GET/POST, throttled via default rate-limit only. | Availability ≥ 99.5%, latency p95 ≤ 500 ms. |
+| **Protected** | `/api/v1/identity/**`, `/api/v1/tenancy/**` | Valid `Authorization: Bearer` JWT issued by Tenancy-Identity. Gateway enforces `X-Tenant-Id` header, auto-injected from claims. | Availability ≥ 99.9%, latency p95 ≤ 400 ms, strong auth failure alarm (>1% 401/403). |
 | **Admin** | `/api/admin/**`, `/admin/ratelimits/**` | JWT + `roles` contains `admin` (or `TENANT_ADMIN` for tenant-scoped endpoints). Requires mTLS when deployed internally. | Availability ≥ 99.9%, latency p95 ≤ 300 ms, multi-factor enforcement (future). |
 
 **Header contract**
@@ -32,8 +32,8 @@ This document records the non-functional contracts the API Gateway and Tenancy�
 |---------|----------------|-----------------------|-------------|--------------------------|
 | API Gateway (overall) | External traffic on `:8080` | 99.90% | 400 ms | 43.2 min downtime |
 | Gateway → Identity proxy | `/api/v1/identity/**` | 99.90% | 450 ms end-to-end (includes identity) | Included in overall budget |
-| Tenancy-Identity REST | `/api/tenants`, `/api/auth/**`, `/api/roles/**` | 99.90% | 350 ms | 43.2 min |
-| Identity Auth (login/credential ops) | `/api/auth/login`, `/api/auth/users/*/credentials` | 99.95% | 250 ms | 21.6 min |
+| Tenancy-Identity REST | `/api/v1/identity/tenants`, `/api/v1/identity/auth/**`, `/api/v1/identity/roles/**` | 99.90% | 350 ms | 43.2 min |
+| Identity Auth (login/credential ops) | `/api/v1/identity/auth/login`, `/api/v1/identity/auth/users/*/credentials` | 99.95% | 250 ms | 21.6 min |
 | **Financial Accounting API** | `/api/v1/finance/**` (create ledger, define account, post journal, close period) | **99.90%** | **200 ms journal post, 300 ms ledger create** | 43.2 min (shared with finance slice) |
 
 **RPO/RTO (per Phase 3 pre-work)**

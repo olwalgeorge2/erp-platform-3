@@ -16,7 +16,8 @@ API Gateway Health Routing Runbook
   - Gateway config `api-gateway/src/main/resources/application.yml`:
     - Identity platform routes (non-overlapping):
       - `/api/v1/identity/q/*` → rewrite remove-prefix `/api/v1/identity`, add-prefix `/`.
-      - `/api/v1/identity/api/*` → rewrite remove-prefix `/api/v1/identity`, add-prefix `/`.
+      - `/api/v1/identity/*` → rewrite remove-prefix `/api/v1/identity`, add-prefix `/api/v1/identity`.
+      - `/api/identity/*` (legacy) → rewrite remove-prefix `/api`, add-prefix `/api`.
     - Versioned health aliases:
       - `/api/v1/identity/health` and `/api/v1/identity/health/*` → rewrite to `/q/health`.
     - Public endpoints:

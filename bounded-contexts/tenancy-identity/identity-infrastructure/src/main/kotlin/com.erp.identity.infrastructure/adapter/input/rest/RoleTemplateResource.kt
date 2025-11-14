@@ -9,17 +9,36 @@ import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 
-@Path("/api/roles/templates")
+open class BaseRoleTemplateResource() {
+    @Inject
+    protected lateinit var catalog: RoleTemplateCatalog
+
+    constructor(catalog: RoleTemplateCatalog) : this() {
+        this.catalog = catalog
+    }
+
+    @GET
+    fun listTemplates(): Response = Response.ok(catalog.templates()).build()
+}
+
+@Path("$IDENTITY_API_V1_PREFIX/roles/templates")
 @Produces(MediaType.APPLICATION_JSON)
 @ApplicationScoped
-class RoleTemplateResource
-    @Inject
-    constructor(
-        private val catalog: RoleTemplateCatalog,
-    ) {
-        @GET
-        fun listTemplates(): Response = Response.ok(catalog.templates()).build()
+open class RoleTemplateResource() : BaseRoleTemplateResource() {
+    constructor(catalog: RoleTemplateCatalog) : this() {
+        this.catalog = catalog
     }
+}
+
+@Path("$IDENTITY_API_COMPAT_PREFIX/roles/templates")
+@Produces(MediaType.APPLICATION_JSON)
+@ApplicationScoped
+@Deprecated("Use /api/v1/identity/roles/templates")
+open class LegacyRoleTemplateResource() : BaseRoleTemplateResource() {
+    constructor(catalog: RoleTemplateCatalog) : this() {
+        this.catalog = catalog
+    }
+}
 
 @ApplicationScoped
 class RoleTemplateCatalog {

@@ -8,13 +8,15 @@
 # Will be set by the Create Role response handler below.
 @roleId = 00000000-0000-0000-0000-000000000000
 
+# Canonical path: /api/v1/identity/**. Legacy /api/** alias remains temporarily for dev clients.
+
 # Simulated gateway-provided principal headers
 @userId = rest-client-admin
 @userRoles = TENANT_ADMIN
 @userPermissions = roles:manage,roles:read
 
 ### Provision Tenant
-POST {{host}}/api/tenants
+POST {{host}}/api/v1/identity/tenants
 Content-Type: application/json
 
 {
@@ -43,7 +45,7 @@ Content-Type: application/json
 ###
 
 ### Activate Tenant
-POST {{host}}/api/tenants/{{tenantId}}/activate
+POST {{host}}/api/v1/identity/tenants/{{tenantId}}/activate
 Content-Type: application/json
 
 {
@@ -55,7 +57,7 @@ Content-Type: application/json
 @roleName = tenant-admin
 
 ### Create Role
-POST {{host}}/api/tenants/{{tenantId}}/roles
+POST {{host}}/api/v1/identity/tenants/{{tenantId}}/roles
 Content-Type: application/json
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
@@ -83,7 +85,7 @@ X-Tenant-ID: {{tenantId}}
 ###
 
 ### List Roles
-GET {{host}}/api/tenants/{{tenantId}}/roles
+GET {{host}}/api/v1/identity/tenants/{{tenantId}}/roles
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
 X-User-Permissions: roles:read
@@ -92,7 +94,7 @@ X-Tenant-ID: {{tenantId}}
 ###
 
 ### Update Role
-PUT {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
+PUT {{host}}/api/v1/identity/tenants/{{tenantId}}/roles/{{roleId}}
 Content-Type: application/json
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
@@ -115,7 +117,7 @@ X-Tenant-ID: {{tenantId}}
 ###
 
 ### Get Role
-GET {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
+GET {{host}}/api/v1/identity/tenants/{{tenantId}}/roles/{{roleId}}
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
 X-User-Permissions: roles:read
@@ -124,7 +126,7 @@ X-Tenant-ID: {{tenantId}}
 ###
 
 ### Delete Role
-DELETE {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
+DELETE {{host}}/api/v1/identity/tenants/{{tenantId}}/roles/{{roleId}}
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
 X-User-Permissions: {{userPermissions}}
@@ -133,7 +135,7 @@ X-Tenant-ID: {{tenantId}}
 ###
 
 ### List Roles After Deletion
-GET {{host}}/api/tenants/{{tenantId}}/roles
+GET {{host}}/api/v1/identity/tenants/{{tenantId}}/roles
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
 X-User-Permissions: roles:read
@@ -142,4 +144,4 @@ X-Tenant-ID: {{tenantId}}
 ###
 
 ### Fetch Built-in Role Templates
-GET {{host}}/api/roles/templates
+GET {{host}}/api/v1/identity/roles/templates

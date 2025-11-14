@@ -314,8 +314,8 @@ val safeOffset = offset?.let { max(0, it) } ?: 0
 
 **Resource Hierarchy:**
 ```
-/api/tenants/{tenantId}/roles          → List/Create roles
-/api/tenants/{tenantId}/roles/{roleId} → Get/Update/Delete role
+/api/v1/identity/tenants/{tenantId}/roles          → List/Create roles
+/api/v1/identity/tenants/{tenantId}/roles/{roleId} → Get/Update/Delete role
 ```
 
 **HTTP Methods & Status Codes:**
@@ -389,13 +389,13 @@ The `tenancy-identity-roles.rest` file provides:
 **Example Workflow:**
 ```http
 ### Provision Tenant
-POST {{host}}/api/tenants
+POST {{host}}/api/v1/identity/tenants
 > {%
   client.global.set("tenantId", response.body.id);
 %}
 
 ### Create Role
-POST {{host}}/api/tenants/{{tenantId}}/roles
+POST {{host}}/api/v1/identity/tenants/{{tenantId}}/roles
 ```
 
 This is production-ready API documentation!
@@ -1196,7 +1196,7 @@ Result: 11/11 PASSED ✅
 | Authorization gap | ✅ Fixed | Added header-based principal extraction, `AuthorizationService`, and explicit permission checks on every role endpoint. Missing headers or mismatched tenants now return a structured 403 response. |
 | Integration coverage | ✅ Fixed | Extended `IdentityIntegrationTest` to exercise the complete role lifecycle (create, update, list, delete) with the new authorization headers. |
 | RBAC documentation | ✅ Fixed | Updated `docs/ARCHITECTURE.md` to describe the permission model, scopes, header contract, and role templates. The `.rest` client file mirrors the same expectations. |
-| Role templates | ✅ Fixed | Introduced `RoleTemplateCatalog` plus `/api/roles/templates` to expose curated presets (Tenant Admin, Support Agent, Billing Manager). |
+| Role templates | ✅ Fixed | Introduced `RoleTemplateCatalog` plus `/api/v1/identity/roles/templates` to expose curated presets (Tenant Admin, Support Agent, Billing Manager). |
 
 ---
 

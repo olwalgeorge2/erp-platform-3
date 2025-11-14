@@ -117,7 +117,7 @@ curl http://localhost:8081/q/metrics | rg identity.user.creation
 ```
 
 ### 4.2 Log correlation
-1. Call `http://localhost:8080/api/v1/identity/api/auth/login` with `-H "X-Trace-Id: trace-demo-1"`.
+1. Call `http://localhost:8080/api/v1/identity/auth/login` with `-H "X-Trace-Id: trace-demo-1"`.
 2. Check `gateway-output.log` and `identity-dev.out.log`; both will contain `trace-demo-1`, allowing you to follow the request through the stack.
 
 ### 4.3 Prometheus/Grafana (future)

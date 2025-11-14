@@ -43,16 +43,16 @@
 
 ```http
 # Authentication (negative test)
-POST /api/auth/login
+POST /api/v1/identity/auth/login
 Expected: 401 with sanitized error
 Headers: X-Error-ID present
 
 # Tenant Provisioning
-POST /api/tenants
+POST /api/v1/identity/tenants
 Captures: tenantId for subsequent requests
 
 # Role Management
-POST /api/tenants/{tenantId}/roles
+POST /api/v1/identity/tenants/{tenantId}/roles
 Captures: roleId
 Tests: Create, List, Update, Delete
 ```

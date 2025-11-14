@@ -15,10 +15,14 @@ data class JournalEntryLine(
     val currency: String,
     val description: String? = null,
     val createdAt: Instant = Instant.now(),
+    val originalCurrency: String = currency,
+    val originalAmount: Money = amount,
 ) {
     init {
         require(amount.amount > 0) { "Line amount must be positive" }
         require(currency.length == 3) { "Currency must be ISO-4217 3-letter code" }
+        require(originalCurrency.length == 3) { "Original currency must be ISO-4217 3-letter code" }
+        require(originalAmount.amount > 0) { "Original amount must be positive" }
     }
 }
 

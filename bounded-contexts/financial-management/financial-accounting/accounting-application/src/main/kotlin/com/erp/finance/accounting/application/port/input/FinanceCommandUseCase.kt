@@ -4,6 +4,7 @@ import com.erp.finance.accounting.application.port.input.command.CloseAccounting
 import com.erp.finance.accounting.application.port.input.command.CreateLedgerCommand
 import com.erp.finance.accounting.application.port.input.command.DefineAccountCommand
 import com.erp.finance.accounting.application.port.input.command.PostJournalEntryCommand
+import com.erp.finance.accounting.application.port.input.command.RunCurrencyRevaluationCommand
 import com.erp.finance.accounting.domain.model.AccountingPeriod
 import com.erp.finance.accounting.domain.model.ChartOfAccounts
 import com.erp.finance.accounting.domain.model.JournalEntry
@@ -17,4 +18,6 @@ interface FinanceCommandUseCase {
     fun postJournalEntry(command: PostJournalEntryCommand): JournalEntry
 
     fun closePeriod(command: CloseAccountingPeriodCommand): AccountingPeriod
+
+    fun runCurrencyRevaluation(command: RunCurrencyRevaluationCommand): JournalEntry?
 }

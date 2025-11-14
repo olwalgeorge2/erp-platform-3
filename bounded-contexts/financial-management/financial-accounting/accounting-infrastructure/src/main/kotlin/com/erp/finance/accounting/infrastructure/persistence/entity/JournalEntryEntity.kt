@@ -19,6 +19,8 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.Lob
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
+import jakarta.persistence.PrePersist
+import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
 import jakarta.persistence.Version
 import java.time.Instant
@@ -58,10 +60,31 @@ class JournalEntryEntity(
     var createdAt: Instant = Instant.now(),
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant = Instant.now(),
+    @Column(name = "created_by", nullable = false, length = 128)
+    var createdBy: String = DEFAULT_ACTOR,
+    @Column(name = "updated_by", nullable = false, length = 128)
+    var updatedBy: String = DEFAULT_ACTOR,
+    @Column(name = "source_system", nullable = false, length = 64)
+    var sourceSystem: String = DEFAULT_SOURCE,
     @Version
     @Column(name = "version")
     var version: Int? = 0,
 ) {
+    @PrePersist
+    fun prePersist() {
+        createdBy = createdBy.ifBlank { DEFAULT_ACTOR }
+        updatedBy = updatedBy.ifBlank { createdBy }
+        sourceSystem = sourceSystem.ifBlank { DEFAULT_SOURCE }
+        updatedAt = Instant.now()
+    }
+
+    @PreUpdate
+    fun preUpdate() {
+        updatedBy = updatedBy.ifBlank { DEFAULT_ACTOR }
+        sourceSystem = sourceSystem.ifBlank { DEFAULT_SOURCE }
+        updatedAt = Instant.now()
+    }
+
     @OneToMany(
         mappedBy = "journalEntry",
         cascade = [CascadeType.ALL],
@@ -124,6 +147,8 @@ class JournalEntryEntity(
                     currency = line.currency,
                     description = line.description,
                     createdAt = line.createdAt,
+                    originalCurrency = line.originalCurrency,
+                    originalAmount = line.originalAmount.amount,
                 )
         }
     }
@@ -145,6 +170,9 @@ class JournalEntryEntity(
             ).also { entity ->
                 entity.updateFrom(domain)
             }
+
+        private const val DEFAULT_ACTOR = "system"
+        private const val DEFAULT_SOURCE = "erp-platform"
     }
 }
 
@@ -174,6 +202,10 @@ class JournalEntryLineEntity(
     var description: String? = null,
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant = Instant.now(),
+    @Column(name = "original_currency", nullable = false, length = 3)
+    var originalCurrency: String = currency,
+    @Column(name = "original_amount", nullable = false)
+    var originalAmount: Long = 0,
 ) {
     fun toDomain(): JournalEntryLine =
         JournalEntryLine(
@@ -184,5 +216,7 @@ class JournalEntryLineEntity(
             currency = currency,
             description = description,
             createdAt = createdAt,
+            originalCurrency = originalCurrency,
+            originalAmount = Money(originalAmount),
         )
 }

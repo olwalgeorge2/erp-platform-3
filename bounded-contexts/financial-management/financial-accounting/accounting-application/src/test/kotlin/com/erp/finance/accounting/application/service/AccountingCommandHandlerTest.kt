@@ -4,6 +4,7 @@ import com.erp.finance.accounting.application.port.input.command.CloseAccounting
 import com.erp.finance.accounting.application.port.input.command.DefineAccountCommand
 import com.erp.finance.accounting.application.port.input.command.JournalEntryLineCommand
 import com.erp.finance.accounting.application.port.input.command.PostJournalEntryCommand
+import com.erp.finance.accounting.application.port.input.command.RunCurrencyRevaluationCommand
 import com.erp.finance.accounting.application.port.output.AccountingPeriodRepository
 import com.erp.finance.accounting.application.port.output.ChartOfAccountsRepository
 import com.erp.finance.accounting.application.port.output.FinanceEventPublisher
@@ -18,14 +19,19 @@ import com.erp.finance.accounting.domain.model.ChartOfAccounts
 import com.erp.finance.accounting.domain.model.ChartOfAccountsId
 import com.erp.finance.accounting.domain.model.EntryDirection
 import com.erp.finance.accounting.domain.model.JournalEntry
+import com.erp.finance.accounting.domain.model.JournalEntryStatus
 import com.erp.finance.accounting.domain.model.Ledger
 import com.erp.finance.accounting.domain.model.LedgerId
 import com.erp.finance.accounting.domain.model.Money
+import com.erp.finance.accounting.domain.policy.ExchangeRate
+import com.erp.finance.accounting.domain.policy.ExchangeRateProvider
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -36,6 +42,7 @@ class AccountingCommandHandlerTest {
     private lateinit var periodRepository: InMemoryAccountingPeriodRepository
     private lateinit var journalRepository: InMemoryJournalEntryRepository
     private lateinit var eventPublisher: RecordingFinanceEventPublisher
+    private lateinit var exchangeRateProvider: StubExchangeRateProvider
     private lateinit var handler: AccountingCommandHandler
 
     @BeforeEach
@@ -45,6 +52,7 @@ class AccountingCommandHandlerTest {
         periodRepository = InMemoryAccountingPeriodRepository()
         journalRepository = InMemoryJournalEntryRepository()
         eventPublisher = RecordingFinanceEventPublisher()
+        exchangeRateProvider = StubExchangeRateProvider()
         handler =
             AccountingCommandHandler(
                 ledgerRepository = ledgerRepository,
@@ -52,6 +60,7 @@ class AccountingCommandHandlerTest {
                 periodRepository = periodRepository,
                 journalRepository = journalRepository,
                 eventPublisher = eventPublisher,
+                exchangeRateProvider = exchangeRateProvider,
             )
     }
 
@@ -111,6 +120,89 @@ class AccountingCommandHandlerTest {
         assertTrue(directions.containsAll(setOf(EntryDirection.DEBIT, EntryDirection.CREDIT)))
         assertEquals(journalRepository.lastSaved?.id, result.id)
         assertSame(result, eventPublisher.journalEvents.single())
+    }
+
+    @Test
+    fun `runCurrencyRevaluation posts adjustment entry for foreign currency lines`() {
+        val tenantId = UUID.randomUUID()
+        val ledger =
+            Ledger(
+                id = LedgerId(),
+                tenantId = tenantId,
+                chartOfAccountsId = ChartOfAccountsId(),
+                baseCurrency = "USD",
+            )
+        val period =
+            AccountingPeriod(
+                ledgerId = ledger.id,
+                tenantId = tenantId,
+                code = "2025-03",
+                startDate = LocalDate.parse("2025-03-01"),
+                endDate = LocalDate.parse("2025-03-31"),
+            )
+        ledgerRepository.given(ledger)
+        periodRepository.given(period)
+
+        val assetAccount = AccountId(UUID.randomUUID())
+        val offsetAccount = AccountId(UUID.randomUUID())
+        val gainAccount = AccountId(UUID.randomUUID())
+        val lossAccount = AccountId(UUID.randomUUID())
+
+        exchangeRateProvider.stubRate("EUR", "USD", BigDecimal("1.00"))
+        handler.postJournalEntry(
+            PostJournalEntryCommand(
+                tenantId = tenantId,
+                ledgerId = ledger.id.value,
+                accountingPeriodId = period.id.value,
+                bookedAt = Instant.parse("2025-03-05T00:00:00Z"),
+                lines =
+                    listOf(
+                        JournalEntryLineCommand(
+                            accountId = assetAccount,
+                            direction = EntryDirection.DEBIT,
+                            amount = Money(1000),
+                            currency = "EUR",
+                            description = "Foreign receivable",
+                        ),
+                        JournalEntryLineCommand(
+                            accountId = offsetAccount,
+                            direction = EntryDirection.CREDIT,
+                            amount = Money(1000),
+                            currency = "USD",
+                            description = "Revenue",
+                        ),
+                    ),
+            ),
+        )
+
+        exchangeRateProvider.stubRate("EUR", "USD", BigDecimal("1.20"))
+
+        val revaluation =
+            handler.runCurrencyRevaluation(
+                RunCurrencyRevaluationCommand(
+                    tenantId = tenantId,
+                    ledgerId = ledger.id.value,
+                    accountingPeriodId = period.id.value,
+                    asOf = Instant.parse("2025-03-31T23:59:59Z"),
+                    bookedAt = Instant.parse("2025-03-31T23:59:59Z"),
+                    gainAccountId = gainAccount,
+                    lossAccountId = lossAccount,
+                    reference = "FX-REV",
+                ),
+            )
+
+        assertNotNull(revaluation)
+        val assetAdjustment =
+            revaluation!!.lines.first { it.accountId == assetAccount }
+        val gainLine =
+            revaluation.lines.first { it.accountId == gainAccount }
+        assertEquals(EntryDirection.DEBIT, assetAdjustment.direction)
+        assertEquals(EntryDirection.CREDIT, gainLine.direction)
+        assertEquals(200L, assetAdjustment.amount.amount)
+        assertEquals(200L, gainLine.amount.amount)
+        assertEquals("USD", assetAdjustment.currency)
+        assertEquals("USD", gainLine.currency)
+        assertEquals(2, revaluation.lines.size)
     }
 
     @Test
@@ -181,6 +273,60 @@ class AccountingCommandHandlerTest {
         assertEquals(1, updated.accounts.size)
         assertTrue(updated.accounts.values.any { it.code == "1000" })
         assertSame(updated, chartRepository.lastSaved)
+    }
+
+    @Test
+    fun `postJournalEntry converts foreign currency lines`() {
+        val tenantId = UUID.randomUUID()
+        val ledger =
+            Ledger(
+                id = LedgerId(),
+                tenantId = tenantId,
+                chartOfAccountsId = ChartOfAccountsId(),
+                baseCurrency = "USD",
+            )
+        val period =
+            AccountingPeriod(
+                ledgerId = ledger.id,
+                tenantId = tenantId,
+                code = "2025-02",
+                startDate = LocalDate.parse("2025-02-01"),
+                endDate = LocalDate.parse("2025-02-28"),
+            )
+        ledgerRepository.given(ledger)
+        periodRepository.given(period)
+        exchangeRateProvider.stubRate("EUR", "USD", BigDecimal("1.20"))
+
+        val command =
+            PostJournalEntryCommand(
+                tenantId = tenantId,
+                ledgerId = ledger.id.value,
+                accountingPeriodId = period.id.value,
+                lines =
+                    listOf(
+                        JournalEntryLineCommand(
+                            accountId = AccountId(),
+                            direction = EntryDirection.DEBIT,
+                            amount = Money(10_00),
+                            currency = "EUR",
+                        ),
+                        JournalEntryLineCommand(
+                            accountId = AccountId(),
+                            direction = EntryDirection.CREDIT,
+                            amount = Money(12_00),
+                            currency = "USD",
+                        ),
+                    ),
+                bookedAt = Instant.parse("2025-02-10T00:00:00Z"),
+            )
+
+        val result = handler.postJournalEntry(command)
+
+        val debitLine = result.lines.first { it.direction == EntryDirection.DEBIT }
+        assertEquals("USD", debitLine.currency)
+        assertEquals("EUR", debitLine.originalCurrency)
+        assertEquals(12_00, debitLine.amount.amount)
+        assertEquals(10_00, debitLine.originalAmount.amount)
     }
 }
 
@@ -273,6 +419,20 @@ private class InMemoryJournalEntryRepository : JournalEntryRepository {
         id: UUID,
         tenantId: UUID,
     ): JournalEntry? = storage[id to tenantId]
+
+    override fun findPostedByLedgerAndPeriod(
+        ledgerId: LedgerId,
+        accountingPeriodId: AccountingPeriodId,
+        tenantId: UUID,
+    ): List<JournalEntry> =
+        storage
+            .values
+            .filter {
+                it.tenantId == tenantId &&
+                    it.ledgerId == ledgerId &&
+                    it.accountingPeriodId == accountingPeriodId &&
+                    it.status == JournalEntryStatus.POSTED
+            }
 }
 
 private class RecordingFinanceEventPublisher : FinanceEventPublisher {
@@ -289,4 +449,33 @@ private class RecordingFinanceEventPublisher : FinanceEventPublisher {
     ) {
         periodEvents += period to previousStatus
     }
+}
+
+private class StubExchangeRateProvider : ExchangeRateProvider {
+    private val rates = mutableMapOf<Pair<String, String>, ExchangeRate>()
+
+    fun stubRate(
+        base: String,
+        quote: String,
+        rate: BigDecimal,
+    ) {
+        rates[base.uppercase() to quote.uppercase()] =
+            ExchangeRate(
+                baseCurrency = base.uppercase(),
+                quoteCurrency = quote.uppercase(),
+                rate = rate,
+                asOf = Instant.now(),
+            )
+    }
+
+    override fun findRate(
+        baseCurrency: String,
+        quoteCurrency: String,
+        asOf: Instant,
+    ): ExchangeRate? =
+        if (baseCurrency.uppercase() == quoteCurrency.uppercase()) {
+            ExchangeRate(baseCurrency.uppercase(), quoteCurrency.uppercase(), BigDecimal.ONE, asOf)
+        } else {
+            rates[baseCurrency.uppercase() to quoteCurrency.uppercase()]
+        }
 }

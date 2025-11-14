@@ -37,7 +37,7 @@ class DefaultResponsesFilter : OASFilter {
     }
 
     private fun errorResponse(description: String): APIResponse {
-        val schema: Schema = OASFactory.createSchema().ref("#/components/schemas/ErrorResponse")
+        val schema: Schema = OASFactory.createSchema().ref("#/components/schemas/GatewayErrorResponse")
         val media: MediaType = OASFactory.createMediaType().schema(schema)
         val content: Content = OASFactory.createContent().addMediaType("application/json", media)
         return OASFactory.createAPIResponse().description(description).content(content)

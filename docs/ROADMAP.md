@@ -307,3 +307,15 @@
 9.8 Cross-links: docs/ARCHITECTURE.md#deployment-architecture, docs/ARCHITECTURE.md#future-enhancements, docs/ARCHITECTURE.md#architecture-decision-records.
 9.9 Related ADRs: ADR-004 API Gateway Pattern, ADR-005 Multi-Tenancy Data Isolation Strategy.
 
+
+
+## 6. Phase 5 - Finance Expansion & SAP Parity
+See `docs/FINANCE_PHASE5_PLAN.md` for the detailed backlog and sequencing.
+
+6.1 Multi-currency accounting – exchange-rate governance, gain/loss handling, ledger base-currency enforcement (initial scaffolding via `ExchangeRate` in accounting-domain).
+6.2 Reporting/query surfaces – trial balance, ledger summaries, export feeds, and OpenAPI/.rest documentation.
+6.3 Approvals & compliance – dual-authorization workflow, management dimensions (cost centers, tax codes), segregation of duties.
+6.4 Observability & resilience – business SLIs, dashboards, k6/JMeter suites, chaos drills, and runbooks.
+6.5 Security scopes – enforce `financial-admin`, `financial-user`, `financial-auditor` across gateway + services with privileged action logging.
+
+These deliverables push the finance slice toward SAP-grade parity once Phase 4 is stabilized.

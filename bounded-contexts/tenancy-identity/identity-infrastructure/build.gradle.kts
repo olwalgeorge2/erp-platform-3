@@ -21,6 +21,10 @@ dependencies {
     implementation(project(":bounded-contexts:tenancy-identity:identity-domain"))
     implementation(project(":platform-shared:common-types"))
 
+    // REST + JSON (modern Quarkus RESTEasy Reactive stack)
+    implementation(libs.quarkus.rest)
+    implementation(libs.quarkus.rest.jackson)
+
     // Persistence: Postgres + Flyway migrations
     implementation("io.quarkus:quarkus-jdbc-postgresql")
     implementation("io.quarkus:quarkus-flyway")

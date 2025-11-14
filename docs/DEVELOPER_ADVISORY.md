@@ -1668,7 +1668,7 @@ class EmailResource {
 @RegisterRestClient(configKey = "user-api")
 interface UserRestClient {
     @GET
-    @Path("/api/identity/users/{id}")
+    @Path("/api/v1/identity/users/{id}")
     fun getUser(@PathParam("id") userId: String): UserResponse
 }
 ```

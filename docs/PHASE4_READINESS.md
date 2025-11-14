@@ -86,3 +86,18 @@ _Last updated: 2025-11-13_
 
 
 
+
+
+
+## 8. Phase 5 Enhancement Backlog
+
+The gaps identified against SAP-grade capabilities are tracked in `docs/FINANCE_PHASE5_PLAN.md`. Highlights:
+
+1. Multi-currency accounting and exchange-rate governance.
+2. Reporting/query APIs (trial balance, ledger summaries, exports).
+3. Management accounting dimensions (cost centers, tax hooks).
+4. Approval workflow & segregation of duties for sensitive journals.
+5. Business SLIs, dashboards, load/chaos suites, and runbooks.
+6. Financial scopes end-to-end with privileged action logging.
+
+These move into Phase 5 for implementation.

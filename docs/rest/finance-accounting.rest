@@ -1,0 +1,101 @@
+### Finance Accounting API Samples
+@host = http://localhost:8082
+@gateway = http://localhost:8080
+@tenant = aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+@chartId = {{$guid}}
+@ledgerId = {{$guid}}
+@periodId = {{$guid}}
+@journalId = {{$guid}}
+@debitAccountId = {{$guid}}
+@creditAccountId = {{$guid}}
+@gainAccountId = {{$guid}}
+@lossAccountId = {{$guid}}
+# Supply an access token (paste directly or reference your REST client env)
+@token = Bearer <PASTE_JWT_TOKEN_HERE>
+# Canonical path: /api/v1/finance/**. The service also exposes a temporary /api/finance/** alias for dev-only compatibility.
+
+### Create ledger (direct service)
+POST {{host}}/api/v1/finance/ledgers
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+{
+  "tenantId": "{{tenant}}",
+  "chartOfAccountsId": "{{chartId}}",
+  "baseCurrency": "USD",
+  "chartCode": "FIN-ROOT",
+  "chartName": "Finance Root Chart"
+}
+
+### Define account
+POST {{host}}/api/v1/finance/chart-of-accounts/{{chartId}}/accounts
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+{
+  "tenantId": "{{tenant}}",
+  "code": "1000",
+  "name": "Cash",
+  "type": "ASSET",
+  "currency": "USD",
+  "isPosting": true
+}
+
+### Post journal entry via gateway (preferred path)
+POST {{gateway}}/api/v1/finance/journal-entries
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+{
+  "tenantId": "{{tenant}}",
+  "ledgerId": "{{ledgerId}}",
+  "accountingPeriodId": "{{periodId}}",
+  "reference": "JE-001",
+  "description": "Sample posting",
+  "lines": [
+    {
+      "accountId": "{{debitAccountId}}",
+      "direction": "DEBIT",
+      "amountMinor": 10000,
+      "currency": "USD",
+      "description": "Debit cash"
+    },
+    {
+      "accountId": "{{creditAccountId}}",
+      "direction": "CREDIT",
+      "amountMinor": 10000,
+      "currency": "USD",
+      "description": "Credit revenue"
+    }
+  ]
+}
+
+### Close accounting period
+POST {{gateway}}/api/v1/finance/ledgers/{{ledgerId}}/periods/{{periodId}}/close
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+{
+  "tenantId": "{{tenant}}",
+  "freezeOnly": false
+}
+
+### Run currency revaluation (FX adjustment for unrealized gains/losses)
+POST {{gateway}}/api/v1/finance/ledgers/{{ledgerId}}/periods/{{periodId}}/currency-revaluation
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+{
+  "tenantId": "{{tenant}}",
+  "gainAccountId": "{{gainAccountId}}",
+  "lossAccountId": "{{lossAccountId}}",
+  "bookedAt": "2025-11-30T23:59:59Z",
+  "asOfTimestamp": "2025-11-14T00:00:00Z",
+  "reference": "FX-REVAL-2025-11",
+  "description": "Monthly currency revaluation for foreign exposures"
+}

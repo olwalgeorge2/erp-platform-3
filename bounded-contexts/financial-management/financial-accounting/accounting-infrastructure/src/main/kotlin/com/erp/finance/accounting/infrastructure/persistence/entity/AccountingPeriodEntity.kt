@@ -9,6 +9,8 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
+import jakarta.persistence.PrePersist
+import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
 import jakarta.persistence.Version
 import java.time.Instant
@@ -38,10 +40,31 @@ class AccountingPeriodEntity(
     var createdAt: Instant = Instant.now(),
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant = Instant.now(),
+    @Column(name = "created_by", nullable = false, length = 128)
+    var createdBy: String = DEFAULT_ACTOR,
+    @Column(name = "updated_by", nullable = false, length = 128)
+    var updatedBy: String = DEFAULT_ACTOR,
+    @Column(name = "source_system", nullable = false, length = 64)
+    var sourceSystem: String = DEFAULT_SOURCE,
     @Version
     @Column(name = "version")
     var version: Int? = 0,
 ) {
+    @PrePersist
+    fun prePersist() {
+        createdBy = createdBy.ifBlank { DEFAULT_ACTOR }
+        updatedBy = updatedBy.ifBlank { createdBy }
+        sourceSystem = sourceSystem.ifBlank { DEFAULT_SOURCE }
+        updatedAt = Instant.now()
+    }
+
+    @PreUpdate
+    fun preUpdate() {
+        updatedBy = updatedBy.ifBlank { DEFAULT_ACTOR }
+        sourceSystem = sourceSystem.ifBlank { DEFAULT_SOURCE }
+        updatedAt = Instant.now()
+    }
+
     fun toDomain(): AccountingPeriod =
         AccountingPeriod(
             id = AccountingPeriodId(id),
@@ -66,5 +89,8 @@ class AccountingPeriodEntity(
                 createdAt = Instant.now(),
                 updatedAt = Instant.now(),
             )
+
+        private const val DEFAULT_ACTOR = "system"
+        private const val DEFAULT_SOURCE = "erp-platform"
     }
 }

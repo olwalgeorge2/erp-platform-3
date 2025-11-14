@@ -231,7 +231,7 @@ docker exec -it $(docker ps -q --filter ancestor=confluentinc/cp-kafka) \
 
 ```bash
 # Terminal 2: Create a user (triggers UserCreatedEvent)
-curl -X POST http://localhost:8080/api/identity/users \
+curl -X POST http://localhost:8080/api/v1/identity/users \
   -H "Content-Type: application/json" \
   -H "X-Trace-ID: test-trace-123" \
   -H "X-Tenant-ID: a1b2c3d4-e5f6-7890-abcd-ef1234567890" \

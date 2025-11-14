@@ -9,7 +9,10 @@ import jakarta.ws.rs.ext.ExceptionMapper
 import jakarta.ws.rs.ext.Provider
 import org.eclipse.microprofile.openapi.annotations.media.Schema
 
-@Schema(ref = "#/components/schemas/GatewayErrorResponse")
+@Schema(
+    name = "GatewayErrorResponse",
+    description = "Standard error envelope emitted by the API Gateway",
+)
 data class ErrorResponse(
     val code: String,
     val message: String,

@@ -1,7 +1,10 @@
 package com.erp.finance.accounting.infrastructure.adapter.output.persistence
 
 import com.erp.finance.accounting.application.port.output.JournalEntryRepository
+import com.erp.finance.accounting.domain.model.AccountingPeriodId
 import com.erp.finance.accounting.domain.model.JournalEntry
+import com.erp.finance.accounting.domain.model.JournalEntryStatus
+import com.erp.finance.accounting.domain.model.LedgerId
 import com.erp.finance.accounting.infrastructure.persistence.entity.JournalEntryEntity
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.persistence.EntityManager
@@ -47,4 +50,29 @@ class JpaJournalEntryRepository(
             .resultList
             .firstOrNull()
             ?.toDomain()
+
+    override fun findPostedByLedgerAndPeriod(
+        ledgerId: LedgerId,
+        accountingPeriodId: AccountingPeriodId,
+        tenantId: UUID,
+    ): List<JournalEntry> =
+        entityManager
+            .createQuery(
+                """
+                SELECT DISTINCT e
+                FROM JournalEntryEntity e
+                LEFT JOIN FETCH e.lines
+                WHERE e.tenantId = :tenantId
+                  AND e.ledgerId = :ledgerId
+                  AND e.accountingPeriodId = :periodId
+                  AND e.status = :status
+                ORDER BY e.bookedAt ASC, e.id ASC
+                """.trimIndent(),
+                JournalEntryEntity::class.java,
+            ).setParameter("tenantId", tenantId)
+            .setParameter("ledgerId", ledgerId.value)
+            .setParameter("periodId", accountingPeriodId.value)
+            .setParameter("status", JournalEntryStatus.POSTED)
+            .resultList
+            .map(JournalEntryEntity::toDomain)
 }

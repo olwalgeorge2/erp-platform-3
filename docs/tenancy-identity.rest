@@ -9,6 +9,8 @@
 @userRoles = SYSTEM_ADMIN
 @userPermissions = roles:manage,roles:read
 
+# Canonical path: /api/v1/identity/**. The service also exposes a temporary /api/identity/** alias for dev-only compatibility.
+
 ###############################################################################
 # Health Check - ✅ VERIFY SERVICE IS RUNNING
 ###############################################################################
@@ -17,16 +19,20 @@
 GET {{host}}/q/health
 Accept: application/json
 
+### Check Identity Service Swagger UI
+GET {{host}}/q/swagger-ui/
+Accept: text/html
+
 ### Check Identity Service Dev UI
 GET {{host}}/q/dev-ui/
 Accept: text/html
 
 ###############################################################################
-# API Tests
+# API Tests (Versioned Endpoints)
 ###############################################################################
 
 ### Auth: expect 401 for unknown user (sanitized)
-POST {{host}}/api/auth/login
+POST {{host}}/api/v1/identity/auth/login
 Content-Type: application/json
 
 {
@@ -35,8 +41,8 @@ Content-Type: application/json
   "password": "WrongPass123!"
 }
 
-### Provision tenant
-POST {{host}}/api/tenants
+### Provision tenant (CANONICAL v1 endpoint)
+POST {{host}}/api/v1/identity/tenants
 Content-Type: application/json
 
 {
@@ -58,13 +64,13 @@ Content-Type: application/json
 %}
 
 ### Activate tenant
-POST {{host}}/api/tenants/{{tenantId}}/activate
+POST {{host}}/api/v1/identity/tenants/{{tenantId}}/activate
 Content-Type: application/json
 
 {}
 
 ### Create role
-POST {{host}}/api/tenants/{{tenantId}}/roles
+POST {{host}}/api/v1/identity/tenants/{{tenantId}}/roles
 Content-Type: application/json
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
@@ -86,14 +92,14 @@ X-Tenant-ID: {{tenantId}}
 %}
 
 ### List roles
-GET {{host}}/api/tenants/{{tenantId}}/roles?limit=10&offset=0
+GET {{host}}/api/v1/identity/tenants/{{tenantId}}/roles?limit=10&offset=0
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
 X-User-Permissions: roles:read
 X-Tenant-ID: {{tenantId}}
 
 ### Update role
-PUT {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
+PUT {{host}}/api/v1/identity/tenants/{{tenantId}}/roles/{{roleId}}
 Content-Type: application/json
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
@@ -110,7 +116,7 @@ X-Tenant-ID: {{tenantId}}
 }
 
 ### Delete role
-DELETE {{host}}/api/tenants/{{tenantId}}/roles/{{roleId}}
+DELETE {{host}}/api/v1/identity/tenants/{{tenantId}}/roles/{{roleId}}
 X-User-Id: {{userId}}
 X-User-Roles: {{userRoles}}
 X-User-Permissions: {{userPermissions}}

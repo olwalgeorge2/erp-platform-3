@@ -23,3 +23,15 @@ data class JournalEntryLineCommand(
     val currency: String? = null,
     val description: String? = null,
 )
+
+data class RunCurrencyRevaluationCommand(
+    val tenantId: UUID,
+    val ledgerId: UUID,
+    val accountingPeriodId: UUID,
+    val asOf: Instant = Instant.now(),
+    val bookedAt: Instant = asOf,
+    val gainAccountId: AccountId,
+    val lossAccountId: AccountId,
+    val reference: String? = null,
+    val description: String? = null,
+)

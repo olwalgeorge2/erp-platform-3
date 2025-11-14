@@ -18,9 +18,10 @@ This document lists all port mappings for the ERP platform services to avoid con
 
 | Port | Service | Module | Description |
 |------|---------|--------|-------------|
-| 8181 (dev) | Identity Service | identity-infrastructure | Tenancy & Identity bounded context (tests use ephemeral port) |
-| TBD | API Gateway | api-gateway | Main entry point |
-| TBD | Other Services | - | To be configured |
+| 8080 | API Gateway | api-gateway | Main entry point for all client requests |
+| 8081 | Tenancy & Identity Service | identity-infrastructure | Authentication, authorization, tenant management |
+| 8082 | Financial Accounting Service | accounting-infrastructure | Finance domain (Phase 5A - Multi-currency) |
+| 8083+ | Other Bounded Context Services | - | Sequential allocation for future services |
 
 ## Port Conflicts
 

@@ -56,7 +56,7 @@ class OutboxEventScheduler @Inject constructor(
 **Test:**
 ```bash
 # Create user → Check outbox table → Wait 5s → Verify published_at is set
-curl -X POST /api/identity/users -d '{...}'
+curl -X POST /api/v1/identity/users -d '{...}'
 psql -c "SELECT * FROM event_outbox WHERE published_at IS NULL;"
 # Wait 5 seconds
 psql -c "SELECT * FROM event_outbox WHERE published_at IS NOT NULL;"
@@ -207,13 +207,13 @@ fun createUser(command: CreateUserCommand): Result<User> =
 
 ```bash
 # Test weak password rejection
-curl -X POST /api/identity/users \
+curl -X POST /api/v1/identity/users \
   -H "Content-Type: application/json" \
   -d '{"password":"weak", ...}'
 # Expected: 400 Bad Request with "WEAK_PASSWORD"
 
 # Test duplicate username
-curl -X POST /api/identity/users -d '{"username":"duplicate",...}' # twice
+curl -X POST /api/v1/identity/users -d '{"username":"duplicate",...}' # twice
 # Expected: 409 Conflict with "USERNAME_IN_USE"
 
 # Check outbox events

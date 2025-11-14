@@ -243,7 +243,7 @@ curl http://localhost:8080/metrics
 
 ```bash
 # Test validation errors
-curl -X POST http://localhost:8080/api/identity/users \
+curl -X POST http://localhost:8080/api/v1/identity/users \
   -H "Content-Type: application/json" \
   -d '{
     "tenantId": "invalid-uuid",

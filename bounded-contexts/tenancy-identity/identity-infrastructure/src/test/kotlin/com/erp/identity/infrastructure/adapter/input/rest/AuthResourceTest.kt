@@ -68,7 +68,7 @@ class AuthResourceTest {
         val response = resource.createUser(request, simpleUriInfo())
 
         assertEquals(Response.Status.CREATED.statusCode, response.status)
-        assertTrue(response.location.toString().endsWith("/api/auth/users/${user.id}"))
+        assertTrue(response.location.toString().endsWith("/api/v1/identity/auth/users/${user.id}"))
         val body = response.entity as UserResponse
         assertEquals(user.email, body.email)
     }
@@ -174,7 +174,7 @@ class AuthResourceTest {
 
     private fun simpleUriInfo(): UriInfo =
         object : UriInfo {
-            private val base = URI.create("http://localhost/")
+            private val base = URI.create("http://localhost/api/v1/identity/auth/users")
 
             override fun getBaseUri(): URI = base
 

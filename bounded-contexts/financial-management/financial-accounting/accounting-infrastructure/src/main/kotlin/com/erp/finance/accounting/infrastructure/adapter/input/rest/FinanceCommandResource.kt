@@ -6,8 +6,10 @@ import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.CreateLe
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.DefineAccountRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.ErrorResponse
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.PostJournalEntryRequest
+import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.RunCurrencyRevaluationRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.toResponse
 import jakarta.enterprise.context.ApplicationScoped
+import jakarta.inject.Inject
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
@@ -19,14 +21,17 @@ import org.eclipse.microprofile.openapi.annotations.Operation
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
 import java.util.UUID
 
-@ApplicationScoped
-@Path("/api/v1/finance")
-@Produces(MediaType.APPLICATION_JSON)
-@Consumes(MediaType.APPLICATION_JSON)
-@Tag(name = "Finance", description = "Financial accounting command endpoints")
-class FinanceCommandResource(
-    private val commandService: FinanceCommandUseCase,
-) {
+private const val FINANCE_API_V1_PREFIX = "/api/v1/finance"
+private const val FINANCE_API_COMPAT_PREFIX = "/api/finance"
+
+open class BaseFinanceCommandResource() {
+    @Inject
+    protected lateinit var commandService: FinanceCommandUseCase
+
+    constructor(commandService: FinanceCommandUseCase) : this() {
+        this.commandService = commandService
+    }
+
     @POST
     @Path("/ledgers")
     @Operation(summary = "Create a ledger")
@@ -81,6 +86,25 @@ class FinanceCommandResource(
                 ).toResponse()
         }.ok()
 
+    @POST
+    @Path("/ledgers/{ledgerId}/periods/{periodId}/currency-revaluation")
+    @Operation(summary = "Run currency revaluation for foreign currency exposures")
+    fun runCurrencyRevaluation(
+        @PathParam("ledgerId") ledgerId: String,
+        @PathParam("periodId") periodId: String,
+        request: RunCurrencyRevaluationRequest,
+    ): Response =
+        execute {
+            val result =
+                commandService.runCurrencyRevaluation(
+                    request.toCommand(
+                        ledgerId = UUID.fromString(ledgerId),
+                        periodId = UUID.fromString(periodId),
+                    ),
+                )
+            result?.toResponse() ?: mapOf("message" to "No revaluation adjustments needed")
+        }.ok()
+
     private fun <T> execute(block: () -> T): CommandResult<T> =
         runCatching { block() }
             .fold(
@@ -130,5 +154,31 @@ class FinanceCommandResource(
         data class Failure(
             val error: Throwable,
         ) : CommandResult<Nothing>
+    }
+}
+
+@ApplicationScoped
+@Path(FINANCE_API_V1_PREFIX)
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+@Tag(name = "Finance", description = "Financial accounting command endpoints")
+open class FinanceCommandResource() : BaseFinanceCommandResource() {
+    constructor(commandService: FinanceCommandUseCase) : this() {
+        this.commandService = commandService
+    }
+}
+
+@ApplicationScoped
+@Path(FINANCE_API_COMPAT_PREFIX)
+@Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
+@Tag(
+    name = "Finance (legacy)",
+    description = "Temporary alias for /api/v1/finance while clients migrate",
+)
+@Deprecated("Use /api/v1/finance")
+open class LegacyFinanceCommandResource() : BaseFinanceCommandResource() {
+    constructor(commandService: FinanceCommandUseCase) : this() {
+        this.commandService = commandService
     }
 }

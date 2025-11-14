@@ -1,0 +1,25 @@
+components:
+  schemas:
+    ErrorResponse:
+      description: Canonical financial accounting error payload.
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Stable machine-readable identifier (e.g., LEDGER_NOT_FOUND).
+        message:
+          type: string
+          description: Human-readable description for clients.
+        details:
+          type: object
+          additionalProperties: true
+          description: Optional metadata describing the failure.
+      example:
+        code: LEDGER_NOT_FOUND
+        message: Ledger 12345 could not be found
+        details:
+          ledgerId: 12345
+paths: {}

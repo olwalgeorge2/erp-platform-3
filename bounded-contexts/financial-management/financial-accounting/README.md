@@ -14,26 +14,45 @@ financial-accounting/
   accounting-infrastructure/  // REST adapters, persistence, messaging, Flyway migrations
 ```
 
-## Current Status (2025-11-13)
-- ✅ **Domain** – Aggregates + invariants codified with tests (`ChartOfAccountsTest`, `JournalEntryTest`, `AccountingPeriodTest`).
-- ✅ **Application** – `AccountingCommandHandler` exposes CreateLedger / DefineAccount / PostJournalEntry / CloseAccountingPeriod command paths.
-- ✅ **Persistence** – Flyway baseline `V001__create_financial_accounting_schema.sql` plus JPA repositories for ledgers, chart of accounts, periods, and journal entries.
-- 🟡 **API layer** – Finance service now exposes `/api/v1/finance/**` REST endpoints; gateway proxy/scopes still pending.
+## Current Status (2025-11-14)
+- ✅ **Domain** – Aggregates + invariants codified with tests (`ChartOfAccountsTest`, `JournalEntryTest`, `AccountingPeriodTest`, `MoneyTest`).
+- ✅ **Application** – `AccountingCommandHandler` exposes CreateLedger / DefineAccount / PostJournalEntry / CloseAccountingPeriod / RunCurrencyRevaluation command paths.
+- ✅ **Persistence** – Flyway migrations V001 (baseline schema), V004 (audit columns), V005 (exchange rates), V006 (original currency on journal lines).
+- ✅ **API layer** – Finance service exposes `/api/v1/finance/**` REST endpoints; gateway proxy/scopes configured; REST samples at `docs/rest/finance-accounting.rest`.
 - ✅ **Events** – Kafka publisher emits `finance.journal.events.v1` / `finance.period.events.v1` payloads aligned with the new JSON schemas (reconciliation topic reserved).
-- 🟡 **Observability** – Micrometer + logging hooks to be wired before load/perf validation.
+- ✅ **Observability** – Micrometer instrumentation (@Timed, @Counted, gauges) on all command handlers; readiness health checks at `/q/health/ready`.
 
 ## Integration Contracts
 - **Inbound events** (planned): `identity.domain.events.v1`, `commerce.order.events.v1`, `procurement.payables.events.v1` to seed automatic postings.
 - **Outbound events**: `finance.journal.events.v1`, `finance.period.events.v1`, `finance.reconciliation.events.v1` (schemas to be registered in `docs/schemas/finance/` per EVENT_VERSIONING_POLICY).
-- **REST surface**: `/api/v1/finance/ledgers`, `/api/v1/finance/chart-of-accounts/{id}/accounts`, `/api/v1/finance/journal-entries`, `/api/v1/finance/ledgers/{ledgerId}/periods/{periodId}/close`.
+- **REST surface**: 
+  - `POST /api/v1/finance/ledgers` - Create ledger
+  - `POST /api/v1/finance/chart-of-accounts/{id}/accounts` - Define account
+  - `POST /api/v1/finance/journal-entries` - Post journal entry
+  - `POST /api/v1/finance/ledgers/{ledgerId}/periods/{periodId}/close` - Close accounting period
+  - `POST /api/v1/finance/ledgers/{ledgerId}/periods/{periodId}/currency-revaluation` - Run FX revaluation (Phase 5A)
+  - See `docs/rest/finance-accounting.rest` for ready-to-run HTTP examples.
 
 ## Security & Access
 - JWT scopes reserved via gateway: `financial-admin` (full control), `financial-user` (posting + read), `financial-auditor` (read-only, multi-tenant as approved).
 - Multi-tenancy enforced via tenant ID on every table + repository query filters; optimistic locking enabled on mutable aggregates.
 - All APIs require `X-Tenant-Id` + `X-Request-Id` headers consistent with platform guidelines.
 
-## Next Steps
-1. Register finance event schemas in the platform registry + back the publisher with the shared outbox pattern.
-2. Update API Gateway routes/scopes and add integration tests for `/api/v1/finance/**`.
-3. Add Micrometer metrics, health checks, and structured logging correlated with gateway/identity MDC fields.
-4. Extend documentation (`PHASE4_READINESS.md`, `SECURITY_SLA.md`, `CONTEXT_MAP.md`) as milestones complete.
+## Phase 5A Multi-Currency Foundation ✅
+Sprint 0 stabilization and multi-currency foundation complete:
+- ✅ Exchange rate database (`exchange_rates` table with ExchangeRateProvider/DatabaseExchangeRateProvider)
+- ✅ Foreign currency journal line support (original_currency + original_amount columns)
+- ✅ Automatic conversion to ledger base currency at posting time
+- ✅ Unrealized gain/loss revaluation (`RunCurrencyRevaluationCommand` + REST endpoint)
+- ✅ Micrometer instrumentation for all operations
+- ✅ Readiness health checks ensuring DB connectivity
+- ✅ Audit metadata (created_by, updated_by, source_system) with JPA lifecycle hooks
+- ✅ REST API documentation with gateway-ready examples
+
+## Next Steps (Phase 5A Continued)
+1. **Cost Centers & Dimensions** (next priority): Add cost_center_id, project_id, department_id to journal lines for multi-dimensional reporting.
+2. **Query/Reporting APIs**: Implement trial balance, GL summary, and period status endpoints for read-side operations.
+3. **Approval Workflow MVP**: Add draft/submitted/approved/rejected states with workflow service and enforcement in command handlers.
+4. **Scheduler for Currency Revaluation**: Monthly/quarterly automatic revaluation jobs triggered by scheduled task.
+5. **Exchange Rate Management APIs**: REST endpoints for manual exchange rate entry and historical rate queries.
+

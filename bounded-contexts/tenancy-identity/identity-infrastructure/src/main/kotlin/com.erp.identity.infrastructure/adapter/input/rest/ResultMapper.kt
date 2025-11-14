@@ -80,7 +80,10 @@ private val environment: Environment by lazy {
 
 private fun currentEnvironment(): Environment = environment
 
-@Schema(ref = "#/components/schemas/IdentityErrorResponse")
+@Schema(
+    name = "IdentityErrorResponse",
+    description = "Canonical identity-service error payload",
+)
 data class ErrorResponse(
     val code: String,
     val message: String,
@@ -88,7 +91,10 @@ data class ErrorResponse(
     val validationErrors: List<ValidationErrorResponse> = emptyList(),
 )
 
-@Schema(ref = "#/components/schemas/ValidationError")
+@Schema(
+    name = "ValidationError",
+    description = "Details about a specific invalid field/parameter",
+)
 data class ValidationErrorResponse(
     val field: String,
     val code: String,

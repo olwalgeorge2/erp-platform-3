@@ -1,6 +1,271 @@
 # Development Scripts Usage Guide
 
-## Identity Service Launch Script
+---
+
+## 🚀 Quick Start - Run All Services
+
+### Complete Platform Startup (Recommended)
+
+```powershell
+# Step 1: Start infrastructure (PostgreSQL, Kafka, Redis)
+.\scripts\start-infrastructure.ps1
+
+# Step 2: Wait 15 seconds, then start applications
+.\scripts\start-all-services.ps1
+
+# Step 3: Check everything is healthy
+.\scripts\check-status.ps1
+```
+
+**Three external PowerShell windows will open:**
+- 🔵 **Tenancy-Identity** (Cyan) - Port 8081
+- 🟢 **API Gateway** (Green) - Port 8080
+- 🟡 **Finance** (Yellow) - Port 8082
+
+### Quick Stop
+
+```powershell
+.\scripts\stop-all-services.ps1
+```
+
+---
+
+## 📜 Management Scripts Reference
+
+### `start-infrastructure.ps1` ⭐
+**Purpose:** Start Docker infrastructure services
+
+**Services Started:**
+- PostgreSQL (5432) - `erp-postgres`
+- Redpanda/Kafka (19092) - `erp-redpanda`
+- Redpanda Console (8090) - `erp-redpanda-console`
+- Redis (6379) - `erp-redis`
+
+**What it does:**
+1. ✅ Verifies Docker is running
+2. ✅ Starts containers via `docker-compose-kafka.yml`
+3. ✅ Polls PostgreSQL health (30 attempts × 2s = 60s timeout)
+4. ✅ Displays connection information
+
+**Output:**
+```
+🚀 Starting ERP Platform Infrastructure...
+✅ Docker is running
+✅ Starting containers...
+✅ PostgreSQL is healthy!
+
+Services running:
+- PostgreSQL: localhost:5432 (user: erp_user, password: erp_pass)
+- Redpanda: localhost:19092
+- Redpanda Console: http://localhost:8090
+```
+
+**Usage:**
+```powershell
+.\scripts\start-infrastructure.ps1
+```
+
+---
+
+### `start-all-services.ps1` ⭐
+**Purpose:** Start all application services in external PowerShell windows
+
+**Pre-flight Checks:**
+- ✅ Verifies infrastructure containers are running
+- ✅ Checks for port conflicts (8080, 8081, 8082)
+
+**Services Started:**
+1. **Tenancy-Identity** (port 8081) - Authentication & authorization
+2. **API Gateway** (port 8080) - Main entry point
+3. **Finance** (port 8082) - Financial accounting
+
+**What it does:**
+- Launches each service in a separate external PowerShell window
+- Sets color-coded window titles for easy identification
+- Configures environment variables (DB credentials for Finance)
+- Runs Quarkus in dev mode (`./gradlew quarkusDev`)
+
+**Output:**
+```
+🚀 Starting ERP Platform Services...
+✅ Infrastructure is ready
+✅ Checking ports...
+✅ Starting Tenancy-Identity (8081)...
+✅ Starting API Gateway (8080)...
+✅ Starting Finance (8082)...
+
+All services started! Check the colored PowerShell windows.
+
+Service URLs:
+- Tenancy-Identity: http://localhost:8081/q/health
+- API Gateway: http://localhost:8080/q/health
+- Finance: http://localhost:8082/q/health
+
+Wait 30-60s for services to start, then run:
+  .\scripts\check-status.ps1
+```
+
+**Usage:**
+```powershell
+.\scripts\start-all-services.ps1
+```
+
+---
+
+### `check-status.ps1` ⭐
+**Purpose:** Verify health of infrastructure and applications
+
+**What it checks:**
+1. Docker status
+2. Infrastructure containers (PostgreSQL, Redpanda)
+3. Application ports (8080, 8081, 8082)
+4. HTTP health endpoints
+
+**Output:**
+```
+🔍 ERP Platform Status Check
+
+Docker Status: ✅ Running
+
+Infrastructure Containers:
+✅ erp-postgres       (healthy)
+✅ erp-redpanda       (healthy)
+
+Application Ports:
+✅ 8081 (Tenancy-Identity)
+✅ 8080 (API Gateway)
+✅ 8082 (Finance)
+
+Health Endpoints:
+✅ Tenancy-Identity - UP
+✅ API Gateway - UP
+✅ Finance - UP
+
+All services healthy! 🎉
+```
+
+**Usage:**
+```powershell
+.\scripts\check-status.ps1
+```
+
+---
+
+### `stop-all-services.ps1` ⭐
+**Purpose:** Stop all services (infrastructure + applications)
+
+**What it does:**
+1. ✅ Stops Java/Gradle processes (identity, gateway, finance)
+2. ✅ Stops Docker infrastructure containers
+3. ✅ Cleans Testcontainers (finance uses ephemeral PostgreSQL)
+4. ✅ Verifies ports are released
+
+**Output:**
+```
+🛑 Stopping ERP Platform Services...
+✅ Stopped Java processes (identity-infrastructure, api-gateway, finance)
+✅ Stopped Docker containers
+✅ Cleaned Testcontainers
+✅ Ports released
+
+All services stopped successfully! ✅
+```
+
+**Usage:**
+```powershell
+.\scripts\stop-all-services.ps1
+```
+
+---
+
+## 🗺️ Port Mapping Reference
+
+| Port | Service | Purpose |
+|------|---------|---------|
+| 5432 | PostgreSQL | Shared database (erp_user/erp_pass) |
+| 6379 | Redis | Session/cache store |
+| 8080 | API Gateway | Main entry point |
+| 8081 | Tenancy-Identity | Authentication & multi-tenancy |
+| 8082 | Finance | Financial accounting (Phase 5A) |
+| 8090 | Redpanda Console | Kafka UI (http://localhost:8090) |
+| 19092 | Redpanda | Kafka API (external) |
+
+---
+
+## 🔧 Troubleshooting
+
+### Infrastructure Won't Start
+
+**Problem:** PostgreSQL container fails to start
+```
+Error: Port 5432 already in use
+```
+
+**Solution:**
+```powershell
+# Check if host PostgreSQL is running
+Get-Service -Name postgresql-x64-17
+
+# Stop host PostgreSQL
+Stop-Service -Name postgresql-x64-17 -Force
+Set-Service -Name postgresql-x64-17 -StartupType Disabled
+
+# Restart infrastructure
+.\scripts\start-infrastructure.ps1
+```
+
+### Port Already in Use
+
+**Problem:** Application port conflict
+```
+Port 8082 is already in use by another process
+```
+
+**Solution:**
+```powershell
+# Find process using port
+Get-NetTCPConnection -LocalPort 8082 | Select OwningProcess
+
+# Kill process
+Stop-Process -Id <PID> -Force
+
+# Or use stop script
+.\scripts\stop-all-services.ps1
+```
+
+### Service Not Responding
+
+**Problem:** Health check fails after startup
+
+**Solution:**
+```powershell
+# 1. Check logs in the colored PowerShell windows
+
+# 2. Verify database connection
+docker exec erp-postgres psql -U erp_user -d erp_identity -c "SELECT 1;"
+
+# 3. Restart specific service
+# Close the colored PowerShell window, then re-run:
+.\scripts\start-all-services.ps1
+```
+
+### Docker Not Running
+
+**Problem:** 
+```
+⚠️  Docker is not running
+```
+
+**Solution:**
+1. Start Docker Desktop
+2. Wait for it to show "Running"
+3. Run `.\scripts\start-infrastructure.ps1` again
+
+---
+
+## 📚 Additional Scripts
+
+### Identity Service Launch Script
 
 ### Basic Usage
 ```powershell

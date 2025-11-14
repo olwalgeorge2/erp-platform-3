@@ -121,6 +121,35 @@ data class ClosePeriodRequest(
         )
 }
 
+@RegisterForReflection
+data class RunCurrencyRevaluationRequest(
+    val tenantId: UUID,
+    val gainAccountId: UUID,
+    val lossAccountId: UUID,
+    val asOfTimestamp: Instant? = null,
+    val bookedAt: Instant? = null,
+    val reference: String? = null,
+    val description: String? = null,
+) {
+    fun toCommand(
+        ledgerId: UUID,
+        periodId: UUID,
+    ): com.erp.finance.accounting.application.port.input.command.RunCurrencyRevaluationCommand {
+        val asOf = asOfTimestamp ?: Instant.now()
+        return com.erp.finance.accounting.application.port.input.command.RunCurrencyRevaluationCommand(
+            tenantId = tenantId,
+            ledgerId = ledgerId,
+            accountingPeriodId = periodId,
+            asOf = asOf,
+            bookedAt = bookedAt ?: asOf,
+            gainAccountId = AccountId(gainAccountId),
+            lossAccountId = AccountId(lossAccountId),
+            reference = reference,
+            description = description,
+        )
+    }
+}
+
 data class LedgerResponse(
     val id: UUID,
     val tenantId: UUID,
@@ -184,6 +213,10 @@ data class AccountingPeriodResponse(
     val endDate: String,
 )
 
+@Schema(
+    name = "ErrorResponse",
+    description = "Financial accounting service error payload",
+)
 data class ErrorResponse(
     val code: String,
     val message: String,

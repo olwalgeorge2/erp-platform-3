@@ -5,6 +5,7 @@ import com.erp.finance.accounting.application.port.input.command.CloseAccounting
 import com.erp.finance.accounting.application.port.input.command.CreateLedgerCommand
 import com.erp.finance.accounting.application.port.input.command.DefineAccountCommand
 import com.erp.finance.accounting.application.port.input.command.PostJournalEntryCommand
+import com.erp.finance.accounting.application.port.input.command.RunCurrencyRevaluationCommand
 import com.erp.finance.accounting.domain.model.AccountId
 import com.erp.finance.accounting.domain.model.AccountType
 import com.erp.finance.accounting.domain.model.AccountingPeriod
@@ -254,6 +255,8 @@ class FinanceCommandResourceTest {
             private set
         var lastClosePeriod: CloseAccountingPeriodCommand? = null
             private set
+        var lastRevaluation: RunCurrencyRevaluationCommand? = null
+            private set
 
         var createLedgerHandler: (CreateLedgerCommand) -> Ledger = { throw UnsupportedOperationException("stub") }
         var defineAccountHandler: (
@@ -265,6 +268,9 @@ class FinanceCommandResourceTest {
         var closePeriodHandler: (
             CloseAccountingPeriodCommand,
         ) -> AccountingPeriod = { throw UnsupportedOperationException("stub") }
+        var revaluationHandler: (
+            RunCurrencyRevaluationCommand,
+        ) -> JournalEntry? = { throw UnsupportedOperationException("stub") }
 
         override fun createLedger(command: CreateLedgerCommand): Ledger {
             lastCreateLedger = command
@@ -284,6 +290,11 @@ class FinanceCommandResourceTest {
         override fun closePeriod(command: CloseAccountingPeriodCommand): AccountingPeriod {
             lastClosePeriod = command
             return closePeriodHandler(command)
+        }
+
+        override fun runCurrencyRevaluation(command: RunCurrencyRevaluationCommand): JournalEntry? {
+            lastRevaluation = command
+            return revaluationHandler(command)
         }
     }
 

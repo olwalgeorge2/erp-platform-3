@@ -3,6 +3,7 @@ quarkus:
     port: ${QUARKUS_HTTP_PORT:8081}
   smallrye-openapi:
     path: /q/openapi
+    additional-docs: META-INF/openapi/error-responses.yaml
   swagger-ui:
     path: /q/swagger-ui
     always-include: true

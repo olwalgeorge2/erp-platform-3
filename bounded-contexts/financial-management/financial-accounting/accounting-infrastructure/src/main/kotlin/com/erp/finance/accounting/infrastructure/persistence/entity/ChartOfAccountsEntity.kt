@@ -15,6 +15,8 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
+import jakarta.persistence.PrePersist
+import jakarta.persistence.PreUpdate
 import jakarta.persistence.Table
 import jakarta.persistence.Version
 import java.time.Instant
@@ -38,6 +40,12 @@ class ChartOfAccountsEntity(
     var createdAt: Instant = Instant.now(),
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant = Instant.now(),
+    @Column(name = "created_by", nullable = false, length = 128)
+    var createdBy: String = DEFAULT_ACTOR,
+    @Column(name = "updated_by", nullable = false, length = 128)
+    var updatedBy: String = DEFAULT_ACTOR,
+    @Column(name = "source_system", nullable = false, length = 64)
+    var sourceSystem: String = DEFAULT_SOURCE,
     @Version
     @Column(name = "version")
     var version: Int? = null,
@@ -49,6 +57,21 @@ class ChartOfAccountsEntity(
         fetch = FetchType.LAZY,
     )
     var accounts: MutableSet<AccountEntity> = linkedSetOf()
+
+    @PrePersist
+    fun prePersist() {
+        createdBy = createdBy.ifBlank { DEFAULT_ACTOR }
+        updatedBy = updatedBy.ifBlank { createdBy }
+        sourceSystem = sourceSystem.ifBlank { DEFAULT_SOURCE }
+        updatedAt = Instant.now()
+    }
+
+    @PreUpdate
+    fun preUpdate() {
+        updatedBy = updatedBy.ifBlank { DEFAULT_ACTOR }
+        sourceSystem = sourceSystem.ifBlank { DEFAULT_SOURCE }
+        updatedAt = Instant.now()
+    }
 
     fun toDomain(): ChartOfAccounts =
         ChartOfAccounts(
@@ -130,6 +153,9 @@ class ChartOfAccountsEntity(
             ).also { entity ->
                 entity.updateFrom(domain)
             }
+
+        private const val DEFAULT_ACTOR = "system"
+        private const val DEFAULT_SOURCE = "erp-platform"
     }
 }
 

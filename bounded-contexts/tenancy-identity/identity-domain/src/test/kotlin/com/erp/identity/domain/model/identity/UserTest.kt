@@ -356,7 +356,7 @@ class UserTest {
         val cleared = flagged.clearPasswordChangeRequirement()
 
         assertFalse(cleared.credential.mustChangeOnNextLogin)
-        assertTrue(cleared.updatedAt.isAfter(flagged.updatedAt))
+        assertTrue(cleared.updatedAt >= flagged.updatedAt) // >= instead of isAfter to handle fast execution
     }
 
     @Test

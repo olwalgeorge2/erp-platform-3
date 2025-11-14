@@ -12,7 +12,7 @@ _Last updated: 2025-11-13_
 | 1 | API Gateway + Tenancy-Identity in place with published contracts (Phase 2 complete) | ✅ Ready – gateway + identity services power current smoke suites |
 | 2 | Data/messaging backbone documented w/ retention + recovery plans (Phase 3 Task 4.4) | 🟡 Updating – add finance RPO/RTO + schema registry notes |
 | 3 | Schema isolation strategy ratified (ADR-002 addendum) | ✅ Complete – `financial_accounting` schema + Flyway baseline |
-| 4 | Event versioning policy + registry workflow defined | 🟡 Pending registration – finance schemas to publish |
+| 4 | Event versioning policy + registry workflow defined | ✅ Complete – finance schemas registered (IDs 1-3) |
 | 5 | Security SLAs + RPO/RTO targets agreed (docs/SECURITY_SLA.md) | 🟡 Tie-in required – add finance slice row |
 | 6 | Development environment supports new context scaffolding (Gradle settings, shared plugins) | ✅ Complete – modules compile via `erp.quarkus-conventions` |
 | 7 | Operational runbooks exist for gateway & identity (observability baseline) | 🟡 Extend – append finance escalation flow |
@@ -38,9 +38,12 @@ _Last updated: 2025-11-13_
 2. ✅ Modules + Flyway baseline merged (keep migrations incremental).
 3. 🟡 Wire `/api/v1/finance/**` through api-gateway with financial-* scopes.
 4. 🟡 Update ROADMAP/SECURITY_SLA + observability docs once gateway + metrics land.
-5. 🟡 Register finance schemas in the platform registry and connect the publisher to the shared outbox + Testcontainers harness.
-   - Finance service still emits directly through `accounting-infrastructure/src/main/kotlin/com/erp/finance/accounting/infrastructure/adapter/output/event/KafkaFinanceEventPublisher.kt`; we need an outbox entity/repository/migration mirroring `tenancy-identity/identity-infrastructure/src/main/kotlin/com.erp.identity.infrastructure/outbox/**`.
-   - Finance lacks an integration suite that boots Postgres + Kafka via Testcontainers (see the identity REST integration tests in `tenancy-identity/identity-infrastructure/src/test/kotlin/com/erp/identity/infrastructure/adapter/input/rest/*IntegrationTest.kt`).
+5. ✅ Register finance schemas in the platform registry and connect the publisher to the shared outbox + Testcontainers harness.
+   - ✅ Finance schemas registered: `finance.journal.events.v1-value` (ID=1), `finance.reconciliation.events.v1-value` (ID=2), `finance.period.events.v1-value` (ID=3).
+   - ✅ Transactional outbox implemented (`FinanceOutboxEventEntity`, `FinanceOutboxPublisher`, `FinanceOutboxEventScheduler`) mirroring identity pattern.
+   - ✅ Integration suite validates full flow: `FinanceOutboxIntegrationTest` boots Postgres + Kafka via Testcontainers.
+   - ✅ Metrics instrumentation added (published/failed counters, pending gauge, drain timer).
+   - ✅ Cleanup scheduler configured (nightly purge of old events with configurable retention).
 
 ## 6. Execution Plan
 ### Step 1 – Domain Foundations (Status: ✅ Complete / SME notes pending)
@@ -61,9 +64,12 @@ _Last updated: 2025-11-13_
 - Service endpoints live; add API Gateway route/scopes + security tests.
 - Configure health checks, Micrometer meters, and MDC-enriched logging.
 
-### Step 5 – Event & Integration (Status: 🟡 In Progress)
-- JSON schemas committed (`docs/schemas/finance/**`) and Kafka publisher live on finance service.
-- Register schemas in the shared registry + hook publisher to transactional outbox and Kafka Testcontainers coverage.
+### Step 5 – Event & Integration (Status: ✅ Complete)
+- ✅ JSON schemas committed (`docs/schemas/finance/**`) and Kafka publisher live on finance service.
+- ✅ Schemas registered in Schema Registry (IDs: journal=1, reconciliation=2, period=3).
+- ✅ Transactional outbox pattern implemented with full integration test coverage.
+- ✅ Testcontainers suite validates end-to-end flow: REST → handler → outbox → Kafka.
+- 📄 See `docs/SCHEMA_REGISTRY_STATUS.md` for schema IDs and usage details.
 
 ### Step 6 – Non-Functional Gates (Status: 🔜 Not Started)
 - Build load scripts (k6/JMeter) validating p95 targets before GA.

@@ -75,6 +75,7 @@ testing-core = [
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
+kotlin-noarg = { id = "org.jetbrains.kotlin.plugin.noarg", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 quarkus = { id = "io.quarkus", version.ref = "quarkus" }
 kover = { id = "org.jetbrains.kotlinx.kover", version = "0.9.0" }

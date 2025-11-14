@@ -97,6 +97,19 @@ gateway:
       rewrite:
         remove-prefix: "/api/v1/identity"
         add-prefix: "/"
+    # Financial accounting APIs
+    - pattern: "/api/v1/finance/*"
+      base-url: ${FINANCE_SERVICE_URL:http://localhost:8280}
+      timeout: 10s
+      retries: 2
+      auth-required: true
+      health-path: "/q/health/ready"
+      backoff-initial-ms: 100
+      backoff-max-ms: 1000
+      backoff-jitter-ms: 50
+      rewrite:
+        remove-prefix: "/api/v1/finance"
+        add-prefix: "/"
 
   public-prefixes:
     - "/api/v1/health"
@@ -116,6 +129,13 @@ gateway:
     protected-prefixes:
       - "/api/v1/identity"
       - "/api/v1/tenancy"
+      - "/api/v1/finance"
+    scope-rules:
+      - prefix: "/api/v1/finance"
+        any-role:
+          - financial-admin
+          - financial-user
+          - financial-auditor
 
 # Flat property for @ConfigProperty injection (not nested)
 gateway.timing-guard.min-failure-duration-ms: 100
@@ -128,3 +148,4 @@ gateway.timing-guard.min-failure-duration-ms: 100
   gateway:
     auth:
       protected-prefixes: []
+      scope-rules: []

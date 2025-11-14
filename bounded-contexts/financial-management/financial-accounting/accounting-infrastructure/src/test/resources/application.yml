@@ -1,0 +1,33 @@
+# Test configuration for Financial Accounting Infrastructure
+quarkus:
+  # Disable all DevServices for tests - we use explicit QuarkusTestResource
+  devservices:
+    enabled: false
+
+  # Test database configuration (will be overridden by FinancePostgresTestResource)
+  datasource:
+    db-kind: postgresql
+
+  # Test Kafka configuration (will be overridden by FinanceKafkaTestResource)
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+
+  log:
+    console:
+      json: false
+    level: INFO
+    category:
+      "com.erp.finance":
+        level: DEBUG
+      "org.testcontainers":
+        level: INFO
+
+mp:
+  messaging:
+    outgoing:
+      finance-journal-events-out:
+        connector: smallrye-kafka
+        bootstrap.servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}
+      finance-period-events-out:
+        connector: smallrye-kafka
+        bootstrap.servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092}

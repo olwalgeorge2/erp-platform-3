@@ -1,21 +1,39 @@
-# Financial Accounting Service
+# Financial Accounting Context
 
-## 1. Purpose
-1.1 Maintain the general ledger, journal entries, and financial consolidation processes.
-1.2 Enforce accounting policies, period close procedures, and compliance reporting.
-1.3 Provide authoritative financial statements and trial balances per tenant and legal entity.
+## Purpose
+- Maintain the tenant-scoped **Chart of Accounts**, ledgers, and accounting periods.
+- Enforce double-entry **JournalEntry** invariants and posting workflows (draft → approved → posted).
+- Provide APIs for journal capture, ledger queries, and period close operations while meeting SAP-grade SLAs (journal posting < 200 ms p95, ledger queries < 100 ms p95).
+- Publish `finance.journal.events.v1` (and follow-on topics) for downstream AP/AR, BI, and audit services; consume identity/account events for enrichment.
 
-## 2. Module Structure
-2.1 `accounting-application/` - Drives ledger posting workflows, period close orchestration, and reporting commands.
-2.2 `accounting-domain/` - Defines ledger aggregates, journal policies, account structures, and validation rules.
-2.3 `accounting-infrastructure/` - Implements persistence, integrations with external ERPs, and data exports.
+## Module Layout
+```
+financial-accounting/
+  accounting-domain/          // Aggregates, value objects, domain services
+  accounting-application/     // CQRS command/query handlers, use cases
+  accounting-infrastructure/  // REST adapters, persistence, messaging, Flyway migrations
+```
 
-## 3. Domain Highlights
-3.1 Supports multi-ledger configurations, dimensions, and consolidations for complex entities.
-3.2 Validates entries against chart-of-accounts and segregation-of-duties constraints.
-3.3 Publishes financial summaries to Business Intelligence and compliance systems.
+## Current Status (2025-11-13)
+- ✅ **Domain** – Aggregates + invariants codified with tests (`ChartOfAccountsTest`, `JournalEntryTest`, `AccountingPeriodTest`).
+- ✅ **Application** – `AccountingCommandHandler` exposes CreateLedger / DefineAccount / PostJournalEntry / CloseAccountingPeriod command paths.
+- ✅ **Persistence** – Flyway baseline `V001__create_financial_accounting_schema.sql` plus JPA repositories for ledgers, chart of accounts, periods, and journal entries.
+- 🟡 **API layer** – Finance service now exposes `/api/v1/finance/**` REST endpoints; gateway proxy/scopes still pending.
+- ✅ **Events** – Kafka publisher emits `finance.journal.events.v1` / `finance.period.events.v1` payloads aligned with the new JSON schemas (reconciliation topic reserved).
+- 🟡 **Observability** – Micrometer + logging hooks to be wired before load/perf validation.
 
-## 4. Integration
-4.1 Consumes financial events from AP, AR, Procurement, Commerce, and Inventory modules.
-4.2 Provides posting APIs to downstream systems and exports to regulatory reporting tools.
-4.3 Emits close status and variance alerts via Communication Hub and platform observability.
+## Integration Contracts
+- **Inbound events** (planned): `identity.domain.events.v1`, `commerce.order.events.v1`, `procurement.payables.events.v1` to seed automatic postings.
+- **Outbound events**: `finance.journal.events.v1`, `finance.period.events.v1`, `finance.reconciliation.events.v1` (schemas to be registered in `docs/schemas/finance/` per EVENT_VERSIONING_POLICY).
+- **REST surface**: `/api/v1/finance/ledgers`, `/api/v1/finance/chart-of-accounts/{id}/accounts`, `/api/v1/finance/journal-entries`, `/api/v1/finance/ledgers/{ledgerId}/periods/{periodId}/close`.
+
+## Security & Access
+- JWT scopes reserved via gateway: `financial-admin` (full control), `financial-user` (posting + read), `financial-auditor` (read-only, multi-tenant as approved).
+- Multi-tenancy enforced via tenant ID on every table + repository query filters; optimistic locking enabled on mutable aggregates.
+- All APIs require `X-Tenant-Id` + `X-Request-Id` headers consistent with platform guidelines.
+
+## Next Steps
+1. Register finance event schemas in the platform registry + back the publisher with the shared outbox pattern.
+2. Update API Gateway routes/scopes and add integration tests for `/api/v1/finance/**`.
+3. Add Micrometer metrics, health checks, and structured logging correlated with gateway/identity MDC fields.
+4. Extend documentation (`PHASE4_READINESS.md`, `SECURITY_SLA.md`, `CONTEXT_MAP.md`) as milestones complete.

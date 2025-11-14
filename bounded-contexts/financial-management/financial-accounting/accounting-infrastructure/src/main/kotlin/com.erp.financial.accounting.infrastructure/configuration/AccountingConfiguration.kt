@@ -1,3 +1,0 @@
-package com.erp.financial.accounting.infrastructure.configuration
-
-object AccountingConfigurationPlaceholder

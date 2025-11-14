@@ -191,6 +191,14 @@ when (event.version) {
 }
 ```
 
+### Transactional Outbox Policy
+
+- Every bounded context that emits integration events **must** enqueue those events in its own transactional outbox table inside the same database transaction that mutates domain state. Direct broker calls from handlers (e.g., calling a Kafka emitter inside `AccountingCommandHandler`) are prohibited because they risk dropping events when the producer or broker is unavailable.
+- Each outbox entry records event type, payload, channel/topic, occurrence timestamp, and publication status (`PENDING`, `PUBLISHED`, `FAILED`). Background schedulers drain the queue and publish to Kafka via context-specific publishers (see `tenancy-identity` and `financial-accounting` implementations).
+- New event publishers must provide replay-safe delivery: retry with exponential backoff up to a bounded number of attempts, move irrecoverable messages to a failed state, and expose `pending` gauges/metrics for observability.
+- Integration tests for every context must include a Testcontainers-backed suite (Postgres + Kafka) that exercises the full path: REST/service call → handler → outbox row persisted → scheduler invocation → Kafka topic receive. Tests are gated behind the `-PwithContainers=true` flag to keep CI fast while ensuring production parity coverage is available on demand.
+- Migrations for future contexts must create `<context>_outbox_events` tables before enabling the outbox publisher, and ADR updates must document the policy so regression back to direct broker calls is caught during review.
+
 ## Message Broker Configuration
 
 ### Kafka Topics Strategy

@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.erp.local/finance/reconciliation/v1",
+  "title": "FinanceReconciliationEvent",
+  "description": "Placeholder schema for future reconciliation batch notifications.",
+  "type": "object",
+  "required": ["eventId", "eventType", "version", "occurredAt", "tenantId", "batchId", "status"],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": {
+      "type": "string",
+      "enum": ["finance.reconciliation.started", "finance.reconciliation.completed", "finance.reconciliation.failed"]
+    },
+    "version": { "type": "integer", "minimum": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "tenantId": { "type": "string", "format": "uuid" },
+    "batchId": { "type": "string", "format": "uuid" },
+    "status": {
+      "type": "string",
+      "enum": ["STARTED", "COMPLETED", "FAILED"]
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "description"],
+        "properties": {
+          "code": { "type": "string" },
+          "severity": { "type": "string", "enum": ["INFO", "WARNING", "ERROR"] },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "null"]
+      }
+    }
+  }
+}

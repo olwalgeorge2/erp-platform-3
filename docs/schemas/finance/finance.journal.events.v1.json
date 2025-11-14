@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.erp.local/finance/journal/v1",
+  "title": "FinanceJournalPostedEvent",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "version",
+    "occurredAt",
+    "tenantId",
+    "ledgerId",
+    "journalEntryId",
+    "totalDebitsMinor",
+    "totalCreditsMinor",
+    "currency",
+    "lines"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "type": "string",
+      "enum": ["finance.journal.posted"]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "ledgerId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "journalEntryId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "postingBatchId": {
+      "type": ["string", "null"],
+      "format": "uuid"
+    },
+    "periodId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "reference": {
+      "type": ["string", "null"],
+      "maxLength": 128
+    },
+    "description": {
+      "type": ["string", "null"],
+      "maxLength": 2000
+    },
+    "totalDebitsMinor": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "totalCreditsMinor": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "currency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "lines": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "required": ["accountId", "direction", "amountMinor", "currency"],
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["DEBIT", "CREDIT"]
+          },
+          "amountMinor": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "description": {
+            "type": ["string", "null"],
+            "maxLength": 512
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "null"]
+      }
+    }
+  }
+}

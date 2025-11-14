@@ -1,0 +1,99 @@
+# Financial Accounting Service configuration
+quarkus:
+  application:
+    name: financial-accounting-service
+
+  http:
+    port: ${FINANCE_HTTP_PORT:8280}
+    host: ${FINANCE_HTTP_HOST:0.0.0.0}
+
+  datasource:
+    db-kind: postgresql
+    username: ${FINANCE_DB_USERNAME:erp_finance_user}
+    password: ${FINANCE_DB_PASSWORD:erp_finance_pass}
+    jdbc:
+      url: ${FINANCE_DB_JDBC_URL:jdbc:postgresql://127.0.0.1:5432/erp_finance}
+      min-size: 2
+      max-size: 8
+      initial-size: 2
+      acquisition-timeout: 30s
+
+  flyway:
+    migrate-at-start: true
+    default-schema: financial_accounting
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    baseline-on-migrate: true
+    clean-disabled: true
+
+  hibernate-orm:
+    database:
+      default-schema: financial_accounting
+      generation: none
+    log:
+      sql: ${QUARKUS_HIBERNATE_LOG_SQL:false}
+      format-sql: true
+      bind-parameters: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+  log:
+    console:
+      json: ${QUARKUS_LOG_CONSOLE_JSON:true}
+
+  micrometer:
+    export:
+      prometheus:
+        enabled: true
+        path: /q/metrics
+
+  health:
+    extensions:
+      enabled: true
+
+  smallrye-openapi:
+    path: /q/openapi
+  swagger-ui:
+    path: /q/swagger-ui
+    always-include: true
+
+mp:
+  openapi:
+    filter: com.erp.finance.accounting.infrastructure.openapi.DefaultResponsesFilter
+  messaging:
+    outgoing:
+      finance-journal-events-out:
+        connector: smallrye-kafka
+        topic: ${FINANCE_JOURNAL_TOPIC:finance.journal.events.v1}
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.apache.kafka.common.serialization.StringSerializer
+        acks: all
+        retries: 3
+        enable-idempotence: true
+        max-in-flight-requests-per-connection: 5
+        compression-type: snappy
+        client-id: finance-journal-${quarkus.uuid}
+      finance-period-events-out:
+        connector: smallrye-kafka
+        topic: ${FINANCE_PERIOD_TOPIC:finance.period.events.v1}
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.apache.kafka.common.serialization.StringSerializer
+        acks: all
+        retries: 3
+        enable-idempotence: true
+        max-in-flight-requests-per-connection: 5
+        compression-type: snappy
+        client-id: finance-period-${quarkus.uuid}
+
+# Custom finance knobs (used by future services/tests)
+financial-accounting:
+  performance:
+    journal-posting-timeout: 5s
+    ledger-query-timeout: 2s
+    period-close-timeout: 30s
+  business-rules:
+    max-journal-lines-per-entry: 1000
+    default-currency: USD
+    require-balanced-entries: true
+    enable-period-validation: true

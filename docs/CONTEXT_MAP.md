@@ -142,14 +142,14 @@ Each bounded context follows a **three-layer hexagonal architecture** to maintai
 
 | Aspect | Details |
 |--------|---------|
-| **Modules** | `financial-accounting`, `financial-ap` (Accounts Payable), `financial-ar` (Accounts Receivable) |
+| **Modules** | `financial-accounting` (GL), `financial-ap`, `financial-ar` |
 | **Shared Modules** | `financial-shared` |
 | **Focus** | Complete financial accounting system including general ledger, journal entries, AP/AR operations, and financial reporting |
 | **Team Ownership** | Finance & Accounting Team |
-| **Integration** | Consumes order events from Commerce for revenue recognition; publishes payment events to Procurement and Commerce; integrates with external accounting systems |
-| **Key Dependencies** | `commerce-shared` for order amounts, `procurement-shared` for payables |
-| **Upstream Contexts** | Commerce, Procurement |
-| **Downstream Contexts** | Business Intelligence, Communication Hub |
+| **Integration** | REST via `/api/v1/finance/**` (scopes: financial-admin/user/auditor); consumes `commerce.order.events.v1`, `procurement.payables.events.v1`, `identity.domain.events.v1`; publishes `finance.journal.events.v1`, `finance.period.events.v1`, `finance.reconciliation.events.v1`; optional adapters for external ERPs |
+| **Key Dependencies** | `financial_accounting` schema + Flyway migrations, `financial-shared` value objects, API Gateway routing, platform outbox/Kafka stack |
+| **Upstream Contexts** | Commerce, Procurement, Identity |
+| **Downstream Contexts** | Business Intelligence, Communication Hub, Reporting |
 
 ### 7. Inventory Management
 **Location**: `bounded-contexts/inventory-management/`

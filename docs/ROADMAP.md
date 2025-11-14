@@ -229,19 +229,20 @@
    - 2025‑11‑13 addendum added to [ADR-002](adr/ADR-002-database-per-context.md) confirming `tenancy_identity` schema ownership + migration triggers.
 4.6 ✅ Establish event versioning and schema registry practices so downstream consumers can evolve safely; capture governance in docs/ARCHITECTURE.md.  
    - Reference: [EVENT_VERSIONING_POLICY.md](EVENT_VERSIONING_POLICY.md) (registry workflow, compatibility modes).
-4.7 ✅ Define RPO/RTO objectives and operational SLOs for data services, using them as the go/no-go criteria for moving into Phase 4.  
-   - Consolidated in [SECURITY_SLA.md](SECURITY_SLA.md) (SLO table) and [DATA_RETENTION.md](DATA_RETENTION.md) (RPO/RTO plan).
+4.7 🟡 Define RPO/RTO objectives and operational SLOs for data services, using them as the go/no-go criteria for moving into Phase 4.
+   - Base criteria captured in SECURITY_SLA.md and DATA_RETENTION.md; append finance slice metrics before cutover.
 4.8 Cross-links: docs/ARCHITECTURE.md#data-consistency, docs/ARCHITECTURE.md#deployment-architecture, docs/ARCHITECTURE.md#future-enhancements.
 4.9 Related ADRs: ADR-002 Database Per Bounded Context, ADR-003 Event-Driven Integration Between Contexts, ADR-005 Multi-Tenancy Data Isolation Strategy.
 
 ## 5. Phase 4 - First Bounded Context Slice
-5.1 Select a high-value bounded context (e.g., financial-management/financial-accounting) and model aggregates.  
-    - ☑ See [PHASE4_READINESS.md](PHASE4_READINESS.md) for the pre-flight checklist and selected slice.
-5.2 Implement application services, API endpoints, and persistence adapters for the selected context.
-5.3 Expose the slice through the API gateway with authentication, authorization, and validation.
-5.4 Create contract, integration, and acceptance tests covering the end-to-end flow.
-5.5 Demonstrate adherence to the hexagonal layering standards in docs/ARCHITECTURE.md (domain-centric tests, adapters in infrastructure) and record measured service SLIs before scaling work.
-5.6 Conduct a formal go/no-go review of architecture assumptions, resilience guardrails, and UX feedback gathered from the Phase 3 spike.
+5.1 ✅ Select a high-value bounded context (financial-management/financial-accounting) and model aggregates.
+    - ☑ See [PHASE4_READINESS.md](PHASE4_READINESS.md) for the pre-flight checklist and selected slice.  
+    - ☑ ADR-009 drafted for financial accounting domain boundaries / aggregates.
+5.2 🟡 Implement application services, API endpoints, and persistence adapters for the selected context (command side complete, Kafka publisher emitting journal/period events; query + outbox wiring next).
+5.3 🟡 Expose the slice through the API gateway with authentication, authorization, and validation (add `/api/v1/finance/**` route + scopes).
+5.4 🟡 Create contract, integration, and acceptance tests covering the end-to-end flow (domain tests done; Quarkus/Kafka suites outstanding).
+5.5 🟡 Demonstrate adherence to the hexagonal layering standards and record measured service SLIs before scaling work (Micrometer + load scripts pending).
+5.6 🟡 Conduct a formal go/no-go review of architecture assumptions, resilience guardrails, and UX feedback gathered from the Phase 3 spike (schedule after gateway + tests).
 5.7 Cross-links: docs/ARCHITECTURE.md#hexagonal-architecture-ports--adapters, docs/ARCHITECTURE.md#bounded-contexts, docs/ARCHITECTURE.md#testing-strategy.
 5.8 Related ADRs: ADR-001 Modular CQRS Implementation, ADR-003 Event-Driven Integration Between Contexts.
 

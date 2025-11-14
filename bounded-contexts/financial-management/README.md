@@ -13,8 +13,8 @@
 
 ## 3. Integration Highlights
 3.1 Consumes procurement, inventory, and commerce events to post financial transactions.
-3.2 Publishes financial summaries to Business Intelligence and reporting pipelines.
-3.3 Coordinates with Tenancy & Identity for segregation-of-duties and financial role governance.
+3.2 Publishes journal/period events (`finance.journal.events.v1`, `finance.period.events.v1`) to Business Intelligence, AP/AR, and external ERPs.
+3.3 Coordinates with Tenancy & Identity for segregation-of-duties and financial role governance; gateway exposes `/api/v1/finance/**` with `financial-*` scopes.
 
 ## 4. Reference
 4.1 Review `docs/ARCHITECTURE.md` (Financial Management) for ledger architecture details.

@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.erp.local/finance/period/v1",
+  "title": "FinancePeriodStatusEvent",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "version",
+    "occurredAt",
+    "tenantId",
+    "ledgerId",
+    "periodId",
+    "periodCode",
+    "previousStatus",
+    "currentStatus"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "type": "string",
+      "enum": ["finance.period.frozen", "finance.period.closed", "finance.period.reopened"]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tenantId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "ledgerId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "periodId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "periodCode": {
+      "type": "string",
+      "maxLength": 32
+    },
+    "previousStatus": {
+      "type": "string",
+      "enum": ["OPEN", "FROZEN", "CLOSED"],
+      "description": "The status immediately before this event occurred"
+    },
+    "currentStatus": {
+      "type": "string",
+      "enum": ["OPEN", "FROZEN", "CLOSED"],
+      "description": "The status after this event"
+    },
+    "freezeOnly": {
+      "type": "boolean",
+      "description": "Indicates if the operation was a freeze-only action (no posting lock release)"
+    },
+    "performedBy": {
+      "type": ["string", "null"],
+      "description": "User identifier from the initiating token"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean", "null"]
+      }
+    }
+  }
+}

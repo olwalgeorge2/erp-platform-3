@@ -14,6 +14,7 @@ This directory contains Architecture Decision Records documenting significant ar
 | [ADR-006](ADR-006-platform-shared-governance.md) | Platform-Shared Governance Rules | **Accepted (CI Enforced)** | 2025-11-06 | **Critical** |
 | [ADR-007](ADR-007-authn-authz-strategy.md) | Authentication & Authorization Strategy | Draft | 2025-11-08 | High |
 | [ADR-008](ADR-008-cicd-network-resilience.md) | CI/CD Pipeline Architecture & Network Resilience | **Accepted (Implemented)** | 2025-11-09 | **High** |
+| [ADR-009](ADR-009-financial-accounting-domain.md) | Financial Accounting Domain Strategy | Accepted | 2025-11-13 | High |
 
 ## What is an ADR?
 

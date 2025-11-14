@@ -21,26 +21,44 @@ class AuthorizationFilter : ContainerRequestFilter {
     lateinit var metrics: GatewayMetrics
 
     override fun filter(requestContext: ContainerRequestContext) {
-        val protectedPrefixes: List<String> =
-            if (authConfig.isResolvable) authConfig.get().protectedPrefixes() else emptyList()
+        val config = if (authConfig.isResolvable) authConfig.get() else null
+        val protectedPrefixes: List<String> = config?.protectedPrefixes() ?: emptyList()
         if (protectedPrefixes.isEmpty()) return
 
-        val path = requestContext.uriInfo.path.let { if (it.startsWith("/")) it else "/$it" }
-        val isProtected =
-            protectedPrefixes.any { pref ->
-                val p = if (pref.startsWith("/")) pref else "/$pref"
-                val normalized = if (p.endsWith("/")) p else "$p/"
-                path.startsWith(normalized)
-            }
+        val path = requestContext.uriInfo.path
+        val isProtected = protectedPrefixes.any { matchesPrefix(path, it) }
         if (!isProtected) return
 
-        // If we are here, AuthenticationFilter should have already allowed the request
         val roles =
             requestContext.securityContext.userPrincipal?.let {
                 (requestContext.securityContext as? GatewaySecurityContext)?.roles()
             }
                 ?: emptySet()
-        if (roles.isEmpty()) {
+
+        val scopeRules = config?.scopeRules()?.orElse(emptyList()) ?: emptyList()
+        val matchedRule = scopeRules.firstOrNull { matchesPrefix(path, it.prefix()) }
+        if (matchedRule != null) {
+            val required =
+                matchedRule
+                    .anyRole()
+                    .map(String::trim)
+                    .filter(String::isNotEmpty)
+                    .toSet()
+            if (required.isNotEmpty() && roles.intersect(required).isEmpty()) {
+                metrics.markAuthFailure("insufficient_scope")
+                requestContext.abortWith(
+                    Response
+                        .status(Response.Status.FORBIDDEN)
+                        .entity(
+                            mapOf(
+                                "code" to "FORBIDDEN",
+                                "message" to "Missing required finance scope",
+                            ),
+                        ).build(),
+                )
+                return
+            }
+        } else if (roles.isEmpty()) {
             metrics.markAuthFailure("forbidden")
             requestContext.abortWith(
                 Response
@@ -49,5 +67,18 @@ class AuthorizationFilter : ContainerRequestFilter {
                     .build(),
             )
         }
+    }
+
+    private fun matchesPrefix(
+        path: String,
+        prefix: String,
+    ): Boolean {
+        val normalizedPath = if (path.startsWith("/")) path else "/$path"
+        val normalizedPrefix = if (prefix.startsWith("/")) prefix else "/$prefix"
+        if (normalizedPath == normalizedPrefix) {
+            return true
+        }
+        val prefixWithSlash = if (normalizedPrefix.endsWith("/")) normalizedPrefix else "$normalizedPrefix/"
+        return normalizedPath.startsWith(prefixWithSlash)
     }
 }

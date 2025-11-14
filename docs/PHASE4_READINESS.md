@@ -73,3 +73,10 @@ _Last updated: 2025-11-13_
 - Keep ROADMAP, CONTEXT_MAP, ADR index synced as milestones land.
 - Draft operational runbook (deploy/migrate/troubleshoot) pre-GA.
 - Prepare onboarding/training outline for Finance squad.
+
+
+
+
+
+
+

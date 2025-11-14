@@ -1,5 +1,7 @@
 package com.erp.finance.accounting.infrastructure.outbox
 
+import java.time.Instant
+
 interface FinanceOutboxRepository {
     fun save(event: FinanceOutboxEventEntity)
 
@@ -17,4 +19,9 @@ interface FinanceOutboxRepository {
     )
 
     fun countPending(maxAttempts: Int): Long
+
+    fun deleteOlderThan(
+        statuses: Set<FinanceOutboxEventStatus>,
+        cutoff: Instant,
+    ): Int
 }

@@ -5,6 +5,7 @@ import jakarta.inject.Inject
 import jakarta.persistence.EntityManager
 import jakarta.transaction.Transactional
 import jakarta.transaction.Transactional.TxType
+import java.time.Instant
 
 @ApplicationScoped
 @Transactional(TxType.MANDATORY)
@@ -66,4 +67,19 @@ class JpaFinanceOutboxRepository
                 .setParameter("maxAttempts", maxAttempts)
                 .singleResult
                 .toLong()
+
+        override fun deleteOlderThan(
+            statuses: Set<FinanceOutboxEventStatus>,
+            cutoff: Instant,
+        ): Int =
+            entityManager
+                .createQuery(
+                    """
+                    DELETE FROM FinanceOutboxEventEntity e
+                    WHERE e.status IN :statuses
+                      AND e.recordedAt < :cutoff
+                    """.trimIndent(),
+                ).setParameter("statuses", statuses)
+                .setParameter("cutoff", cutoff)
+                .executeUpdate()
     }

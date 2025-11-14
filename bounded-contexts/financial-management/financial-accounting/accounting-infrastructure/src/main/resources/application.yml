@@ -58,6 +58,10 @@ quarkus:
     path: /q/swagger-ui
     always-include: true
 
+finance:
+  outbox:
+    retention-days: ${FINANCE_OUTBOX_RETENTION_DAYS:7}
+
 mp:
   openapi:
     filter: com.erp.finance.accounting.infrastructure.openapi.DefaultResponsesFilter

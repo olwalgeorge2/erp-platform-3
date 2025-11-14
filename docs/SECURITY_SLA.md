@@ -28,16 +28,19 @@ This document records the non-functional contracts the API Gateway and Tenancy�
 
 ## 2. Availability & Performance (SLOs)
 
-| Service | Endpoint scope | Availability (30‑day) | Latency p95 | Error Budget (per month) |
+| Service | Endpoint scope | Availability (30-day) | Latency p95 | Error Budget (per month) |
 |---------|----------------|-----------------------|-------------|--------------------------|
 | API Gateway (overall) | External traffic on `:8080` | 99.90% | 400 ms | 43.2 min downtime |
 | Gateway → Identity proxy | `/api/v1/identity/**` | 99.90% | 450 ms end-to-end (includes identity) | Included in overall budget |
-| Tenancy‑Identity REST | `/api/tenants`, `/api/auth/**`, `/api/roles/**` | 99.90% | 350 ms | 43.2 min |
+| Tenancy-Identity REST | `/api/tenants`, `/api/auth/**`, `/api/roles/**` | 99.90% | 350 ms | 43.2 min |
 | Identity Auth (login/credential ops) | `/api/auth/login`, `/api/auth/users/*/credentials` | 99.95% | 250 ms | 21.6 min |
+| **Financial Accounting API** | `/api/v1/finance/**` (create ledger, define account, post journal, close period) | **99.90%** | **200 ms journal post, 300 ms ledger create** | 43.2 min (shared with finance slice) |
 
-**RPO/RTO (per Phase 3 pre‑work)**
+**RPO/RTO (per Phase 3 pre-work)**
 - Postgres (`erp_identity`) RPO 15 min (WAL archiving), RTO 30 min.
 - Redpanda topics (`identity.domain.events.v1`) RPO 5 min (cluster replication), RTO 30 min.
+- Financial Accounting Postgres (`erp_finance`) RPO **15 min**, RTO **30 min** (managed backups, HA pair).
+- Finance Kafka topics (`finance.journal.events.v1`, `finance.period.events.v1`) RPO **5 min**, RTO **30 min** via Redpanda cluster replication.
 
 ---
 

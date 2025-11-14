@@ -4,21 +4,18 @@ import com.erp.finance.accounting.application.port.input.command.CreateLedgerCom
 import com.erp.finance.accounting.application.port.input.command.DefineAccountCommand
 import com.erp.finance.accounting.application.port.input.command.JournalEntryLineCommand
 import com.erp.finance.accounting.application.port.input.command.PostJournalEntryCommand
-import com.erp.finance.accounting.application.port.output.AccountingPeriodRepository
 import com.erp.finance.accounting.domain.model.AccountType
 import com.erp.finance.accounting.domain.model.AccountingPeriod
 import com.erp.finance.accounting.domain.model.EntryDirection
 import com.erp.finance.accounting.domain.model.Money
-import com.erp.finance.accounting.infrastructure.outbox.FinanceOutboxEventEntity
 import com.erp.finance.accounting.infrastructure.outbox.FinanceOutboxEventScheduler
-import com.erp.finance.accounting.infrastructure.outbox.FinanceOutboxRepository
 import com.erp.finance.accounting.infrastructure.service.FinanceCommandService
+import com.erp.finance.accounting.infrastructure.support.AccountingPeriodTestSupport
+import com.erp.finance.accounting.infrastructure.support.FinanceOutboxTestSupport
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.quarkus.test.common.QuarkusTestResource
 import io.quarkus.test.junit.QuarkusTest
-import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
-import jakarta.transaction.Transactional
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.apache.kafka.common.serialization.StringDeserializer
@@ -167,26 +164,4 @@ class FinanceOutboxIntegrationTest {
             }
         return KafkaConsumer(props)
     }
-}
-
-@ApplicationScoped
-class AccountingPeriodTestSupport(
-    private val accountingPeriodRepository: AccountingPeriodRepository,
-) {
-    @Transactional
-    fun save(period: AccountingPeriod): AccountingPeriod = accountingPeriodRepository.save(period)
-}
-
-@ApplicationScoped
-class FinanceOutboxTestSupport(
-    private val outboxRepository: FinanceOutboxRepository,
-) {
-    @Transactional
-    fun fetchPending(
-        limit: Int,
-        maxAttempts: Int,
-    ): List<FinanceOutboxEventEntity> = outboxRepository.fetchPending(limit, maxAttempts)
-
-    @Transactional
-    fun countPending(maxAttempts: Int): Long = outboxRepository.countPending(maxAttempts)
 }

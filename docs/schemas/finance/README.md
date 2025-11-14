@@ -10,6 +10,6 @@ These JSON Schemas define the contract for financial-accounting outbound topics.
 
 ## Governance Checklist
 1. Follow [`EVENT_VERSIONING_POLICY.md`](../EVENT_VERSIONING_POLICY.md) for naming and compatibility.
-2. Update `docs/PHASE4_READINESS.md` once schemas are registered in dev/test registries.
+2. Update `docs/PHASE4_READINESS.md` once schemas are registered in dev/test registries (see `docs/SCHEMA_REGISTRY_PLAYBOOK.md` for the publishing workflow).
 3. Mirror schema changes into the `platform-shared/common-messaging` contracts module when consumers materialize.
 4. Ensure Kafka topics are created with 3 partitions / 3 replicas (default data-tier settings) before enabling producers.

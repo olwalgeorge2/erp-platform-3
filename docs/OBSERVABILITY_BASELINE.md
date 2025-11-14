@@ -76,7 +76,34 @@ This runbook captures the required signals (logs, metrics, traces) for the two c
 
 ---
 
-## 4. Verification Recipes
+## 4. Financial Accounting Observability
+
+### 4.1 Logging & Context
+- REST adapter (`FinanceCommandResource`) and `FinanceCommandService` log incoming commands with `X-Trace-Id`, `X-Tenant-Id`, ledger/chart/journal identifiers, and command ids. Sensitive attributes remain structured for audit review as required by ADR-009.
+- MDC carries the identifiers above; `FinanceOutboxPublisher` copies them into outbox rows and `KafkaFinanceEventPublisher` forwards them as Kafka headers so downstream consumers can stitch the full story.
+- Outbox scheduler + cleanup scheduler log batch counts, failures, and retention operations to ensure operational transparency.
+
+### 4.2 Metrics
+- Micrometer timers/counters exist for all finance commands (p95 targets: 200 ms for `postJournalEntry`, 300 ms for ledger/account commands) and now surface at `/q/metrics`.
+- Outbox metrics added in this iteration:
+  - `finance.outbox.events.published_total`
+  - `finance.outbox.events.failed_total`
+  - `finance.outbox.events.pending`
+  - `finance.outbox.events.batch.size`
+  - `finance.outbox.events.drain` (timer)
+- These series back the SLA table in `SECURITY_SLA.md` and satisfy ADR-007 guidance on outbox observability.
+
+### 4.3 Trace Propagation
+- Same propagation contract as gateway/identity (`X-Trace-Id`, `traceparent`, tenant/user headers).
+- Kafka events include `trace-id`, `tenant-id`, `ledger-id`, and `journal-entry-id` headers, enabling auditors to correlate the journal lifecycle across services, as mandated by ADR-009.
+
+### 4.4 Testcontainers & Health
+- `FinanceOutboxIntegrationTest` spins up Postgres + Redpanda via Testcontainers (`FinancePostgresTestResource`, `FinanceKafkaTestResource`) to validate REST → handler → outbox → Kafka, ensuring metrics/logging/health endpoints behave under realistic conditions.
+- Health endpoints expose DB/Flyway status, Kafka connectivity, outbox scheduler state, and the Micrometer series listed above.
+
+---
+
+## 5. Verification Recipes
 
 ### 4.1 Manual curl checks
 ```bash
@@ -105,7 +132,7 @@ curl http://localhost:8081/q/metrics | rg identity.user.creation
 
 ---
 
-## 5. Action Items / TODO
+## 6. Action Items / TODO
 
 1. **Tracing backend:** Wire OpenTelemetry exporter (OTLP) in both services once collector endpoint is provisioned. Until then rely on `X-Trace-Id`.
 2. **Grafana dashboards:** Import baseline dashboard JSON covering the metrics described above.
@@ -127,4 +154,10 @@ curl http://localhost:8081/q/metrics | rg identity.user.creation
   - `bounded-contexts/tenancy-identity/identity-infrastructure/src/main/kotlin/com.erp.identity.infrastructure/web/RequestLoggingFilter.kt`
   - `bounded-contexts/tenancy-identity/identity-infrastructure/src/main/kotlin/com.erp.identity.infrastructure/service/IdentityCommandService.kt`
   - `bounded-contexts/tenancy-identity/identity-infrastructure/src/main/kotlin/com.erp.identity.infrastructure/outbox/OutboxEventScheduler.kt`
+- Financial accounting logging & metrics:
+  - `bounded-contexts/financial-management/financial-accounting/accounting-infrastructure/src/main/kotlin/com/erp/finance/accounting/infrastructure/service/FinanceCommandService.kt`
+  - `bounded-contexts/financial-management/financial-accounting/accounting-infrastructure/src/main/kotlin/com/erp/finance/accounting/infrastructure/outbox/FinanceOutboxEventScheduler.kt`
+  - `bounded-contexts/financial-management/financial-accounting/accounting-infrastructure/src/main/kotlin/com/erp/finance/accounting/infrastructure/outbox/FinanceOutboxCleanupScheduler.kt`
+  - `bounded-contexts/financial-management/financial-accounting/accounting-infrastructure/src/main/resources/application.yml`
+
 

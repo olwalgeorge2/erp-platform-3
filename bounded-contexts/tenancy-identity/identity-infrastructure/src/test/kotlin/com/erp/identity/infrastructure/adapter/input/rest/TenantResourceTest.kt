@@ -172,14 +172,15 @@ class TenantResourceTest {
     private fun simpleUriInfo(): UriInfo =
         object : UriInfo {
             private val base = URI.create("http://localhost/")
+            private val absolutePath = URI.create("http://localhost/api/tenants")
 
             override fun getBaseUri(): URI = base
 
             override fun getBaseUriBuilder(): UriBuilder = UriBuilder.fromUri(base)
 
-            override fun getAbsolutePath(): URI = base
+            override fun getAbsolutePath(): URI = absolutePath
 
-            override fun getAbsolutePathBuilder(): UriBuilder = UriBuilder.fromUri(base)
+            override fun getAbsolutePathBuilder(): UriBuilder = UriBuilder.fromUri(absolutePath)
 
             override fun getRequestUri(): URI = base
 

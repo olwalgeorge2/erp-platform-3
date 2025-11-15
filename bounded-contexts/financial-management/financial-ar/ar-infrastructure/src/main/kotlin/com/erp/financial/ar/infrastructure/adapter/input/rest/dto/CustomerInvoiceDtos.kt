@@ -10,10 +10,10 @@ import com.erp.financial.ar.domain.model.invoice.CustomerInvoiceStatus
 import com.erp.financial.shared.masterdata.PaymentTermType
 import com.erp.financial.shared.validation.FinanceValidationErrorCode
 import com.erp.financial.shared.validation.FinanceValidationException
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeCurrencyCode
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeReferenceNumber
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeText
 import com.erp.financial.shared.validation.ValidationMessageResolver
-import com.erp.financial.shared.validation.sanitizeCurrencyCode
-import com.erp.financial.shared.validation.sanitizeReferenceNumber
-import com.erp.financial.shared.validation.sanitizeText
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -269,7 +269,12 @@ private fun requirePositive(
             field = field,
             rejectedValue = value.toString(),
             locale = locale,
-            message = ValidationMessageResolver.resolve(FinanceValidationErrorCode.FINANCE_INVALID_AMOUNT, locale, field),
+            message =
+                ValidationMessageResolver.resolve(
+                    FinanceValidationErrorCode.FINANCE_INVALID_AMOUNT,
+                    locale,
+                    field,
+                ),
         )
     }
     return value
@@ -286,7 +291,12 @@ private fun requireNonNegative(
             field = field,
             rejectedValue = value.toString(),
             locale = locale,
-            message = ValidationMessageResolver.resolve(FinanceValidationErrorCode.FINANCE_INVALID_AMOUNT, locale, field),
+            message =
+                ValidationMessageResolver.resolve(
+                    FinanceValidationErrorCode.FINANCE_INVALID_AMOUNT,
+                    locale,
+                    field,
+                ),
         )
     }
     return value

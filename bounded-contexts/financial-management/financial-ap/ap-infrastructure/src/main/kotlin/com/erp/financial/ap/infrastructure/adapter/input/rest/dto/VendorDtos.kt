@@ -16,12 +16,12 @@ import com.erp.financial.shared.masterdata.PaymentTermType
 import com.erp.financial.shared.masterdata.PaymentTerms
 import com.erp.financial.shared.validation.FinanceValidationErrorCode
 import com.erp.financial.shared.validation.FinanceValidationException
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeAccountCode
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeCurrencyCode
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeEmail
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeName
+import com.erp.financial.shared.validation.InputSanitizer.sanitizePhoneNumber
 import com.erp.financial.shared.validation.ValidationMessageResolver
-import com.erp.financial.shared.validation.sanitizeAccountCode
-import com.erp.financial.shared.validation.sanitizeCurrencyCode
-import com.erp.financial.shared.validation.sanitizeEmail
-import com.erp.financial.shared.validation.sanitizeName
-import com.erp.financial.shared.validation.sanitizePhoneNumber
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull

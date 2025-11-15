@@ -2,8 +2,6 @@ package com.erp.financial.ar.infrastructure.adapter.input.rest
 
 import com.erp.financial.ar.application.port.input.CustomerInvoiceUseCase
 import com.erp.financial.ar.application.port.input.query.CustomerInvoiceDetailQuery
-import com.erp.financial.ar.application.port.input.query.ListCustomerInvoicesQuery
-import com.erp.financial.ar.domain.model.invoice.CustomerInvoiceStatus
 import com.erp.financial.ar.infrastructure.adapter.input.rest.dto.CreateCustomerInvoiceRequest
 import com.erp.financial.ar.infrastructure.adapter.input.rest.dto.CustomerInvoiceListRequest
 import com.erp.financial.ar.infrastructure.adapter.input.rest.dto.CustomerInvoicePathParams
@@ -46,7 +44,9 @@ class CustomerInvoiceResource {
 
     @POST
     @Operation(summary = "Create a customer invoice")
-    fun create(@Valid request: CreateCustomerInvoiceRequest): Response {
+    fun create(
+        @Valid request: CreateCustomerInvoiceRequest,
+    ): Response {
         val created = useCase.createInvoice(request.toCommand(currentLocale()))
         return Response.status(Response.Status.CREATED).entity(created.toResponse()).build()
     }
@@ -76,7 +76,9 @@ class CustomerInvoiceResource {
 
     @GET
     @Operation(summary = "List customer invoices")
-    fun list(@Valid @BeanParam request: CustomerInvoiceListRequest): List<CustomerInvoiceResponse> =
+    fun list(
+        @Valid @BeanParam request: CustomerInvoiceListRequest,
+    ): List<CustomerInvoiceResponse> =
         useCase
             .listInvoices(request.toQuery(currentLocale()))
             .map { it.toResponse() }
@@ -84,7 +86,9 @@ class CustomerInvoiceResource {
     @GET
     @Path("/{invoiceId}")
     @Operation(summary = "Fetch an AR invoice by id")
-    fun get(@Valid @BeanParam request: CustomerInvoiceScopedRequest): Response {
+    fun get(
+        @Valid @BeanParam request: CustomerInvoiceScopedRequest,
+    ): Response {
         val locale = currentLocale()
         val invoiceId = request.invoiceId(locale)
         val tenant = request.tenantId(locale)

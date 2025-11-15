@@ -1,7 +1,7 @@
 package com.erp.finance.accounting.infrastructure.adapter.input.rest
 
 import com.erp.finance.accounting.application.port.input.DimensionCommandUseCase
-import com.erp.finance.accounting.domain.model.DimensionType
+import com.erp.finance.accounting.domain.model.CompanyCodeFiscalYearVariant
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.AssignFiscalYearVariantRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.CompanyCodeResponse
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.CreateCompanyCodeRequest
@@ -17,6 +17,7 @@ import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.FiscalYe
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.LinkLedgerRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.PeriodBlackoutResponse
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.SchedulePeriodBlackoutRequest
+import com.erp.financial.shared.validation.preferredLocale
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.ws.rs.Consumes
@@ -31,7 +32,6 @@ import jakarta.ws.rs.core.Context
 import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
-import com.erp.financial.shared.validation.preferredLocale
 import org.eclipse.microprofile.openapi.annotations.Operation
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
 import java.util.Locale
@@ -240,8 +240,7 @@ private fun com.erp.finance.accounting.domain.model.FiscalYearVariant.toFiscalYe
             },
     )
 
-private fun com.erp.finance.accounting.domain.model.CompanyCodeFiscalYearVariant.toFiscalYearVariantAssignmentResponse():
-    FiscalYearVariantAssignmentResponse =
+private fun CompanyCodeFiscalYearVariant.toFiscalYearVariantAssignmentResponse(): FiscalYearVariantAssignmentResponse =
     FiscalYearVariantAssignmentResponse(
         companyCodeId = companyCodeId,
         fiscalYearVariantId = fiscalYearVariantId,

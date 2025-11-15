@@ -33,7 +33,8 @@ data class ArAgingRequest(
 ) {
     fun toQuery(locale: Locale): ArAgingQuery =
         ArAgingQuery(
-            tenantId = tenantId ?: missingField("tenantId", FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID, locale),
+            tenantId =
+                tenantId ?: missingField("tenantId", FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID, locale),
             companyCodeId = companyCodeId,
             customerId = customerId,
             asOfDate = parseAsOfDate(locale),
@@ -42,7 +43,13 @@ data class ArAgingRequest(
     private fun parseAsOfDate(locale: Locale): LocalDate {
         val value =
             asOfDate
-                ?: missingField("asOfDate", FinanceValidationErrorCode.FINANCE_INVALID_DATE, locale, "<missing>", "yyyy-MM-dd")
+                ?: missingField(
+                    "asOfDate",
+                    FinanceValidationErrorCode.FINANCE_INVALID_DATE,
+                    locale,
+                    "<missing>",
+                    "yyyy-MM-dd",
+                )
         return try {
             LocalDate.parse(value)
         } catch (ex: DateTimeParseException) {

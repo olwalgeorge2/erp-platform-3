@@ -25,20 +25,20 @@ import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.ChartPat
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.ClosePeriodRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.CreateLedgerRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.DefineAccountRequest
-import com.erp.financial.shared.api.ErrorResponse
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.JournalEntryResponse
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.LedgerPeriodPathParams
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.LedgerResponse
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.PostJournalEntryLineRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.PostJournalEntryRequest
+import com.erp.financial.shared.api.ErrorResponse
 import com.erp.financial.shared.validation.FinanceValidationException
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertSame
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -101,10 +101,11 @@ class FinanceCommandResourceTest {
                 currency = "usd",
             )
 
-        val response = resource.defineAccount(
-            ChartPathParams(chartId = chartId.toString()),
-            request,
-        )
+        val response =
+            resource.defineAccount(
+                ChartPathParams(chartId = chartId.toString()),
+                request,
+            )
 
         assertStatus(Response.Status.OK, response)
         val payload = response.entity as ChartOfAccountsResponse

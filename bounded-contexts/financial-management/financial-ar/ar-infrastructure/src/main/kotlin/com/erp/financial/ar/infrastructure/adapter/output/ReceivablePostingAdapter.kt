@@ -23,78 +23,78 @@ class ReceivablePostingAdapter
         private val financeQueryUseCase: FinanceQueryUseCase,
         private val controlAccountResolutionService: ControlAccountResolutionService,
     ) : ReceivablePostingPort {
-    override fun postCustomerInvoice(invoice: CustomerInvoice): ReceivablePostingResult {
-        val ledgerInfo =
-            financeQueryUseCase.getLedgerAndPeriodForCompanyCode(
-                GetLedgerForCompanyCodeQuery(
-                    companyCodeId = invoice.companyCodeId,
+        override fun postCustomerInvoice(invoice: CustomerInvoice): ReceivablePostingResult {
+            val ledgerInfo =
+                financeQueryUseCase.getLedgerAndPeriodForCompanyCode(
+                    GetLedgerForCompanyCodeQuery(
+                        companyCodeId = invoice.companyCodeId,
+                        tenantId = invoice.tenantId,
+                    ),
+                ) ?: error("No ledger assigned to company code ${invoice.companyCodeId}")
+            val period =
+                ledgerInfo.currentOpenPeriod
+                    ?: error("No open period available for ledger ${ledgerInfo.ledgerId}")
+
+            val controlAccountId =
+                controlAccountResolutionService.resolveReceivablesAccount(
                     tenantId = invoice.tenantId,
-                ),
-            ) ?: error("No ledger assigned to company code ${invoice.companyCodeId}")
-        val period =
-            ledgerInfo.currentOpenPeriod
-                ?: error("No open period available for ledger ${ledgerInfo.ledgerId}")
+                    companyCodeId = invoice.companyCodeId,
+                    dimensionAssignments = invoice.dimensionAssignments,
+                    currency = invoice.currency,
+                )
 
-        val controlAccountId =
-            controlAccountResolutionService.resolveReceivablesAccount(
-                tenantId = invoice.tenantId,
-                companyCodeId = invoice.companyCodeId,
-                dimensionAssignments = invoice.dimensionAssignments,
-                currency = invoice.currency,
-            )
+            val creditLines = buildRevenueLines(invoice)
+            val totalCredit = creditLines.sumOf { it.amount.amount }
 
-        val creditLines = buildRevenueLines(invoice)
-        val totalCredit = creditLines.sumOf { it.amount.amount }
+            val debitLine =
+                JournalEntryLineCommand(
+                    accountId = AccountId(controlAccountId),
+                    direction = EntryDirection.DEBIT,
+                    amount = Money(totalCredit),
+                    currency = invoice.currency,
+                    description = "AR Control ${invoice.invoiceNumber}",
+                    dimensions = invoice.dimensionAssignments,
+                )
 
-        val debitLine =
-            JournalEntryLineCommand(
-                accountId = AccountId(controlAccountId),
-                direction = EntryDirection.DEBIT,
-                amount = Money(totalCredit),
-                currency = invoice.currency,
-                description = "AR Control ${invoice.invoiceNumber}",
-                dimensions = invoice.dimensionAssignments,
-            )
-
-        val command =
-            PostJournalEntryCommand(
-                tenantId = invoice.tenantId,
-                ledgerId = ledgerInfo.ledgerId,
-                accountingPeriodId = period.periodId,
-                reference = invoice.invoiceNumber,
-                description = "Customer invoice ${invoice.invoiceNumber}",
-                lines = listOf(debitLine) + creditLines,
-            )
-        val entry = financeCommandUseCase.postJournalEntry(command)
-        return ReceivablePostingResult(
-            journalEntryId = entry.id,
-            ledgerId = entry.ledgerId.value,
-            accountingPeriodId = entry.accountingPeriodId.value,
-        )
-    }
-
-    private fun buildRevenueLines(invoice: CustomerInvoice): List<JournalEntryLineCommand> =
-        invoice.lines.map { line ->
-            val amount = line.netAmount.amount + line.taxAmount.amount
-            JournalEntryLineCommand(
-                accountId = AccountId(line.glAccountId),
-                direction = EntryDirection.CREDIT,
-                amount = Money(amount),
-                currency = invoice.currency,
-                description = line.description,
-                dimensions = mergeDimensions(invoice.dimensionAssignments, line.dimensionAssignments),
+            val command =
+                PostJournalEntryCommand(
+                    tenantId = invoice.tenantId,
+                    ledgerId = ledgerInfo.ledgerId,
+                    accountingPeriodId = period.periodId,
+                    reference = invoice.invoiceNumber,
+                    description = "Customer invoice ${invoice.invoiceNumber}",
+                    lines = listOf(debitLine) + creditLines,
+                )
+            val entry = financeCommandUseCase.postJournalEntry(command)
+            return ReceivablePostingResult(
+                journalEntryId = entry.id,
+                ledgerId = entry.ledgerId.value,
+                accountingPeriodId = entry.accountingPeriodId.value,
             )
         }
 
-    private fun mergeDimensions(
-        header: DimensionAssignments,
-        line: DimensionAssignments,
-    ): DimensionAssignments =
-        DimensionAssignments(
-            costCenterId = line.costCenterId ?: header.costCenterId,
-            profitCenterId = line.profitCenterId ?: header.profitCenterId,
-            departmentId = line.departmentId ?: header.departmentId,
-            projectId = line.projectId ?: header.projectId,
-            businessAreaId = line.businessAreaId ?: header.businessAreaId,
-        )
-}
+        private fun buildRevenueLines(invoice: CustomerInvoice): List<JournalEntryLineCommand> =
+            invoice.lines.map { line ->
+                val amount = line.netAmount.amount + line.taxAmount.amount
+                JournalEntryLineCommand(
+                    accountId = AccountId(line.glAccountId),
+                    direction = EntryDirection.CREDIT,
+                    amount = Money(amount),
+                    currency = invoice.currency,
+                    description = line.description,
+                    dimensions = mergeDimensions(invoice.dimensionAssignments, line.dimensionAssignments),
+                )
+            }
+
+        private fun mergeDimensions(
+            header: DimensionAssignments,
+            line: DimensionAssignments,
+        ): DimensionAssignments =
+            DimensionAssignments(
+                costCenterId = line.costCenterId ?: header.costCenterId,
+                profitCenterId = line.profitCenterId ?: header.profitCenterId,
+                departmentId = line.departmentId ?: header.departmentId,
+                projectId = line.projectId ?: header.projectId,
+                businessAreaId = line.businessAreaId ?: header.businessAreaId,
+            )
+    }

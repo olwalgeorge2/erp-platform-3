@@ -20,7 +20,6 @@ import jakarta.ws.rs.BeanParam
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
-import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.Context
 import jakarta.ws.rs.core.HttpHeaders
@@ -47,7 +46,9 @@ open class BaseFinanceCommandResource() {
     @POST
     @Path("/ledgers")
     @Operation(summary = "Create a ledger")
-    fun createLedger(@Valid request: CreateLedgerRequest): Response {
+    fun createLedger(
+        @Valid request: CreateLedgerRequest,
+    ): Response {
         val locale = currentLocale()
         return execute(locale) {
             commandService
@@ -79,7 +80,9 @@ open class BaseFinanceCommandResource() {
     @POST
     @Path("/journal-entries")
     @Operation(summary = "Post a journal entry")
-    fun postJournalEntry(@Valid request: PostJournalEntryRequest): Response {
+    fun postJournalEntry(
+        @Valid request: PostJournalEntryRequest,
+    ): Response {
         val locale = currentLocale()
         return execute(locale) {
             commandService

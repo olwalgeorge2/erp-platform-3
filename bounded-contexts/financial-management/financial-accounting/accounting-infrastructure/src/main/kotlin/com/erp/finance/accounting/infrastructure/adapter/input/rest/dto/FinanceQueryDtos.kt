@@ -31,11 +31,25 @@ data class TrialBalanceRequest(
     fun toQuery(locale: Locale): TrialBalanceQuery {
         val filterMap = parseDimensionFilters(locale)
         return TrialBalanceQuery(
-            tenantId = tenantId ?: throw missingParam("tenantId", FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID, locale),
-            ledgerId = ledgerId ?: throw missingParam("ledgerId", FinanceValidationErrorCode.FINANCE_INVALID_LEDGER_ID, locale),
+            tenantId =
+                tenantId ?: throw missingParam(
+                    "tenantId",
+                    FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID,
+                    locale,
+                ),
+            ledgerId =
+                ledgerId ?: throw missingParam(
+                    "ledgerId",
+                    FinanceValidationErrorCode.FINANCE_INVALID_LEDGER_ID,
+                    locale,
+                ),
             accountingPeriodId =
                 accountingPeriodId
-                    ?: throw missingParam("accountingPeriodId", FinanceValidationErrorCode.FINANCE_INVALID_PERIOD_ID, locale),
+                    ?: throw missingParam(
+                        "accountingPeriodId",
+                        FinanceValidationErrorCode.FINANCE_INVALID_PERIOD_ID,
+                        locale,
+                    ),
             dimensionFilters = filterMap,
         )
     }
@@ -89,11 +103,25 @@ data class GlSummaryRequest(
         val type = parseDimensionType(rawType, locale)
 
         return GlSummaryQuery(
-            tenantId = tenantId ?: throw missingParam("tenantId", FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID, locale),
-            ledgerId = ledgerId ?: throw missingParam("ledgerId", FinanceValidationErrorCode.FINANCE_INVALID_LEDGER_ID, locale),
+            tenantId =
+                tenantId ?: throw missingParam(
+                    "tenantId",
+                    FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID,
+                    locale,
+                ),
+            ledgerId =
+                ledgerId ?: throw missingParam(
+                    "ledgerId",
+                    FinanceValidationErrorCode.FINANCE_INVALID_LEDGER_ID,
+                    locale,
+                ),
             accountingPeriodId =
                 accountingPeriodId
-                    ?: throw missingParam("accountingPeriodId", FinanceValidationErrorCode.FINANCE_INVALID_PERIOD_ID, locale),
+                    ?: throw missingParam(
+                        "accountingPeriodId",
+                        FinanceValidationErrorCode.FINANCE_INVALID_PERIOD_ID,
+                        locale,
+                    ),
             dimensionType = type,
         )
     }
@@ -116,7 +144,12 @@ data class LedgerInfoRequest(
                         FinanceValidationErrorCode.FINANCE_INVALID_COMPANY_CODE_ID,
                         locale,
                     ),
-            tenantId = tenantId ?: throw missingParam("tenantId", FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID, locale),
+            tenantId =
+                tenantId ?: throw missingParam(
+                    "tenantId",
+                    FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID,
+                    locale,
+                ),
         )
 }
 

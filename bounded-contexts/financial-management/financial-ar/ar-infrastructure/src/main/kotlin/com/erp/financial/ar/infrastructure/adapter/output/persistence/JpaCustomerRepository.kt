@@ -20,71 +20,73 @@ class JpaCustomerRepository
     constructor(
         private val entityManager: EntityManager,
     ) : CustomerRepository {
-    override fun save(customer: Customer): Customer {
-        val managed = entityManager.find(CustomerEntity::class.java, customer.id.value)
-        val entity =
-            if (managed == null) {
-                CustomerEntity.from(customer).also { entityManager.persist(it) }
-            } else {
-                managed.updateFrom(customer)
-                managed
+        override fun save(customer: Customer): Customer {
+            val managed = entityManager.find(CustomerEntity::class.java, customer.id.value)
+            val entity =
+                if (managed == null) {
+                    CustomerEntity.from(customer).also { entityManager.persist(it) }
+                } else {
+                    managed.updateFrom(customer)
+                    managed
+                }
+            entityManager.flush()
+            return entity.toDomain()
+        }
+
+        override fun findById(
+            tenantId: UUID,
+            id: CustomerId,
+        ): Customer? =
+            entityManager
+                .find(CustomerEntity::class.java, id.value)
+                ?.takeIf { it.tenantId == tenantId }
+                ?.toDomain()
+
+        override fun findByNumber(
+            tenantId: UUID,
+            customerNumber: CustomerNumber,
+        ): Customer? =
+            entityManager
+                .createQuery(
+                    "SELECT c FROM CustomerEntity c WHERE c.tenantId = :tenantId AND c.customerNumber = :customerNumber",
+                    CustomerEntity::class.java,
+                ).setParameter("tenantId", tenantId)
+                .setParameter("customerNumber", customerNumber.value)
+                .resultList
+                .firstOrNull()
+                ?.toDomain()
+
+        override fun delete(
+            tenantId: UUID,
+            id: CustomerId,
+        ) {
+            val entity = entityManager.find(CustomerEntity::class.java, id.value) ?: return
+            if (entity.tenantId != tenantId) {
+                return
             }
-        entityManager.flush()
-        return entity.toDomain()
-    }
-
-    override fun findById(
-        tenantId: UUID,
-        id: CustomerId,
-    ): Customer? =
-        entityManager.find(CustomerEntity::class.java, id.value)
-            ?.takeIf { it.tenantId == tenantId }
-            ?.toDomain()
-
-    override fun findByNumber(
-        tenantId: UUID,
-        customerNumber: CustomerNumber,
-    ): Customer? =
-        entityManager
-            .createQuery(
-                "SELECT c FROM CustomerEntity c WHERE c.tenantId = :tenantId AND c.customerNumber = :customerNumber",
-                CustomerEntity::class.java,
-            ).setParameter("tenantId", tenantId)
-            .setParameter("customerNumber", customerNumber.value)
-            .resultList
-            .firstOrNull()
-            ?.toDomain()
-
-    override fun delete(
-        tenantId: UUID,
-        id: CustomerId,
-    ) {
-        val entity = entityManager.find(CustomerEntity::class.java, id.value) ?: return
-        if (entity.tenantId != tenantId) {
-            return
+            entityManager.remove(entity)
         }
-        entityManager.remove(entity)
-    }
 
-    override fun list(
-        tenantId: UUID,
-        companyCodeId: UUID?,
-        status: MasterDataStatus?,
-    ): List<Customer> {
-        val builder = StringBuilder("SELECT c FROM CustomerEntity c WHERE c.tenantId = :tenantId")
-        if (companyCodeId != null) {
-            builder.append(" AND c.companyCodeId = :companyCodeId")
-        }
-        if (status != null) {
-            builder.append(" AND c.status = :status")
-        }
-        builder.append(" ORDER BY c.customerNumber ASC")
+        override fun list(
+            tenantId: UUID,
+            companyCodeId: UUID?,
+            status: MasterDataStatus?,
+        ): List<Customer> {
+            val builder = StringBuilder("SELECT c FROM CustomerEntity c WHERE c.tenantId = :tenantId")
+            if (companyCodeId != null) {
+                builder.append(" AND c.companyCodeId = :companyCodeId")
+            }
+            if (status != null) {
+                builder.append(" AND c.status = :status")
+            }
+            builder.append(" ORDER BY c.customerNumber ASC")
 
-        val query =
-            entityManager.createQuery(builder.toString(), CustomerEntity::class.java)
-                .setParameter("tenantId", tenantId)
-        companyCodeId?.let { query.setParameter("companyCodeId", it) }
-        status?.let { query.setParameter("status", it) }
-        return query.resultList.map(CustomerEntity::toDomain)
+            val query =
+                entityManager
+                    .createQuery(builder.toString(), CustomerEntity::class.java)
+                    .setParameter("tenantId", tenantId)
+            companyCodeId?.let { query.setParameter("companyCodeId", it) }
+            status?.let { query.setParameter("status", it) }
+            return query.resultList.map(CustomerEntity::toDomain)
+        }
     }
-}

@@ -1,10 +1,7 @@
 package com.erp.financial.ar.infrastructure.adapter.input.rest.dto
 
-import com.erp.finance.accounting.domain.model.DimensionAssignments
-import com.erp.financial.ar.application.port.input.query.ListCustomersQuery
 import com.erp.financial.ar.application.port.input.query.ListCustomerInvoicesQuery
-import com.erp.financial.ar.domain.model.customer.Customer
-import com.erp.financial.ar.domain.model.invoice.CustomerInvoice
+import com.erp.financial.ar.application.port.input.query.ListCustomersQuery
 import com.erp.financial.ar.domain.model.invoice.CustomerInvoiceStatus
 import com.erp.financial.shared.validation.FinanceValidationErrorCode
 import com.erp.financial.shared.validation.FinanceValidationException
@@ -28,7 +25,8 @@ data class CustomerListRequest(
 ) {
     fun toQuery(locale: Locale): ListCustomersQuery =
         ListCustomersQuery(
-            tenantId = tenantId ?: missingField("tenantId", FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID, locale),
+            tenantId =
+                tenantId ?: missingField("tenantId", FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID, locale),
             companyCodeId = companyCodeId,
             status = status?.let { parseStatus(it, locale) },
         )
@@ -37,22 +35,25 @@ data class CustomerListRequest(
         raw: String,
         locale: Locale,
     ): com.erp.financial.shared.masterdata.MasterDataStatus =
-        runCatching { com.erp.financial.shared.masterdata.MasterDataStatus.valueOf(raw.uppercase(Locale.getDefault())) }
-            .getOrElse {
-                throw FinanceValidationException(
-                    errorCode = FinanceValidationErrorCode.FINANCE_INVALID_STATUS,
-                    field = "status",
-                    rejectedValue = raw,
-                    locale = locale,
-                    message =
-                        ValidationMessageResolver.resolve(
-                            FinanceValidationErrorCode.FINANCE_INVALID_STATUS,
-                            locale,
-                            raw,
-                            com.erp.financial.shared.masterdata.MasterDataStatus.entries.joinToString(),
-                        ),
-                )
-            }
+        runCatching {
+            com.erp.financial.shared.masterdata.MasterDataStatus
+                .valueOf(raw.uppercase(Locale.getDefault()))
+        }.getOrElse {
+            throw FinanceValidationException(
+                errorCode = FinanceValidationErrorCode.FINANCE_INVALID_STATUS,
+                field = "status",
+                rejectedValue = raw,
+                locale = locale,
+                message =
+                    ValidationMessageResolver.resolve(
+                        FinanceValidationErrorCode.FINANCE_INVALID_STATUS,
+                        locale,
+                        raw,
+                        com.erp.financial.shared.masterdata.MasterDataStatus.entries
+                            .joinToString(),
+                    ),
+            )
+        }
 }
 
 data class CustomerScopedRequest(
@@ -126,7 +127,8 @@ data class CustomerInvoiceListRequest(
 ) {
     fun toQuery(locale: Locale): ListCustomerInvoicesQuery =
         ListCustomerInvoicesQuery(
-            tenantId = tenantId ?: missingField("tenantId", FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID, locale),
+            tenantId =
+                tenantId ?: missingField("tenantId", FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID, locale),
             companyCodeId = companyCodeId,
             customerId = customerId,
             status = status?.let { parseStatus(it, locale) },

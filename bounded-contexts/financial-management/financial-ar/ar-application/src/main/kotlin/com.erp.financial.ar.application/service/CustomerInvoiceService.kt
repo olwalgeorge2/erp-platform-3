@@ -31,76 +31,76 @@ class CustomerInvoiceService
         private val openItemRepository: ArOpenItemRepository,
         private val clock: Clock,
     ) : CustomerInvoiceUseCase {
-    override fun createInvoice(command: CreateCustomerInvoiceCommand): CustomerInvoice {
-        val customer =
-            customerRepository.findById(command.tenantId, CustomerId(command.customerId))
-                ?: throw IllegalArgumentException("Customer not found")
-        val currency = command.currency.uppercase()
-        val headerDimensions =
-            if (command.dimensionAssignments.isEmpty() && !customer.profile.dimensionDefaults.isEmpty()) {
-                customer.profile.dimensionDefaults
-            } else {
-                command.dimensionAssignments
-            }
-        val lines =
-            command.lines.map {
-                CustomerInvoiceLine(
-                    glAccountId = it.glAccountId,
-                    description = it.description,
-                    netAmount = Money(it.netAmount, currency),
-                    taxAmount = Money(it.taxAmount, currency),
-                    dimensionAssignments = it.dimensionAssignments,
+        override fun createInvoice(command: CreateCustomerInvoiceCommand): CustomerInvoice {
+            val customer =
+                customerRepository.findById(command.tenantId, CustomerId(command.customerId))
+                    ?: throw IllegalArgumentException("Customer not found")
+            val currency = command.currency.uppercase()
+            val headerDimensions =
+                if (command.dimensionAssignments.isEmpty() && !customer.profile.dimensionDefaults.isEmpty()) {
+                    customer.profile.dimensionDefaults
+                } else {
+                    command.dimensionAssignments
+                }
+            val lines =
+                command.lines.map {
+                    CustomerInvoiceLine(
+                        glAccountId = it.glAccountId,
+                        description = it.description,
+                        netAmount = Money(it.netAmount, currency),
+                        taxAmount = Money(it.taxAmount, currency),
+                        dimensionAssignments = it.dimensionAssignments,
+                    )
+                }
+            val invoice =
+                CustomerInvoice.draft(
+                    tenantId = command.tenantId,
+                    companyCodeId = command.companyCodeId,
+                    customerId = command.customerId,
+                    invoiceNumber = command.invoiceNumber,
+                    invoiceDate = command.invoiceDate,
+                    dueDate = command.dueDate,
+                    currency = currency,
+                    lines = lines,
+                    dimensionAssignments = headerDimensions,
+                    taxAmount = Money(command.lines.sumOf { it.taxAmount }, currency),
+                    paymentTerms = customer.profile.paymentTerms,
+                    clock = clock,
                 )
-            }
-        val invoice =
-            CustomerInvoice.draft(
-                tenantId = command.tenantId,
-                companyCodeId = command.companyCodeId,
-                customerId = command.customerId,
-                invoiceNumber = command.invoiceNumber,
-                invoiceDate = command.invoiceDate,
-                dueDate = command.dueDate,
-                currency = currency,
-                lines = lines,
-                dimensionAssignments = headerDimensions,
-                taxAmount = Money(command.lines.sumOf { it.taxAmount }, currency),
-                paymentTerms = customer.profile.paymentTerms,
-                clock = clock,
-            )
-        val approved = invoice.approve(clock)
-        return invoiceRepository.save(approved)
-    }
-
-    override fun postInvoice(command: PostCustomerInvoiceCommand): CustomerInvoice {
-        val invoice = loadInvoice(command.tenantId, command.invoiceId)
-        if (invoice.status == CustomerInvoiceStatus.POSTED && invoice.journalEntryId != null) {
-            return invoice
+            val approved = invoice.approve(clock)
+            return invoiceRepository.save(approved)
         }
-        val posted = invoice.post(clock)
-        val postingResult = postingPort.postCustomerInvoice(posted)
-        val withJournal = posted.assignJournalEntry(postingResult.journalEntryId, clock)
-        return invoiceRepository.save(withJournal)
+
+        override fun postInvoice(command: PostCustomerInvoiceCommand): CustomerInvoice {
+            val invoice = loadInvoice(command.tenantId, command.invoiceId)
+            if (invoice.status == CustomerInvoiceStatus.POSTED && invoice.journalEntryId != null) {
+                return invoice
+            }
+            val posted = invoice.post(clock)
+            val postingResult = postingPort.postCustomerInvoice(posted)
+            val withJournal = posted.assignJournalEntry(postingResult.journalEntryId, clock)
+            return invoiceRepository.save(withJournal)
+        }
+
+        override fun recordReceipt(command: RecordCustomerReceiptCommand): CustomerInvoice {
+            val invoice = loadInvoice(command.tenantId, command.invoiceId)
+            val paymentDate = command.receiptDate ?: LocalDate.now(clock)
+            val updated = invoice.applyReceipt(Money(command.receiptAmount, invoice.currency), clock)
+            val saved = invoiceRepository.save(updated)
+            openItemRepository.updateReceiptMetadata(saved.id.value, paymentDate)
+            return saved
+        }
+
+        override fun listInvoices(query: ListCustomerInvoicesQuery): List<CustomerInvoice> =
+            invoiceRepository.list(query.tenantId, query.companyCodeId, query.customerId, query.status, query.dueBefore)
+
+        override fun getInvoice(query: CustomerInvoiceDetailQuery): CustomerInvoice? =
+            invoiceRepository.findById(query.tenantId, CustomerInvoiceId(query.invoiceId))
+
+        private fun loadInvoice(
+            tenantId: UUID,
+            invoiceId: UUID,
+        ): CustomerInvoice =
+            invoiceRepository.findById(tenantId, CustomerInvoiceId(invoiceId))
+                ?: throw IllegalArgumentException("Invoice not found")
     }
-
-    override fun recordReceipt(command: RecordCustomerReceiptCommand): CustomerInvoice {
-        val invoice = loadInvoice(command.tenantId, command.invoiceId)
-        val paymentDate = command.receiptDate ?: LocalDate.now(clock)
-        val updated = invoice.applyReceipt(Money(command.receiptAmount, invoice.currency), clock)
-        val saved = invoiceRepository.save(updated)
-        openItemRepository.updateReceiptMetadata(saved.id.value, paymentDate)
-        return saved
-    }
-
-    override fun listInvoices(query: ListCustomerInvoicesQuery): List<CustomerInvoice> =
-        invoiceRepository.list(query.tenantId, query.companyCodeId, query.customerId, query.status, query.dueBefore)
-
-    override fun getInvoice(query: CustomerInvoiceDetailQuery): CustomerInvoice? =
-        invoiceRepository.findById(query.tenantId, CustomerInvoiceId(query.invoiceId))
-
-    private fun loadInvoice(
-        tenantId: UUID,
-        invoiceId: UUID,
-    ): CustomerInvoice =
-        invoiceRepository.findById(tenantId, CustomerInvoiceId(invoiceId))
-            ?: throw IllegalArgumentException("Invoice not found")
-}

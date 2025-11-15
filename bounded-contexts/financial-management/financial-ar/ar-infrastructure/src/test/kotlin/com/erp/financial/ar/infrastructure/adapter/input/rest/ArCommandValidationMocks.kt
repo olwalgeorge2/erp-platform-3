@@ -9,9 +9,9 @@ import com.erp.financial.ar.application.port.input.command.RegisterCustomerComma
 import com.erp.financial.ar.application.port.input.command.UpdateCustomerCommand
 import com.erp.financial.ar.application.port.input.command.UpdateCustomerStatusCommand
 import com.erp.financial.ar.application.port.input.query.CustomerDetailQuery
+import com.erp.financial.ar.application.port.input.query.CustomerInvoiceDetailQuery
 import com.erp.financial.ar.application.port.input.query.ListCustomerInvoicesQuery
 import com.erp.financial.ar.application.port.input.query.ListCustomersQuery
-import com.erp.financial.ar.application.port.input.query.CustomerInvoiceDetailQuery
 import com.erp.financial.ar.domain.model.customer.Customer
 import com.erp.financial.ar.domain.model.invoice.CustomerInvoice
 import io.quarkus.test.Mock
@@ -39,9 +39,7 @@ class MockCustomerCommandUseCase : CustomerCommandUseCase {
     override fun deleteCustomer(
         tenantId: UUID,
         customerId: UUID,
-    ) {
-        throw UnsupportedOperationException("Should not be invoked during validation tests.")
-    }
+    ): Unit = throw UnsupportedOperationException("Should not be invoked during validation tests.")
 }
 
 @Mock

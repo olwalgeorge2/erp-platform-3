@@ -9,7 +9,6 @@ import com.erp.financial.ar.application.port.input.query.ListCustomersQuery
 import com.erp.financial.ar.application.port.output.CustomerRepository
 import com.erp.financial.ar.domain.model.customer.Customer
 import com.erp.financial.ar.domain.model.customer.CustomerId
-import com.erp.financial.ar.domain.model.customer.CustomerNumber
 import com.erp.financial.shared.masterdata.MasterDataStatus
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.Clock

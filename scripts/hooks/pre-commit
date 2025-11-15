@@ -31,6 +31,13 @@ kotlin_files=$(echo "$changed_files" | grep -E '\.(kt|kts)$' || true)
 # Run ktlint if Kotlin files changed
 if [[ -n "$kotlin_files" ]]; then
   echo "[pre-commit] Step 1/2: Running ktlint on Kotlin files..."
+  echo "[pre-commit]   → Auto-formatting code..."
+  ./gradlew ktlintFormat --no-daemon --stacktrace
+  
+  # Stage any files that were formatted
+  git add -u
+  
+  echo "[pre-commit]   → Checking code style..."
   ./gradlew ktlintCheck --no-daemon --stacktrace
   echo "[pre-commit] ✓ ktlint passed"
 else

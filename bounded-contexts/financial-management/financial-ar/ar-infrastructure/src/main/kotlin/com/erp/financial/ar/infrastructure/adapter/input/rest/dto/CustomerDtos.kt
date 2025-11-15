@@ -16,12 +16,12 @@ import com.erp.financial.shared.masterdata.PaymentTermType
 import com.erp.financial.shared.masterdata.PaymentTerms
 import com.erp.financial.shared.validation.FinanceValidationErrorCode
 import com.erp.financial.shared.validation.FinanceValidationException
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeAccountCode
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeCurrencyCode
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeEmail
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeName
+import com.erp.financial.shared.validation.InputSanitizer.sanitizePhoneNumber
 import com.erp.financial.shared.validation.ValidationMessageResolver
-import com.erp.financial.shared.validation.sanitizeAccountCode
-import com.erp.financial.shared.validation.sanitizeCurrencyCode
-import com.erp.financial.shared.validation.sanitizeEmail
-import com.erp.financial.shared.validation.sanitizeName
-import com.erp.financial.shared.validation.sanitizePhoneNumber
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
@@ -129,7 +129,15 @@ fun CustomerRequest.toRegisterCommand(locale: Locale): RegisterCustomerCommand =
     RegisterCustomerCommand(
         tenantId = tenantId,
         companyCodeId = companyCodeId,
-        customerNumber = CustomerNumber(requireNotBlank(customerNumber.sanitizeAccountCode(), "customerNumber", FinanceValidationErrorCode.FINANCE_INVALID_CUSTOMER_NUMBER, locale)),
+        customerNumber =
+            CustomerNumber(
+                requireNotBlank(
+                    customerNumber.sanitizeAccountCode(),
+                    "customerNumber",
+                    FinanceValidationErrorCode.FINANCE_INVALID_CUSTOMER_NUMBER,
+                    locale,
+                ),
+            ),
         profile = toProfile(locale),
     )
 
@@ -166,7 +174,13 @@ private fun CustomerRequest.toProfile(locale: Locale): CustomerProfile =
         preferredCurrency = normalizeCurrency(currency.sanitizeCurrencyCode(), "currency", locale),
         paymentTerms = paymentTerms.toDomain(locale),
         primaryContact =
-            contact?.let { ContactPerson(name = it.name.sanitizeName(), email = it.email?.sanitizeEmail(), phoneNumber = it.phoneNumber?.sanitizePhoneNumber()) },
+            contact?.let {
+                ContactPerson(
+                    name = it.name.sanitizeName(),
+                    email = it.email?.sanitizeEmail(),
+                    phoneNumber = it.phoneNumber?.sanitizePhoneNumber(),
+                )
+            },
         creditLimit =
             creditLimit?.let {
                 Money.fromMajor(
@@ -202,7 +216,13 @@ private fun PaymentTermsRequest.toDomain(locale: Locale): PaymentTerms {
         )
     }
     return PaymentTerms(
-        code = requireNotBlank(code.sanitizeAccountCode(), "paymentTerms.code", FinanceValidationErrorCode.FINANCE_INVALID_PAYMENT_TERMS, locale),
+        code =
+            requireNotBlank(
+                code.sanitizeAccountCode(),
+                "paymentTerms.code",
+                FinanceValidationErrorCode.FINANCE_INVALID_PAYMENT_TERMS,
+                locale,
+            ),
         type = type,
         dueInDays = dueInDays,
         discountPercentage = discountPercentage,
@@ -215,12 +235,30 @@ private fun AddressRequest.toDomainAddress(
     locale: Locale,
 ): Address =
     Address(
-        line1 = requireNotBlank(line1.sanitizeName(), "$fieldPrefix.line1", FinanceValidationErrorCode.FINANCE_INVALID_NAME, locale),
+        line1 =
+            requireNotBlank(
+                line1.sanitizeName(),
+                "$fieldPrefix.line1",
+                FinanceValidationErrorCode.FINANCE_INVALID_NAME,
+                locale,
+            ),
         line2 = line2?.sanitizeName(),
-        city = requireNotBlank(city.sanitizeName(), "$fieldPrefix.city", FinanceValidationErrorCode.FINANCE_INVALID_NAME, locale),
+        city =
+            requireNotBlank(
+                city.sanitizeName(),
+                "$fieldPrefix.city",
+                FinanceValidationErrorCode.FINANCE_INVALID_NAME,
+                locale,
+            ),
         stateOrProvince = stateOrProvince?.sanitizeName(),
         postalCode = postalCode?.sanitizeAccountCode(),
-        countryCode = requireNotBlank(countryCode.sanitizeAccountCode(), "$fieldPrefix.countryCode", FinanceValidationErrorCode.FINANCE_INVALID_NAME, locale),
+        countryCode =
+            requireNotBlank(
+                countryCode.sanitizeAccountCode(),
+                "$fieldPrefix.countryCode",
+                FinanceValidationErrorCode.FINANCE_INVALID_NAME,
+                locale,
+            ),
     )
 
 private fun normalizeCurrency(

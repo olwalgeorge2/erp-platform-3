@@ -77,7 +77,10 @@ class JpaCustomerInvoiceRepository
         private fun syncOpenItem(entity: CustomerInvoiceEntity) {
             val shouldTrack =
                 when (entity.status) {
-                    CustomerInvoiceStatus.POSTED, CustomerInvoiceStatus.PARTIALLY_PAID, CustomerInvoiceStatus.PAID -> true
+                    CustomerInvoiceStatus.POSTED,
+                    CustomerInvoiceStatus.PARTIALLY_PAID,
+                    CustomerInvoiceStatus.PAID,
+                    -> true
                     else -> false
                 }
             val existing = findOpenItem(entity.id)

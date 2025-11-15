@@ -23,16 +23,15 @@ import com.erp.financial.shared.validation.InputSanitizer.sanitizeAccountCode
 import com.erp.financial.shared.validation.InputSanitizer.sanitizeForXss
 import com.erp.financial.shared.validation.InputSanitizer.sanitizeReferenceNumber
 import com.erp.financial.shared.validation.InputSanitizer.sanitizeText
-import com.erp.financial.shared.validation.constraints.ValidDateRange
 import com.erp.financial.shared.validation.ValidationMessageResolver
 import com.erp.financial.shared.validation.constraints.ValidAccountCode
 import com.erp.financial.shared.validation.constraints.ValidCurrencyCode
+import com.erp.financial.shared.validation.constraints.ValidDateRange
+import io.quarkus.runtime.annotations.RegisterForReflection
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
-import jakarta.validation.constraints.Size
-import io.quarkus.runtime.annotations.RegisterForReflection
 import org.eclipse.microprofile.openapi.annotations.media.Schema
 import java.time.Instant
 import java.time.LocalDate
@@ -124,7 +123,11 @@ data class PostJournalEntryRequest(
                     field = "lines",
                     rejectedValue = null,
                     locale = locale,
-                    message = ValidationMessageResolver.resolve(FinanceValidationErrorCode.FINANCE_INVALID_JOURNAL_LINES, locale),
+                    message =
+                        ValidationMessageResolver.resolve(
+                            FinanceValidationErrorCode.FINANCE_INVALID_JOURNAL_LINES,
+                            locale,
+                        ),
                 )
 
         return PostJournalEntryCommand(
@@ -180,7 +183,14 @@ data class PostJournalEntryLineRequest(
             accountId = AccountId(accountId),
             direction = direction,
             amount = Money(amountMinor),
-            currency = currency?.takeIf { it.isNotBlank() }?.let { normalizeCurrency(it, "lines[$index].currency", locale) },
+            currency =
+                currency?.takeIf { it.isNotBlank() }?.let {
+                    normalizeCurrency(
+                        it,
+                        "lines[$index].currency",
+                        locale,
+                    )
+                },
             description = description?.sanitizeText(200),
             dimensions = toAssignments(),
         )

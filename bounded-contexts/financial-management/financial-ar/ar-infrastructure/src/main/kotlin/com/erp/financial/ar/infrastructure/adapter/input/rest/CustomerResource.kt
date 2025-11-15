@@ -2,7 +2,6 @@ package com.erp.financial.ar.infrastructure.adapter.input.rest
 
 import com.erp.financial.ar.application.port.input.CustomerCommandUseCase
 import com.erp.financial.ar.application.port.input.query.CustomerDetailQuery
-import com.erp.financial.ar.application.port.input.query.ListCustomersQuery
 import com.erp.financial.ar.infrastructure.adapter.input.rest.dto.CustomerIdPathParams
 import com.erp.financial.ar.infrastructure.adapter.input.rest.dto.CustomerListRequest
 import com.erp.financial.ar.infrastructure.adapter.input.rest.dto.CustomerRequest
@@ -47,7 +46,9 @@ class CustomerResource {
 
     @POST
     @Operation(summary = "Create a customer")
-    fun registerCustomer(@Valid request: CustomerRequest): Response {
+    fun registerCustomer(
+        @Valid request: CustomerRequest,
+    ): Response {
         val created = customerCommandUseCase.registerCustomer(request.toRegisterCommand(currentLocale()))
         return Response.status(Response.Status.CREATED).entity(created.toResponse()).build()
     }
@@ -78,7 +79,9 @@ class CustomerResource {
 
     @GET
     @Operation(summary = "List customers")
-    fun listCustomers(@Valid @BeanParam request: CustomerListRequest): List<CustomerResponse> =
+    fun listCustomers(
+        @Valid @BeanParam request: CustomerListRequest,
+    ): List<CustomerResponse> =
         customerCommandUseCase
             .listCustomers(request.toQuery(currentLocale()))
             .map { it.toResponse() }
@@ -86,7 +89,9 @@ class CustomerResource {
     @GET
     @Path("/{customerId}")
     @Operation(summary = "Fetch a customer by id")
-    fun getCustomer(@Valid @BeanParam request: CustomerScopedRequest): Response {
+    fun getCustomer(
+        @Valid @BeanParam request: CustomerScopedRequest,
+    ): Response {
         val locale = currentLocale()
         val customerId = request.customerId(locale)
         val tenant = request.tenantId(locale)
@@ -99,7 +104,9 @@ class CustomerResource {
     @DELETE
     @Path("/{customerId}")
     @Operation(summary = "Delete a customer")
-    fun deleteCustomer(@Valid @BeanParam request: CustomerScopedRequest): Response {
+    fun deleteCustomer(
+        @Valid @BeanParam request: CustomerScopedRequest,
+    ): Response {
         val locale = currentLocale()
         val customerId = request.customerId(locale)
         val tenant = request.tenantId(locale)

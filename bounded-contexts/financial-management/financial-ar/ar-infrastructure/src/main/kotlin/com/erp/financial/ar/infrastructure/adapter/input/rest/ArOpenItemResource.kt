@@ -36,7 +36,9 @@ class ArOpenItemResource {
     @GET
     @Path("/aging/detail")
     @Operation(summary = "Retrieve AR open-item aging detail")
-    fun detail(@Valid @BeanParam request: ArAgingRequest): ArAgingDetailResponse =
+    fun detail(
+        @Valid @BeanParam request: ArAgingRequest,
+    ): ArAgingDetailResponse =
         useCase
             .getAgingDetail(request.toQuery(currentLocale()))
             .toResponse()
@@ -44,7 +46,9 @@ class ArOpenItemResource {
     @GET
     @Path("/aging/summary")
     @Operation(summary = "Retrieve AR open-item aging summary")
-    fun summary(@Valid @BeanParam request: ArAgingRequest): ArAgingSummaryResponse =
+    fun summary(
+        @Valid @BeanParam request: ArAgingRequest,
+    ): ArAgingSummaryResponse =
         useCase
             .getAgingSummary(request.toQuery(currentLocale()))
             .toResponse()

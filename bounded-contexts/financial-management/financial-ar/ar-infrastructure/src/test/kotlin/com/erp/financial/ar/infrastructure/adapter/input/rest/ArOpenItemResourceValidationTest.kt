@@ -24,8 +24,10 @@ class ArOpenItemResourceValidationTest {
             .then()
             .statusCode(422)
             .body("code", equalTo("FINANCE_INVALID_DATE"))
-            .body("validationErrors[0].message", equalTo("La fecha '2024-13-15' no es v\u00E1lida. Formato esperado: yyyy-MM-dd."))
-            .body("validationErrors[0].rejectedValue", equalTo("2024-13-15"))
+            .body(
+                "validationErrors[0].message",
+                equalTo("La fecha '2024-13-15' no es v\u00E1lida. Formato esperado: yyyy-MM-dd."),
+            ).body("validationErrors[0].rejectedValue", equalTo("2024-13-15"))
     }
 
     companion object {

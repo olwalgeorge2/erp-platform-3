@@ -10,6 +10,9 @@
 @creditAccountId = {{$guid}}
 @gainAccountId = {{$guid}}
 @lossAccountId = {{$guid}}
+@costCenterId = {{$guid}}
+@profitCenterId = {{$guid}}
+@departmentId = {{$guid}}
 # Supply an access token (paste directly or reference your REST client env)
 @token = Bearer <PASTE_JWT_TOKEN_HERE>
 # Canonical path: /api/v1/finance/**. The service also exposes a temporary /api/finance/** alias for dev-only compatibility.
@@ -61,7 +64,10 @@ Authorization: {{token}}
       "direction": "DEBIT",
       "amountMinor": 10000,
       "currency": "USD",
-      "description": "Debit cash"
+      "description": "Debit cash",
+      "costCenterId": "{{costCenterId}}",
+      "profitCenterId": "{{profitCenterId}}",
+      "departmentId": "{{departmentId}}"
     },
     {
       "accountId": "{{creditAccountId}}",
@@ -99,3 +105,10 @@ Authorization: {{token}}
   "reference": "FX-REVAL-2025-11",
   "description": "Monthly currency revaluation for foreign exposures"
 }
+### Get trial balance for a ledger
+GET {{host}}/api/v1/finance/ledgers/{{ledgerId}}/trial-balance?tenantId={{tenant}}&accountingPeriodId={{periodId}}&dimensionFilter=COST_CENTER:{{costCenterId}}
+Authorization: {{token}}
+
+### Get GL summary grouped by cost center
+GET {{host}}/api/v1/finance/ledgers/{{ledgerId}}/dimension-summary?tenantId={{tenant}}&accountingPeriodId={{periodId}}&dimensionType=COST_CENTER
+Authorization: {{token}}

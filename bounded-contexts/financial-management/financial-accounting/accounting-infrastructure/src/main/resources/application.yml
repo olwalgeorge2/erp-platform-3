@@ -94,6 +94,17 @@ mp:
         max-in-flight-requests-per-connection: 5
         compression-type: snappy
         client-id: finance-period-${quarkus.uuid}
+      finance-dimension-events-out:
+        connector: smallrye-kafka
+        topic: ${FINANCE_DIMENSION_TOPIC:finance.dimensions.events.v1}
+        key-serializer: org.apache.kafka.common.serialization.StringSerializer
+        value-serializer: org.apache.kafka.common.serialization.StringSerializer
+        acks: all
+        retries: 3
+        enable-idempotence: true
+        max-in-flight-requests-per-connection: 5
+        compression-type: snappy
+        client-id: finance-dimension-${quarkus.uuid}
 
 # Custom finance knobs (used by future services/tests)
 financial-accounting:

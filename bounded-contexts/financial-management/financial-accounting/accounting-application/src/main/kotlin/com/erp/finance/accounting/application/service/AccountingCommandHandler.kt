@@ -11,11 +11,13 @@ import com.erp.finance.accounting.application.port.output.ChartOfAccountsReposit
 import com.erp.finance.accounting.application.port.output.FinanceEventPublisher
 import com.erp.finance.accounting.application.port.output.JournalEntryRepository
 import com.erp.finance.accounting.application.port.output.LedgerRepository
+import com.erp.finance.accounting.application.service.DimensionValidationService.DimensionValidationLine
 import com.erp.finance.accounting.domain.model.AccountId
 import com.erp.finance.accounting.domain.model.AccountingPeriod
 import com.erp.finance.accounting.domain.model.AccountingPeriodId
 import com.erp.finance.accounting.domain.model.ChartOfAccounts
 import com.erp.finance.accounting.domain.model.ChartOfAccountsId
+import com.erp.finance.accounting.domain.model.DimensionType
 import com.erp.finance.accounting.domain.model.EntryDirection
 import com.erp.finance.accounting.domain.model.JournalEntry
 import com.erp.finance.accounting.domain.model.JournalEntryLine
@@ -33,6 +35,7 @@ class AccountingCommandHandler(
     private val journalRepository: JournalEntryRepository,
     private val eventPublisher: FinanceEventPublisher,
     private val exchangeRateProvider: ExchangeRateProvider,
+    private val dimensionAssignmentValidator: DimensionAssignmentValidator,
 ) {
     fun createLedger(command: CreateLedgerCommand): Ledger {
         val baseCurrency = command.baseCurrency.uppercase()
@@ -86,6 +89,9 @@ class AccountingCommandHandler(
         val ledger =
             ledgerRepository.findById(ledgerId, command.tenantId)
                 ?: error("Ledger not found")
+        val chart =
+            chartRepository.findById(ledger.chartOfAccountsId, command.tenantId)
+                ?: error("Chart of accounts not found for ledger ${ledger.id.value}")
 
         val period =
             periodRepository.findById(periodId, command.tenantId)
@@ -106,6 +112,12 @@ class AccountingCommandHandler(
                     bookedAt = command.bookedAt,
                 )
             }
+        validateDimensions(
+            tenantId = command.tenantId,
+            bookedAt = command.bookedAt,
+            chart = chart,
+            lines = convertedLines,
+        )
         val balanceCheck =
             convertedLines.fold(Money.ZERO to Money.ZERO) { acc, line ->
                 val (debits, credits) = acc
@@ -342,6 +354,38 @@ class AccountingCommandHandler(
             description = line.description,
             originalCurrency = sourceCurrency,
             originalAmount = sourceAmount,
+            dimensions = line.dimensions,
+        )
+    }
+
+    private fun validateDimensions(
+        tenantId: UUID,
+        bookedAt: Instant,
+        chart: ChartOfAccounts,
+        lines: List<JournalEntryLine>,
+    ) {
+        val validationLines =
+            lines.map { line ->
+                val account =
+                    chart.accounts[line.accountId]
+                        ?: error("Account ${line.accountId.value} not found in chart ${chart.id.value}")
+                DimensionValidationLine(
+                    accountType = account.type,
+                    dimensions =
+                        buildMap {
+                            line.dimensions.costCenterId?.let { put(DimensionType.COST_CENTER, it) }
+                            line.dimensions.profitCenterId?.let { put(DimensionType.PROFIT_CENTER, it) }
+                            line.dimensions.departmentId?.let { put(DimensionType.DEPARTMENT, it) }
+                            line.dimensions.projectId?.let { put(DimensionType.PROJECT, it) }
+                            line.dimensions.businessAreaId?.let { put(DimensionType.BUSINESS_AREA, it) }
+                        },
+                )
+            }
+
+        dimensionAssignmentValidator.validateAssignments(
+            tenantId = tenantId,
+            bookedAt = bookedAt,
+            lines = validationLines,
         )
     }
 }

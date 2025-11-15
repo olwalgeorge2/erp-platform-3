@@ -1,11 +1,10 @@
 package com.erp.identity.infrastructure.adapter.input.rest
 
-import com.erp.identity.application.port.input.query.GetTenantQuery
-import com.erp.identity.application.port.input.query.ListTenantsQuery
 import com.erp.identity.domain.model.tenant.Tenant
 import com.erp.identity.domain.model.tenant.TenantId
-import com.erp.identity.domain.model.tenant.TenantStatus
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ActivateTenantRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.GetTenantRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.ListTenantsRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ProvisionTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.ResumeTenantRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.SuspendTenantRequest
@@ -13,17 +12,22 @@ import com.erp.identity.infrastructure.adapter.input.rest.dto.TenantResponse
 import com.erp.identity.infrastructure.adapter.input.rest.dto.toResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.identity.infrastructure.service.IdentityQueryService
+import com.erp.identity.infrastructure.validation.IdentityValidationException
+import com.erp.identity.infrastructure.validation.ValidationErrorCode
+import com.erp.identity.infrastructure.validation.ValidationMessageResolver
 import com.erp.shared.types.results.Result
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import jakarta.validation.Valid
+import jakarta.ws.rs.BeanParam
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
-import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Context
+import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.UriInfo
@@ -34,6 +38,7 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
+import java.util.Locale
 
 open class BaseTenantResource() {
     @Inject
@@ -41,6 +46,9 @@ open class BaseTenantResource() {
 
     @Inject
     protected lateinit var queryService: IdentityQueryService
+
+    @Context
+    protected var httpHeaders: HttpHeaders? = null
 
     constructor(
         commandService: IdentityCommandService,
@@ -121,19 +129,17 @@ open class BaseTenantResource() {
     )
     @Path("/{tenantId}")
     fun getTenant(
-        @PathParam("tenantId") tenantIdRaw: String,
-    ): Response =
-        parseTenantId(tenantIdRaw)
-            ?.let { tenantId -> queryService.getTenant(GetTenantQuery(tenantId)) }
-            ?.let { result ->
-                when (result) {
-                    is Result.Success -> {
-                        val tenant = result.value ?: return notFoundResponse(tenantIdRaw)
-                        Response.ok(tenant.toResponse()).build()
-                    }
-                    is Result.Failure -> result.failureResponse()
-                }
-            } ?: invalidIdentifierResponse("tenantId", tenantIdRaw)
+        @Valid @BeanParam request: GetTenantRequest,
+    ): Response {
+        val result = queryService.getTenant(request.toQuery(currentLocale()))
+        return when (result) {
+            is Result.Success -> {
+                val tenant = result.value ?: return notFoundResponse(request.tenantId.toString())
+                Response.ok(tenant.toResponse()).build()
+            }
+            is Result.Failure -> result.failureResponse()
+        }
+    }
 
     @GET
     @Operation(summary = "List tenants")
@@ -146,25 +152,14 @@ open class BaseTenantResource() {
         ],
     )
     fun listTenants(
-        @QueryParam("status") statusRaw: String?,
-        @QueryParam("limit") limit: Int?,
-        @QueryParam("offset") offset: Int?,
-    ): Response =
-        try {
-            val status = statusRaw?.let { TenantStatus.valueOf(it.uppercase()) }
-            val query =
-                ListTenantsQuery(
-                    status = status,
-                    limit = limit ?: 50,
-                    offset = offset ?: 0,
-                )
-            when (val result = queryService.listTenants(query)) {
-                is Result.Success -> Response.ok(result.value.map { it.toResponse() }).build()
-                is Result.Failure -> result.failureResponse()
-            }
-        } catch (ex: IllegalArgumentException) {
-            invalidQueryResponse(ex.message ?: "Invalid query parameters")
+        @Valid @BeanParam request: ListTenantsRequest,
+    ): Response {
+        val result = queryService.listTenants(request.toQuery(currentLocale()))
+        return when (result) {
+            is Result.Success -> Response.ok(result.value.map { it.toResponse() }).build()
+            is Result.Failure -> result.failureResponse()
         }
+    }
 
     @POST
     @Operation(summary = "Activate tenant")
@@ -185,11 +180,11 @@ open class BaseTenantResource() {
         request: ActivateTenantRequest,
     ): Response =
         parseTenantId(tenantIdRaw)
-            ?.let { tenantId ->
+            .let { tenantId ->
                 commandService.activateTenant(
                     request.toCommand(tenantId.value),
                 )
-            }?.toTenantResponse() ?: invalidIdentifierResponse("tenantId", tenantIdRaw)
+            }.toTenantResponse()
 
     @POST
     @Operation(summary = "Suspend tenant")
@@ -210,11 +205,11 @@ open class BaseTenantResource() {
         request: SuspendTenantRequest,
     ): Response =
         parseTenantId(tenantIdRaw)
-            ?.let { tenantId ->
+            .let { tenantId ->
                 commandService.suspendTenant(
                     request.toCommand(tenantId.value),
                 )
-            }?.toTenantResponse() ?: invalidIdentifierResponse("tenantId", tenantIdRaw)
+            }.toTenantResponse()
 
     @POST
     @Operation(summary = "Resume tenant")
@@ -235,42 +230,31 @@ open class BaseTenantResource() {
         request: ResumeTenantRequest,
     ): Response =
         parseTenantId(tenantIdRaw)
-            ?.let { tenantId ->
+            .let { tenantId ->
                 commandService.resumeTenant(
                     request.toCommand(tenantId.value),
                 )
-            }?.toTenantResponse() ?: invalidIdentifierResponse("tenantId", tenantIdRaw)
+            }.toTenantResponse()
 
-    private fun parseTenantId(raw: String): TenantId? =
-        try {
-            TenantId.from(raw)
-        } catch (ex: IllegalArgumentException) {
-            null
+    private fun parseTenantId(raw: String): TenantId =
+        runCatching { TenantId.from(raw) }.getOrElse {
+            throw IdentityValidationException(
+                errorCode = ValidationErrorCode.TENANCY_INVALID_TENANT_ID,
+                field = "tenantId",
+                rejectedValue = raw,
+                locale = currentLocale(),
+                message =
+                    ValidationMessageResolver.resolve(
+                        ValidationErrorCode.TENANCY_INVALID_TENANT_ID,
+                        currentLocale(),
+                    ),
+            )
         }
 
-    private fun invalidIdentifierResponse(
-        field: String,
-        value: String,
-    ): Response =
-        Response
-            .status(Response.Status.BAD_REQUEST)
-            .entity(
-                ErrorResponse(
-                    code = "INVALID_IDENTIFIER",
-                    message = "Invalid UUID for parameter '$field'",
-                    details = mapOf(field to value),
-                ),
-            ).build()
-
-    private fun invalidQueryResponse(reason: String): Response =
-        Response
-            .status(Response.Status.BAD_REQUEST)
-            .entity(
-                ErrorResponse(
-                    code = "INVALID_QUERY_PARAMETER",
-                    message = reason,
-                ),
-            ).build()
+    private fun currentLocale(): Locale =
+        httpHeaders?.language
+            ?: httpHeaders?.acceptableLanguages?.firstOrNull()
+            ?: Locale.getDefault()
 
     private fun notFoundResponse(tenantId: String): Response =
         Response

@@ -6,11 +6,14 @@ import com.erp.identity.domain.model.identity.Role
 import com.erp.identity.domain.model.identity.RoleId
 import com.erp.identity.domain.model.tenant.TenantId
 import com.erp.identity.infrastructure.adapter.input.rest.dto.CreateRoleRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.DeleteRoleRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.ListRolesRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.PermissionPayload
 import com.erp.identity.infrastructure.adapter.input.rest.dto.UpdateRoleRequest
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.identity.infrastructure.service.IdentityQueryService
 import com.erp.identity.infrastructure.service.security.AuthorizationService
+import com.erp.identity.infrastructure.validation.IdentityValidationException
 import com.erp.identity.infrastructure.web.RequestPrincipal
 import com.erp.identity.infrastructure.web.RequestPrincipalContext
 import com.erp.shared.types.results.Result
@@ -24,6 +27,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -96,9 +100,16 @@ class RoleResourceTest {
     @Test
     fun `delete role returns no content`() {
         val tenantId = TenantId.generate()
+        val roleId = RoleId.generate()
         whenever(commandService.deleteRole(any())).thenReturn(Result.success(Unit))
 
-        val response = resource.deleteRole(tenantId.toString(), RoleId.generate().toString())
+        val response =
+            resource.deleteRole(
+                DeleteRoleRequest(
+                    tenantId = tenantId.value,
+                    roleId = roleId.value,
+                ),
+            )
 
         assertEquals(Response.Status.NO_CONTENT.statusCode, response.status)
         verify(commandService).deleteRole(any())
@@ -109,7 +120,14 @@ class RoleResourceTest {
         val tenantId = TenantId.generate()
         whenever(queryService.listRoles(any())).thenReturn(Result.success(listOf(sampleRole(tenantId))))
 
-        val response = resource.listRoles(tenantId.toString(), 10, 0)
+        val response =
+            resource.listRoles(
+                ListRolesRequest(
+                    tenantId = tenantId.value,
+                    limit = 10,
+                    offset = 0,
+                ),
+            )
 
         assertEquals(Response.Status.OK.statusCode, response.status)
         verify(queryService).listRoles(any())
@@ -117,18 +135,24 @@ class RoleResourceTest {
 
     @Test
     fun `get role returns bad request for invalid identifiers`() {
-        val response = resource.getRole("not-a-tenant", "not-a-role")
-
-        assertEquals(Response.Status.BAD_REQUEST.statusCode, response.status)
+        assertThrows<IdentityValidationException> {
+            resource.getRole("not-a-tenant", "not-a-role")
+        }
         verifyNoInteractions(queryService)
     }
 
     @Test
     fun `delete role validates tenant id separately`() {
         val tenantId = TenantId.generate()
-        val response = resource.deleteRole(tenantId.toString(), "not-a-role")
 
-        assertEquals(Response.Status.BAD_REQUEST.statusCode, response.status)
+        assertThrows<IdentityValidationException> {
+            resource.deleteRole(
+                DeleteRoleRequest(
+                    tenantId = tenantId.value,
+                    roleId = null,
+                ),
+            )
+        }
         verify(commandService, never()).deleteRole(any())
     }
 

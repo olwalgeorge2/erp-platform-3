@@ -1,0 +1,128 @@
+### Finance Dimension & Company Code API Samples
+@host = http://localhost:8082
+@tenant = aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+@companyCodeId = {{$guid}}
+@costCenterId = {{$guid}}
+@fiscalVariantId = {{$guid}}
+# Provide an access token (service or gateway). Replace placeholder below.
+@token = Bearer <PASTE_JWT_TOKEN_HERE>
+
+### Create company code
+POST {{host}}/api/v1/finance/company-codes
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+{
+  "tenantId": "{{tenant}}",
+  "code": "US01",
+  "name": "North America Operations",
+  "legalEntityName": "ERP Platform Inc.",
+  "countryCode": "US",
+  "baseCurrency": "USD",
+  "timezone": "America/Chicago"
+}
+
+### Create cost center
+POST {{host}}/api/v1/finance/dimensions/cost-centers
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+{
+  "tenantId": "{{tenant}}",
+  "companyCodeId": "{{companyCodeId}}",
+  "code": "6000",
+  "name": "Digital Marketing",
+  "status": "ACTIVE",
+  "validFrom": "2025-01-01",
+  "validTo": null
+}
+
+### Update cost center details
+PUT {{host}}/api/v1/finance/dimensions/cost-centers/{{costCenterId}}
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+{
+  "name": "Digital Marketing & Growth",
+  "status": "ACTIVE",
+  "validTo": null,
+  "description": "Covers paid media + SEO budget"
+}
+
+### List profit centers filtered by company code
+GET {{host}}/api/v1/finance/dimensions/profit-centers?companyCodeId={{companyCodeId}}&status=ACTIVE
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+### Create fiscal year variant (4-4-5)
+POST {{host}}/api/v1/finance/fiscal-year-variants
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+{
+  "tenantId": "{{tenant}}",
+  "code": "FY-445",
+  "name": "Retail 4-4-5",
+  "startMonth": 1,
+  "calendarPattern": "4-4-5",
+  "periodStructure": [
+    { "period": 1, "label": "P01", "lengthInDays": 28 },
+    { "period": 2, "label": "P02", "lengthInDays": 28 },
+    { "period": 3, "label": "P03", "lengthInDays": 35 }
+  ]
+}
+
+### Assign fiscal year variant to company code
+POST {{host}}/api/v1/finance/company-codes/{{companyCodeId}}/fiscal-year-variants
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+{
+  "fiscalYearVariantId": "{{fiscalVariantId}}",
+  "effectiveFrom": "2025-01-01"
+}
+
+### Schedule blackout window for a company code
+POST {{host}}/api/v1/finance/company-codes/{{companyCodeId}}/period-blackouts
+Content-Type: application/json
+X-Tenant-Id: {{tenant}}
+Authorization: {{token}}
+
+{
+  "periodCode": "2025-P12",
+  "blackoutStart": "2025-12-28T00:00:00Z",
+  "blackoutEnd": "2026-01-05T23:59:59Z",
+  "status": "PLANNED",
+  "reason": "Year-end close freeze"
+}
+
+### Upsert dimension policy (e.g., cost center mandatory for expense)
+POST {{host}}/api/v1/finance/dimension-policies
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+  "tenantId": "{{tenant}}",
+  "accountType": "EXPENSE",
+  "dimensionType": "COST_CENTER",
+  "requirement": "MANDATORY"
+}
+
+### List dimension policies
+GET {{host}}/api/v1/finance/dimension-policies?tenantId={{tenant}}
+Authorization: {{token}}
+
+### Link ledger to company code
+POST {{host}}/api/v1/finance/company-codes/{{companyCodeId}}/ledgers
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+  "tenantId": "{{tenant}}",
+  "ledgerId": "{{ledgerId}}"
+}

@@ -2,6 +2,7 @@ package com.erp.finance.accounting.infrastructure.persistence.entity
 
 import com.erp.finance.accounting.domain.model.AccountId
 import com.erp.finance.accounting.domain.model.AccountingPeriodId
+import com.erp.finance.accounting.domain.model.DimensionAssignments
 import com.erp.finance.accounting.domain.model.EntryDirection
 import com.erp.finance.accounting.domain.model.JournalEntry
 import com.erp.finance.accounting.domain.model.JournalEntryLine
@@ -149,6 +150,11 @@ class JournalEntryEntity(
                     createdAt = line.createdAt,
                     originalCurrency = line.originalCurrency,
                     originalAmount = line.originalAmount.amount,
+                    costCenterId = line.dimensions.costCenterId,
+                    profitCenterId = line.dimensions.profitCenterId,
+                    departmentId = line.dimensions.departmentId,
+                    projectId = line.dimensions.projectId,
+                    businessAreaId = line.dimensions.businessAreaId,
                 )
         }
     }
@@ -206,6 +212,16 @@ class JournalEntryLineEntity(
     var originalCurrency: String = currency,
     @Column(name = "original_amount", nullable = false)
     var originalAmount: Long = 0,
+    @Column(name = "cost_center_id")
+    var costCenterId: UUID? = null,
+    @Column(name = "profit_center_id")
+    var profitCenterId: UUID? = null,
+    @Column(name = "department_id")
+    var departmentId: UUID? = null,
+    @Column(name = "project_id")
+    var projectId: UUID? = null,
+    @Column(name = "business_area_id")
+    var businessAreaId: UUID? = null,
 ) {
     fun toDomain(): JournalEntryLine =
         JournalEntryLine(
@@ -218,5 +234,13 @@ class JournalEntryLineEntity(
             createdAt = createdAt,
             originalCurrency = originalCurrency,
             originalAmount = Money(originalAmount),
+            dimensions =
+                DimensionAssignments(
+                    costCenterId = costCenterId,
+                    profitCenterId = profitCenterId,
+                    departmentId = departmentId,
+                    projectId = projectId,
+                    businessAreaId = businessAreaId,
+                ),
         )
 }

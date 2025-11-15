@@ -1,6 +1,7 @@
 package com.erp.finance.accounting.application.port.input.command
 
 import com.erp.finance.accounting.domain.model.AccountId
+import com.erp.finance.accounting.domain.model.DimensionAssignments
 import com.erp.finance.accounting.domain.model.EntryDirection
 import com.erp.finance.accounting.domain.model.Money
 import java.time.Instant
@@ -22,6 +23,7 @@ data class JournalEntryLineCommand(
     val amount: Money,
     val currency: String? = null,
     val description: String? = null,
+    val dimensions: DimensionAssignments = DimensionAssignments(),
 )
 
 data class RunCurrencyRevaluationCommand(

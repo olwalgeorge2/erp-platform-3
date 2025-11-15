@@ -1,8 +1,10 @@
 package com.erp.finance.accounting.infrastructure.outbox
 
 import com.erp.finance.accounting.application.port.output.FinanceEventPublisher
+import com.erp.finance.accounting.domain.model.AccountingDimension
 import com.erp.finance.accounting.domain.model.AccountingPeriod
 import com.erp.finance.accounting.domain.model.AccountingPeriodStatus
+import com.erp.finance.accounting.domain.model.DimensionEventAction
 import com.erp.finance.accounting.domain.model.JournalEntry
 import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.enterprise.context.ApplicationScoped
@@ -37,6 +39,20 @@ class FinanceOutboxPublisher(
             FinanceOutboxEventEntity(
                 eventType = payload.eventType,
                 channel = "finance-period-events-out",
+                payload = objectMapper.writeValueAsString(payload),
+                version = payload.version,
+                occurredAt = payload.occurredAt,
+            )
+        outboxRepository.save(event)
+    }
+
+    override fun publishDimensionChanged(
+        dimension: AccountingDimension,
+        action: DimensionEventAction,
+    ) {
+        val payload = DimensionChangedEventPayload.from(dimension, action)
+        val event =
+            FinanceOutboxEventEntity.dimension(
                 payload = objectMapper.writeValueAsString(payload),
                 version = payload.version,
                 occurredAt = payload.occurredAt,

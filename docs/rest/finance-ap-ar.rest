@@ -1,0 +1,89 @@
+### Create vendor
+POST http://localhost:8092/api/v1/finance/vendors
+Content-Type: application/json
+
+{
+  "tenantId": "00000000-0000-0000-0000-000000000001",
+  "companyCodeId": "00000000-0000-0000-0000-000000000101",
+  "vendorNumber": "V-1001",
+  "name": "Acme Supplies",
+  "currency": "USD",
+  "paymentTerms": {
+    "code": "NET30",
+    "type": "NET",
+    "dueInDays": 30
+  },
+  "address": {
+    "line1": "1200 First Ave",
+    "city": "New York",
+    "countryCode": "US"
+  },
+  "contact": {
+    "name": "Mary Major",
+    "email": "mary@acme.com"
+  }
+}
+
+### List vendors
+GET http://localhost:8092/api/v1/finance/vendors?tenantId=00000000-0000-0000-0000-000000000001
+
+### Create customer
+POST http://localhost:8093/api/v1/finance/customers
+Content-Type: application/json
+
+{
+  "tenantId": "00000000-0000-0000-0000-000000000001",
+  "companyCodeId": "00000000-0000-0000-0000-000000000101",
+  "customerNumber": "C-2001",
+  "name": "Globex Corp",
+  "currency": "USD",
+  "paymentTerms": {
+    "code": "NET45",
+    "type": "NET",
+    "dueInDays": 45
+  },
+  "billingAddress": {
+    "line1": "200 Market Street",
+    "city": "San Francisco",
+    "countryCode": "US"
+  },
+  "creditLimit": {
+    "amount": 50000,
+    "currency": "USD"
+  }
+}
+
+### List customers
+GET http://localhost:8093/api/v1/finance/customers?tenantId=00000000-0000-0000-0000-000000000001
+
+### Create AP invoice
+POST http://localhost:8092/api/v1/finance/ap/invoices
+Content-Type: application/json
+
+{
+  "tenantId": "00000000-0000-0000-0000-000000000001",
+  "companyCodeId": "00000000-0000-0000-0000-000000000101",
+  "vendorId": "00000000-0000-0000-0000-000000000201",
+  "invoiceNumber": "INV-9001",
+  "invoiceDate": "2025-11-15",
+  "dueDate": "2025-12-15",
+  "currency": "USD",
+  "lines": [
+    {
+      "glAccountId": "00000000-0000-0000-0000-000000001111",
+      "description": "Consulting services",
+      "netAmount": 120000
+    }
+  ]
+}
+
+### Post AP invoice
+POST http://localhost:8092/api/v1/finance/ap/invoices/{{billId}}/post
+Content-Type: application/json
+
+{
+  "tenantId": "00000000-0000-0000-0000-000000000001"
+}
+
+### List AP invoices
+GET http://localhost:8092/api/v1/finance/ap/invoices?tenantId=00000000-0000-0000-0000-000000000001

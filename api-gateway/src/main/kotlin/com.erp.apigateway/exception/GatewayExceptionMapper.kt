@@ -2,6 +2,7 @@ package com.erp.apigateway.exception
 
 import com.erp.apigateway.routing.RouteNotFoundException
 import com.erp.apigateway.tracing.TraceContext
+import com.erp.apigateway.validation.GatewayValidationException
 import jakarta.inject.Inject
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
@@ -17,6 +18,18 @@ data class ErrorResponse(
     val code: String,
     val message: String,
     val traceId: String? = null,
+    val validationErrors: List<ValidationErrorResponse> = emptyList(),
+)
+
+@Schema(
+    name = "GatewayValidationError",
+    description = "Details for a specific validation violation",
+)
+data class ValidationErrorResponse(
+    val field: String,
+    val code: String,
+    val message: String,
+    val rejectedValue: String?,
 )
 
 @Provider
@@ -25,6 +38,9 @@ class GatewayExceptionMapper : ExceptionMapper<Throwable> {
     var traceContext: TraceContext? = null
 
     override fun toResponse(exception: Throwable): Response {
+        if (exception is GatewayValidationException) {
+            return validationErrorResponse(exception)
+        }
         val (status, code, message) =
             when (exception) {
                 is RouteNotFoundException ->
@@ -49,5 +65,38 @@ class GatewayExceptionMapper : ExceptionMapper<Throwable> {
             .entity(body)
             .type(MediaType.APPLICATION_JSON_TYPE)
             .build()
+    }
+
+    private fun validationErrorResponse(exception: GatewayValidationException): Response {
+        val violation =
+            ValidationErrorResponse(
+                field = exception.field,
+                code = exception.errorCode.code,
+                message = exception.message ?: exception.errorCode.code,
+                rejectedValue = exception.rejectedValue,
+            )
+        val body =
+            ErrorResponse(
+                code = exception.errorCode.code,
+                message = exception.message ?: exception.errorCode.code,
+                traceId = traceContext?.traceId,
+                validationErrors = listOf(violation),
+            )
+        return Response
+            .status(UNPROCESSABLE_ENTITY)
+            .entity(body)
+            .type(MediaType.APPLICATION_JSON_TYPE)
+            .build()
+    }
+
+    companion object {
+        private val UNPROCESSABLE_ENTITY =
+            object : Response.StatusType {
+                override fun getStatusCode(): Int = 422
+
+                override fun getReasonPhrase(): String = "Unprocessable Entity"
+
+                override fun getFamily(): Response.Status.Family = Response.Status.Family.CLIENT_ERROR
+            }
     }
 }

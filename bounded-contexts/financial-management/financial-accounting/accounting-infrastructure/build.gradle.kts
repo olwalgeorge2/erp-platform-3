@@ -29,6 +29,7 @@ dependencies {
     implementation(libs.jackson.module.kotlin)
 
     testImplementation("io.quarkus:quarkus-junit5")
+    testImplementation("io.rest-assured:rest-assured")
     // Testcontainers for integration tests
     testImplementation("org.testcontainers:testcontainers:1.20.4")
     testImplementation("org.testcontainers:postgresql:1.20.4")

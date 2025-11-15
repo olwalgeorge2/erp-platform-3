@@ -1,19 +1,24 @@
 package com.erp.identity.infrastructure.adapter.input.rest
 
-import com.erp.identity.application.port.input.command.DeleteRoleCommand
-import com.erp.identity.application.port.input.query.ListRolesQuery
 import com.erp.identity.domain.model.identity.RoleId
 import com.erp.identity.domain.model.tenant.TenantId
 import com.erp.identity.infrastructure.adapter.input.rest.dto.CreateRoleRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.DeleteRoleRequest
+import com.erp.identity.infrastructure.adapter.input.rest.dto.ListRolesRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.RoleResponse
 import com.erp.identity.infrastructure.adapter.input.rest.dto.UpdateRoleRequest
 import com.erp.identity.infrastructure.adapter.input.rest.dto.toResponse
 import com.erp.identity.infrastructure.service.IdentityCommandService
 import com.erp.identity.infrastructure.service.IdentityQueryService
 import com.erp.identity.infrastructure.service.security.AuthorizationService
+import com.erp.identity.infrastructure.validation.IdentityValidationException
+import com.erp.identity.infrastructure.validation.ValidationErrorCode
+import com.erp.identity.infrastructure.validation.ValidationMessageResolver
 import com.erp.shared.types.results.Result
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import jakarta.validation.Valid
+import jakarta.ws.rs.BeanParam
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.GET
@@ -22,8 +27,8 @@ import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
-import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.Context
+import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.UriInfo
@@ -34,7 +39,7 @@ import org.eclipse.microprofile.openapi.annotations.parameters.RequestBody
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponses
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
-import kotlin.math.max
+import java.util.Locale
 
 open class BaseRoleResource() {
     @Inject
@@ -45,6 +50,9 @@ open class BaseRoleResource() {
 
     @Inject
     protected lateinit var authorizationService: AuthorizationService
+
+    @Context
+    protected var httpHeaders: HttpHeaders? = null
 
     constructor(
         commandService: IdentityCommandService,
@@ -146,45 +154,33 @@ open class BaseRoleResource() {
     )
     @Path("/{roleId}")
     fun deleteRole(
-        @PathParam("tenantId") tenantIdRaw: String,
-        @PathParam("roleId") roleIdRaw: String,
-    ): Response =
-        withTenantAndRole(tenantIdRaw, roleIdRaw) { tenantId, roleId ->
-            authorizationService.requireRoleManagement(tenantId)?.let { return@withTenantAndRole it }
-            val command =
-                DeleteRoleCommand(
-                    tenantId = tenantId,
-                    roleId = roleId,
-                )
-            when (val result = commandService.deleteRole(command)) {
-                is Result.Success -> Response.noContent().build()
-                is Result.Failure -> result.failureResponse()
-            }
+        @Valid @BeanParam request: DeleteRoleRequest,
+    ): Response {
+        val command = request.toCommand(currentLocale())
+        authorizationService.requireRoleManagement(command.tenantId)?.let { return it }
+
+        val result = commandService.deleteRole(command)
+        return when (result) {
+            is Result.Success -> Response.noContent().build()
+            is Result.Failure -> result.failureResponse()
         }
+    }
 
     @GET
     @Operation(summary = "List roles")
     @APIResponses(value = [APIResponse(responseCode = "200", description = "OK")])
     fun listRoles(
-        @PathParam("tenantId") tenantIdRaw: String,
-        @QueryParam("limit") limit: Int?,
-        @QueryParam("offset") offset: Int?,
-    ): Response =
-        withTenant(tenantIdRaw) { tenantId ->
-            authorizationService.requireRoleRead(tenantId)?.let { return@withTenant it }
-            val safeLimit = limit?.coerceIn(1, 200) ?: 50
-            val safeOffset = offset?.let { max(0, it) } ?: 0
-            val query =
-                ListRolesQuery(
-                    tenantId = tenantId,
-                    limit = safeLimit,
-                    offset = safeOffset,
-                )
-            when (val result = queryService.listRoles(query)) {
-                is Result.Success -> Response.ok(result.value.map { it.toResponse() }).build()
-                is Result.Failure -> result.failureResponse()
-            }
+        @Valid @BeanParam request: ListRolesRequest,
+    ): Response {
+        val query = request.toQuery(currentLocale())
+        authorizationService.requireRoleRead(query.tenantId)?.let { return it }
+
+        val result = queryService.listRoles(query)
+        return when (result) {
+            is Result.Success -> Response.ok(result.value.map { it.toResponse() }).build()
+            is Result.Failure -> result.failureResponse()
         }
+    }
 
     @GET
     @Operation(summary = "Get role by ID")
@@ -221,56 +217,52 @@ open class BaseRoleResource() {
     private fun withTenant(
         tenantIdRaw: String,
         block: (TenantId) -> Response,
-    ): Response {
-        val tenantId = parseTenantId(tenantIdRaw) ?: return invalidTenantResponse(tenantIdRaw)
-        return block(tenantId)
-    }
+    ): Response = block(parseTenantId(tenantIdRaw))
 
     private fun withTenantAndRole(
         tenantIdRaw: String,
         roleIdRaw: String,
         block: (TenantId, RoleId) -> Response,
     ): Response {
-        val tenantId = parseTenantId(tenantIdRaw) ?: return invalidTenantResponse(tenantIdRaw)
-        val roleId = parseRoleId(roleIdRaw) ?: return invalidRoleResponse(roleIdRaw)
+        val tenantId = parseTenantId(tenantIdRaw)
+        val roleId = parseRoleId(roleIdRaw)
         return block(tenantId, roleId)
     }
 
-    private fun parseTenantId(raw: String): TenantId? =
-        try {
-            TenantId.from(raw)
-        } catch (_: IllegalArgumentException) {
-            null
+    private fun parseTenantId(raw: String): TenantId =
+        runCatching { TenantId.from(raw) }.getOrElse {
+            throw IdentityValidationException(
+                errorCode = ValidationErrorCode.TENANCY_INVALID_TENANT_ID,
+                field = "tenantId",
+                rejectedValue = raw,
+                locale = currentLocale(),
+                message =
+                    ValidationMessageResolver.resolve(
+                        ValidationErrorCode.TENANCY_INVALID_TENANT_ID,
+                        currentLocale(),
+                    ),
+            )
         }
 
-    private fun parseRoleId(raw: String): RoleId? =
-        try {
-            RoleId.from(raw)
-        } catch (_: IllegalArgumentException) {
-            null
+    private fun parseRoleId(raw: String): RoleId =
+        runCatching { RoleId.from(raw) }.getOrElse {
+            throw IdentityValidationException(
+                errorCode = ValidationErrorCode.TENANCY_INVALID_ROLE_ID,
+                field = "roleId",
+                rejectedValue = raw,
+                locale = currentLocale(),
+                message =
+                    ValidationMessageResolver.resolve(
+                        ValidationErrorCode.TENANCY_INVALID_ROLE_ID,
+                        currentLocale(),
+                    ),
+            )
         }
 
-    private fun invalidTenantResponse(value: String): Response =
-        Response
-            .status(Response.Status.BAD_REQUEST)
-            .entity(
-                ErrorResponse(
-                    code = "INVALID_TENANT_ID",
-                    message = "Invalid tenant identifier",
-                    details = mapOf("tenantId" to value),
-                ),
-            ).build()
-
-    private fun invalidRoleResponse(value: String): Response =
-        Response
-            .status(Response.Status.BAD_REQUEST)
-            .entity(
-                ErrorResponse(
-                    code = "INVALID_ROLE_ID",
-                    message = "Invalid role identifier",
-                    details = mapOf("roleId" to value),
-                ),
-            ).build()
+    private fun currentLocale(): Locale =
+        httpHeaders?.language
+            ?: httpHeaders?.acceptableLanguages?.firstOrNull()
+            ?: Locale.getDefault()
 
     private fun notFoundResponse(roleId: String): Response =
         Response

@@ -1,0 +1,45 @@
+quarkus:
+  application:
+    name: financial-ar-service
+  http:
+    port: ${FINANCE_AR_HTTP_PORT:8093}
+    host: ${FINANCE_AR_HTTP_HOST:0.0.0.0}
+  datasource:
+    db-kind: postgresql
+  flyway:
+    migrate-at-start: true
+    default-schema: financial_ar
+    locations: classpath:db/migration
+    clean-disabled: true
+  hibernate-orm:
+    database:
+      default-schema: financial_ar
+      generation: none
+    log:
+      sql: ${QUARKUS_HIBERNATE_LOG_SQL:false}
+      format-sql: true
+      bind-parameters: true
+  micrometer:
+    export:
+      prometheus:
+        enabled: true
+        path: /q/metrics
+  smallrye-openapi:
+    path: /q/openapi
+  swagger-ui:
+    always-include: true
+    path: /q/swagger-ui
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+"%prod":
+  quarkus:
+    datasource:
+      username: ${FINANCE_AR_DB_USERNAME:postgres}
+      password: ${FINANCE_AR_DB_PASSWORD:postgres}
+      jdbc:
+        url: ${FINANCE_AR_DB_JDBC_URL:jdbc:postgresql://127.0.0.1:5432/test}
+        min-size: 2
+        max-size: 8
+        initial-size: 2
+        acquisition-timeout: 30s

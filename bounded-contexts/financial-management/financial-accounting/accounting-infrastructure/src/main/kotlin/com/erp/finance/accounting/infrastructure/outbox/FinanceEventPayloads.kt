@@ -1,11 +1,15 @@
 package com.erp.finance.accounting.infrastructure.outbox
 
+import com.erp.finance.accounting.domain.model.AccountingDimension
 import com.erp.finance.accounting.domain.model.AccountingPeriod
 import com.erp.finance.accounting.domain.model.AccountingPeriodStatus
+import com.erp.finance.accounting.domain.model.DimensionEventAction
+import com.erp.finance.accounting.domain.model.DimensionType
 import com.erp.finance.accounting.domain.model.EntryDirection
 import com.erp.finance.accounting.domain.model.JournalEntry
 import com.erp.finance.accounting.domain.model.JournalEntryLine
 import java.time.Instant
+import java.time.ZoneOffset
 import java.util.UUID
 
 data class JournalPostedEventPayload(
@@ -65,6 +69,11 @@ data class JournalEntryLinePayload(
     val amountMinor: Long,
     val currency: String,
     val description: String?,
+    val costCenterId: UUID? = null,
+    val profitCenterId: UUID? = null,
+    val departmentId: UUID? = null,
+    val projectId: UUID? = null,
+    val businessAreaId: UUID? = null,
 ) {
     companion object {
         fun from(line: JournalEntryLine): JournalEntryLinePayload =
@@ -74,6 +83,47 @@ data class JournalEntryLinePayload(
                 amountMinor = line.amount.amount,
                 currency = line.currency,
                 description = line.description,
+                costCenterId = line.dimensions.costCenterId,
+                profitCenterId = line.dimensions.profitCenterId,
+                departmentId = line.dimensions.departmentId,
+                projectId = line.dimensions.projectId,
+                businessAreaId = line.dimensions.businessAreaId,
+            )
+    }
+}
+
+data class DimensionChangedEventPayload(
+    val eventId: UUID = UUID.randomUUID(),
+    val eventType: String = "finance.dimension.changed",
+    val version: Int = 1,
+    val occurredAt: Instant = Instant.now(),
+    val tenantId: UUID,
+    val dimensionId: UUID,
+    val companyCodeId: UUID,
+    val dimensionType: DimensionType,
+    val action: DimensionEventAction,
+    val code: String,
+    val name: String,
+    val status: String,
+    val validFrom: Instant,
+    val validTo: Instant?,
+) {
+    companion object {
+        fun from(
+            dimension: AccountingDimension,
+            action: DimensionEventAction,
+        ): DimensionChangedEventPayload =
+            DimensionChangedEventPayload(
+                tenantId = dimension.tenantId,
+                dimensionId = dimension.id,
+                companyCodeId = dimension.companyCodeId,
+                dimensionType = dimension.type,
+                action = action,
+                code = dimension.code,
+                name = dimension.name,
+                status = dimension.status.name,
+                validFrom = dimension.validFrom.atStartOfDay(ZoneOffset.UTC).toInstant(),
+                validTo = dimension.validTo?.atStartOfDay(ZoneOffset.UTC)?.toInstant(),
             )
     }
 }

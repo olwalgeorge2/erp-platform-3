@@ -20,6 +20,8 @@ Phase 4 delivered the foundational financial-accounting slice with basic ledger,
 
 Phase 4 delivered the transactional outbox, schema registration, and gateway wiring for the financial-accounting slice. Phase 5 focuses on the features and controls required to approach "world-class SAP grade" parity. This document tracks the targeted capabilities and the associated ADR references.
 
+> **Execution Blueprint:** The detailed stage-by-stage order for closing SAP-grade gaps now lives in `docs/FINANCE_SAP_PARITY_EXECUTION.md`. Use that blueprint to sequence delivery work while this plan tracks scope, sizing, and sprint allocations.
+
 ---
 
 ## Phase 5A Progress (Sprint 2 - In Progress)

@@ -31,13 +31,15 @@ import java.util.concurrent.CompletionStage
 class KafkaFinanceEventPublisherTest {
     private lateinit var journalEmitter: TestEmitter
     private lateinit var periodEmitter: TestEmitter
+    private lateinit var dimensionEmitter: TestEmitter
     private lateinit var publisher: KafkaFinanceEventPublisher
 
     @BeforeEach
     fun setup() {
         journalEmitter = TestEmitter()
         periodEmitter = TestEmitter()
-        publisher = KafkaFinanceEventPublisher(journalEmitter, periodEmitter)
+        dimensionEmitter = TestEmitter()
+        publisher = KafkaFinanceEventPublisher(journalEmitter, periodEmitter, dimensionEmitter)
     }
 
     @Test

@@ -68,6 +68,7 @@ class FinanceCommandServiceTest {
                 journalRepository = journalRepository,
                 eventPublisher = eventPublisher,
                 exchangeRateProvider = exchangeRateProvider,
+                dimensionAssignmentValidator = NoOpDimensionValidator(),
             )
         service = FinanceCommandService(handler, meterRegistry)
     }
@@ -134,6 +135,16 @@ class FinanceCommandServiceTest {
                 baseCurrency = "USD",
             )
         ledgerRepository.save(ledger)
+        val debitAccount = AccountId()
+        val creditAccount = AccountId()
+        saveChart(
+            ledger.chartOfAccountsId,
+            listOf(
+                AccountSeed(debitAccount, "5000", "Expense", AccountType.EXPENSE),
+                AccountSeed(creditAccount, "4000", "Revenue", AccountType.REVENUE),
+            ),
+            ledger.baseCurrency,
+        )
         val period =
             AccountingPeriod(
                 id = AccountingPeriodId(UUID.randomUUID()),
@@ -155,14 +166,14 @@ class FinanceCommandServiceTest {
                 lines =
                     listOf(
                         JournalEntryLineCommand(
-                            accountId = AccountId(),
+                            accountId = debitAccount,
                             direction = EntryDirection.DEBIT,
                             amount = Money(1_00),
                             currency = "usd",
-                            description = "Cash",
+                            description = "Expense",
                         ),
                         JournalEntryLineCommand(
-                            accountId = AccountId(),
+                            accountId = creditAccount,
                             direction = EntryDirection.CREDIT,
                             amount = Money(1_00),
                             currency = "usd",
@@ -188,6 +199,15 @@ class FinanceCommandServiceTest {
                 baseCurrency = "USD",
             )
         ledgerRepository.save(ledger)
+        chartRepository.save(
+            ChartOfAccounts(
+                id = ledger.chartOfAccountsId,
+                tenantId = tenantId,
+                baseCurrency = ledger.baseCurrency,
+                code = "GL",
+                name = "General Ledger Chart",
+            ),
+        )
         val period =
             AccountingPeriod(
                 id = AccountingPeriodId(UUID.randomUUID()),
@@ -226,6 +246,20 @@ class FinanceCommandServiceTest {
                 baseCurrency = "USD",
             )
         ledgerRepository.save(ledger)
+        val assetAccount = AccountId(UUID.randomUUID())
+        val creditAccount = AccountId(UUID.randomUUID())
+        val gainAccount = AccountId(UUID.randomUUID())
+        val lossAccount = AccountId(UUID.randomUUID())
+        saveChart(
+            ledger.chartOfAccountsId,
+            listOf(
+                AccountSeed(assetAccount, "1100", "Foreign Asset", AccountType.ASSET, currency = "EUR"),
+                AccountSeed(creditAccount, "2000", "Liability", AccountType.LIABILITY),
+                AccountSeed(gainAccount, "9100", "FX Gain", AccountType.REVENUE),
+                AccountSeed(lossAccount, "9200", "FX Loss", AccountType.EXPENSE),
+            ),
+            ledger.baseCurrency,
+        )
         val period =
             AccountingPeriod(
                 id = AccountingPeriodId(UUID.randomUUID()),
@@ -237,11 +271,6 @@ class FinanceCommandServiceTest {
                 status = AccountingPeriodStatus.OPEN,
             )
         periodRepository.save(period)
-
-        val assetAccount = AccountId(UUID.randomUUID())
-        val creditAccount = AccountId(UUID.randomUUID())
-        val gainAccount = AccountId(UUID.randomUUID())
-        val lossAccount = AccountId(UUID.randomUUID())
 
         exchangeRateProvider.stubRate("EUR", "USD", BigDecimal("1.00"))
         service.postJournalEntry(
@@ -300,6 +329,41 @@ class FinanceCommandServiceTest {
                 .count(),
         )
     }
+
+    private fun saveChart(
+        chartId: ChartOfAccountsId,
+        accounts: List<AccountSeed>,
+        baseCurrency: String,
+    ) {
+        val chart =
+            ChartOfAccounts(
+                id = chartId,
+                tenantId = tenantId,
+                baseCurrency = baseCurrency,
+                code = "GL",
+                name = "General Ledger Chart",
+                accounts =
+                    accounts.associate { seed ->
+                        seed.id to
+                            com.erp.finance.accounting.domain.model.Account(
+                                id = seed.id,
+                                code = seed.code,
+                                name = seed.name,
+                                type = seed.type,
+                                currency = seed.currency,
+                            )
+                    },
+            )
+        chartRepository.save(chart)
+    }
+
+    private data class AccountSeed(
+        val id: AccountId,
+        val code: String,
+        val name: String,
+        val type: AccountType,
+        val currency: String = "USD",
+    )
 }
 
 private class InMemoryLedgerRepository : LedgerRepository {
@@ -396,6 +460,13 @@ private class RecordingFinanceEventPublisher : FinanceEventPublisher {
     ) {
         periodEvents += period to previousStatus
     }
+
+    override fun publishDimensionChanged(
+        dimension: com.erp.finance.accounting.domain.model.AccountingDimension,
+        action: com.erp.finance.accounting.domain.model.DimensionEventAction,
+    ) {
+        // No-op for this test
+    }
 }
 
 private class StubExchangeRateProvider : ExchangeRateProvider {
@@ -429,5 +500,15 @@ private class StubExchangeRateProvider : ExchangeRateProvider {
             rate = resolved,
             asOf = asOf,
         )
+    }
+}
+
+private class NoOpDimensionValidator : com.erp.finance.accounting.application.service.DimensionAssignmentValidator {
+    override fun validateAssignments(
+        tenantId: UUID,
+        bookedAt: Instant,
+        lines: List<com.erp.finance.accounting.application.service.DimensionValidationService.DimensionValidationLine>,
+    ) {
+        // No-op for unit tests
     }
 }

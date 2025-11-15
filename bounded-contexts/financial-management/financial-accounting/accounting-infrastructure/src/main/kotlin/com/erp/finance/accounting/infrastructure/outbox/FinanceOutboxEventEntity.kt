@@ -87,5 +87,18 @@ class FinanceOutboxEventEntity(
                 version = version,
                 occurredAt = occurredAt,
             )
+
+        fun dimension(
+            payload: String,
+            version: Int,
+            occurredAt: Instant,
+        ): FinanceOutboxEventEntity =
+            FinanceOutboxEventEntity(
+                eventType = "finance.dimension.changed",
+                channel = "finance-dimension-events-out",
+                payload = payload,
+                version = version,
+                occurredAt = occurredAt,
+            )
     }
 }

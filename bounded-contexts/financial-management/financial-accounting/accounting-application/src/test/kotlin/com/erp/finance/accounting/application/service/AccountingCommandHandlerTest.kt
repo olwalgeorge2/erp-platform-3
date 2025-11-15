@@ -10,6 +10,7 @@ import com.erp.finance.accounting.application.port.output.ChartOfAccountsReposit
 import com.erp.finance.accounting.application.port.output.FinanceEventPublisher
 import com.erp.finance.accounting.application.port.output.JournalEntryRepository
 import com.erp.finance.accounting.application.port.output.LedgerRepository
+import com.erp.finance.accounting.domain.model.Account
 import com.erp.finance.accounting.domain.model.AccountId
 import com.erp.finance.accounting.domain.model.AccountType
 import com.erp.finance.accounting.domain.model.AccountingPeriod
@@ -43,6 +44,7 @@ class AccountingCommandHandlerTest {
     private lateinit var journalRepository: InMemoryJournalEntryRepository
     private lateinit var eventPublisher: RecordingFinanceEventPublisher
     private lateinit var exchangeRateProvider: StubExchangeRateProvider
+    private lateinit var dimensionValidator: RecordingDimensionAssignmentValidator
     private lateinit var handler: AccountingCommandHandler
 
     @BeforeEach
@@ -53,6 +55,7 @@ class AccountingCommandHandlerTest {
         journalRepository = InMemoryJournalEntryRepository()
         eventPublisher = RecordingFinanceEventPublisher()
         exchangeRateProvider = StubExchangeRateProvider()
+        dimensionValidator = RecordingDimensionAssignmentValidator()
         handler =
             AccountingCommandHandler(
                 ledgerRepository = ledgerRepository,
@@ -61,7 +64,34 @@ class AccountingCommandHandlerTest {
                 journalRepository = journalRepository,
                 eventPublisher = eventPublisher,
                 exchangeRateProvider = exchangeRateProvider,
+                dimensionAssignmentValidator = dimensionValidator,
             )
+    }
+
+    private fun registerChart(
+        tenantId: UUID,
+        ledger: Ledger,
+        accounts: Map<AccountId, AccountType>,
+    ) {
+        val chart =
+            ChartOfAccounts(
+                id = ledger.chartOfAccountsId,
+                tenantId = tenantId,
+                baseCurrency = ledger.baseCurrency,
+                code = "AUTO-${ledger.id.value.toString().take(4)}",
+                name = "Auto Chart",
+                accounts =
+                    accounts.mapValues { (accountId, type) ->
+                        Account(
+                            id = accountId,
+                            code = "AC-${type.name.take(3)}-${accountId.value.toString().take(4)}",
+                            name = type.name,
+                            type = type,
+                            currency = ledger.baseCurrency,
+                        )
+                    },
+            )
+        chartRepository.given(chart)
     }
 
     @Test
@@ -85,6 +115,18 @@ class AccountingCommandHandlerTest {
         ledgerRepository.given(ledger)
         periodRepository.given(period)
 
+        val debitAccount = AccountId()
+        val creditAccount = AccountId()
+        registerChart(
+            tenantId = tenantId,
+            ledger = ledger,
+            accounts =
+                mapOf(
+                    debitAccount to AccountType.ASSET,
+                    creditAccount to AccountType.REVENUE,
+                ),
+        )
+
         val command =
             PostJournalEntryCommand(
                 tenantId = tenantId,
@@ -96,14 +138,14 @@ class AccountingCommandHandlerTest {
                 lines =
                     listOf(
                         JournalEntryLineCommand(
-                            accountId = AccountId(),
+                            accountId = debitAccount,
                             direction = EntryDirection.DEBIT,
                             amount = Money(10_00),
                             currency = "usd",
                             description = "Cash",
                         ),
                         JournalEntryLineCommand(
-                            accountId = AccountId(),
+                            accountId = creditAccount,
                             direction = EntryDirection.CREDIT,
                             amount = Money(10_00),
                             currency = "usd",
@@ -120,6 +162,7 @@ class AccountingCommandHandlerTest {
         assertTrue(directions.containsAll(setOf(EntryDirection.DEBIT, EntryDirection.CREDIT)))
         assertEquals(journalRepository.lastSaved?.id, result.id)
         assertSame(result, eventPublisher.journalEvents.single())
+        assertEquals(1, dimensionValidator.invocations)
     }
 
     @Test
@@ -147,6 +190,17 @@ class AccountingCommandHandlerTest {
         val offsetAccount = AccountId(UUID.randomUUID())
         val gainAccount = AccountId(UUID.randomUUID())
         val lossAccount = AccountId(UUID.randomUUID())
+        registerChart(
+            tenantId = tenantId,
+            ledger = ledger,
+            accounts =
+                mapOf(
+                    assetAccount to AccountType.ASSET,
+                    offsetAccount to AccountType.LIABILITY,
+                    gainAccount to AccountType.REVENUE,
+                    lossAccount to AccountType.EXPENSE,
+                ),
+        )
 
         exchangeRateProvider.stubRate("EUR", "USD", BigDecimal("1.00"))
         handler.postJournalEntry(
@@ -297,6 +351,18 @@ class AccountingCommandHandlerTest {
         periodRepository.given(period)
         exchangeRateProvider.stubRate("EUR", "USD", BigDecimal("1.20"))
 
+        val debitAccount = AccountId()
+        val creditAccount = AccountId()
+        registerChart(
+            tenantId = tenantId,
+            ledger = ledger,
+            accounts =
+                mapOf(
+                    debitAccount to AccountType.ASSET,
+                    creditAccount to AccountType.LIABILITY,
+                ),
+        )
+
         val command =
             PostJournalEntryCommand(
                 tenantId = tenantId,
@@ -305,13 +371,13 @@ class AccountingCommandHandlerTest {
                 lines =
                     listOf(
                         JournalEntryLineCommand(
-                            accountId = AccountId(),
+                            accountId = debitAccount,
                             direction = EntryDirection.DEBIT,
                             amount = Money(10_00),
                             currency = "EUR",
                         ),
                         JournalEntryLineCommand(
-                            accountId = AccountId(),
+                            accountId = creditAccount,
                             direction = EntryDirection.CREDIT,
                             amount = Money(12_00),
                             currency = "USD",
@@ -438,6 +504,12 @@ private class InMemoryJournalEntryRepository : JournalEntryRepository {
 private class RecordingFinanceEventPublisher : FinanceEventPublisher {
     val journalEvents: MutableList<JournalEntry> = mutableListOf()
     val periodEvents: MutableList<Pair<AccountingPeriod, AccountingPeriodStatus>> = mutableListOf()
+    val dimensionEvents: MutableList<
+        Pair<
+            com.erp.finance.accounting.domain.model.AccountingDimension,
+            com.erp.finance.accounting.domain.model.DimensionEventAction,
+        >,
+    > = mutableListOf()
 
     override fun publishJournalPosted(entry: JournalEntry) {
         journalEvents += entry
@@ -448,6 +520,13 @@ private class RecordingFinanceEventPublisher : FinanceEventPublisher {
         previousStatus: AccountingPeriodStatus,
     ) {
         periodEvents += period to previousStatus
+    }
+
+    override fun publishDimensionChanged(
+        dimension: com.erp.finance.accounting.domain.model.AccountingDimension,
+        action: com.erp.finance.accounting.domain.model.DimensionEventAction,
+    ) {
+        dimensionEvents += dimension to action
     }
 }
 
@@ -478,4 +557,19 @@ private class StubExchangeRateProvider : ExchangeRateProvider {
         } else {
             rates[baseCurrency.uppercase() to quoteCurrency.uppercase()]
         }
+}
+
+private class RecordingDimensionAssignmentValidator : DimensionAssignmentValidator {
+    var invocations: Int = 0
+        private set
+    val capturedLines: MutableList<List<DimensionValidationService.DimensionValidationLine>> = mutableListOf()
+
+    override fun validateAssignments(
+        tenantId: UUID,
+        bookedAt: Instant,
+        lines: List<DimensionValidationService.DimensionValidationLine>,
+    ) {
+        invocations += 1
+        capturedLines += lines
+    }
 }

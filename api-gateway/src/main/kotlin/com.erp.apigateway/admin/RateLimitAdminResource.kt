@@ -3,15 +3,17 @@ package com.erp.apigateway.admin
 import com.erp.apigateway.exception.ErrorResponse
 import jakarta.enterprise.context.RequestScoped
 import jakarta.inject.Inject
+import jakarta.validation.Valid
+import jakarta.ws.rs.BeanParam
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
-import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.WebApplicationException
 import jakarta.ws.rs.core.Context
+import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.SecurityContext
@@ -35,6 +37,9 @@ class RateLimitAdminResource {
     @Context
     lateinit var securityContext: SecurityContext
 
+    @Context
+    lateinit var httpHeaders: HttpHeaders
+
     private fun ensureAdmin() {
         if (!securityContext.isUserInRole("admin")) {
             val resp =
@@ -49,11 +54,6 @@ class RateLimitAdminResource {
             throw WebApplicationException(resp)
         }
     }
-
-    data class OverrideRequest(
-        val requestsPerMinute: Int,
-        val windowSeconds: Int,
-    )
 
     // Tenants
     @GET
@@ -116,9 +116,10 @@ class RateLimitAdminResource {
     )
     @Path("/tenants/{tenant}")
     fun getTenant(
-        @PathParam("tenant") tenant: String,
+        @Valid @BeanParam request: TenantOverridePathRequest,
     ): Response {
         ensureAdmin()
+        val tenant = request.tenantId(currentLocale())
         val v = service.getTenantOverride(tenant) ?: return Response.status(Response.Status.NOT_FOUND).build()
         return Response
             .ok(
@@ -151,11 +152,12 @@ class RateLimitAdminResource {
     )
     @Path("/tenants/{tenant}")
     fun upsertTenant(
-        @PathParam("tenant") tenant: String,
-        @RequestBody(description = "Override payload", required = true) req: OverrideRequest,
+        @Valid @BeanParam request: TenantOverridePathRequest,
+        @RequestBody(description = "Override payload", required = true) @Valid req: OverrideRequest,
     ): Response {
         ensureAdmin()
-        service.setTenantOverride(tenant, req.requestsPerMinute, req.windowSeconds)
+        req.validate(currentLocale())
+        service.setTenantOverride(request.tenantId(currentLocale()), req.requestsPerMinute, req.windowSeconds)
         return Response.noContent().build()
     }
 
@@ -180,10 +182,10 @@ class RateLimitAdminResource {
     )
     @Path("/tenants/{tenant}")
     fun deleteTenant(
-        @PathParam("tenant") tenant: String,
+        @Valid @BeanParam request: TenantOverridePathRequest,
     ): Response {
         ensureAdmin()
-        service.deleteTenantOverride(tenant)
+        service.deleteTenantOverride(request.tenantId(currentLocale()))
         return Response.noContent().build()
     }
 
@@ -248,9 +250,10 @@ class RateLimitAdminResource {
     )
     @Path("/endpoints/{pattern}")
     fun getEndpoint(
-        @PathParam("pattern") pattern: String,
+        @Valid @BeanParam request: EndpointOverridePathRequest,
     ): Response {
         ensureAdmin()
+        val pattern = request.pattern(currentLocale())
         val v = service.getEndpointOverride(pattern) ?: return Response.status(Response.Status.NOT_FOUND).build()
         return Response
             .ok(
@@ -283,11 +286,12 @@ class RateLimitAdminResource {
     )
     @Path("/endpoints/{pattern}")
     fun upsertEndpoint(
-        @PathParam("pattern") pattern: String,
-        @RequestBody(description = "Override payload", required = true) req: OverrideRequest,
+        @Valid @BeanParam request: EndpointOverridePathRequest,
+        @RequestBody(description = "Override payload", required = true) @Valid req: OverrideRequest,
     ): Response {
         ensureAdmin()
-        service.setEndpointOverride(pattern, req.requestsPerMinute, req.windowSeconds)
+        req.validate(currentLocale())
+        service.setEndpointOverride(request.pattern(currentLocale()), req.requestsPerMinute, req.windowSeconds)
         return Response.noContent().build()
     }
 
@@ -312,10 +316,15 @@ class RateLimitAdminResource {
     )
     @Path("/endpoints/{pattern}")
     fun deleteEndpoint(
-        @PathParam("pattern") pattern: String,
+        @Valid @BeanParam request: EndpointOverridePathRequest,
     ): Response {
         ensureAdmin()
-        service.deleteEndpointOverride(pattern)
+        service.deleteEndpointOverride(request.pattern(currentLocale()))
         return Response.noContent().build()
     }
+
+    private fun currentLocale(): java.util.Locale =
+        httpHeaders.language
+            ?: httpHeaders.acceptableLanguages.firstOrNull()
+            ?: java.util.Locale.getDefault()
 }

@@ -27,6 +27,7 @@ class FinanceKafkaTestResource : QuarkusTestResourceLifecycleManager {
             "KAFKA_BOOTSTRAP_SERVERS" to bootstrap,
             "mp.messaging.outgoing.finance-journal-events-out.bootstrap.servers" to bootstrap,
             "mp.messaging.outgoing.finance-period-events-out.bootstrap.servers" to bootstrap,
+            "mp.messaging.outgoing.finance-dimension-events-out.bootstrap.servers" to bootstrap,
         )
     }
 

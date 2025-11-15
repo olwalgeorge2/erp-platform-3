@@ -17,6 +17,7 @@ data class JournalEntryLine(
     val createdAt: Instant = Instant.now(),
     val originalCurrency: String = currency,
     val originalAmount: Money = amount,
+    val dimensions: DimensionAssignments = DimensionAssignments(),
 ) {
     init {
         require(amount.amount > 0) { "Line amount must be positive" }

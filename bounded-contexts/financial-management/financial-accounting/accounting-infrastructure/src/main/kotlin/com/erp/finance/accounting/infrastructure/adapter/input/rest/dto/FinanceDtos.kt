@@ -5,11 +5,13 @@ import com.erp.finance.accounting.application.port.input.command.CreateLedgerCom
 import com.erp.finance.accounting.application.port.input.command.DefineAccountCommand
 import com.erp.finance.accounting.application.port.input.command.JournalEntryLineCommand
 import com.erp.finance.accounting.application.port.input.command.PostJournalEntryCommand
+import com.erp.finance.accounting.application.port.input.dto.LedgerPeriodInfoDto
 import com.erp.finance.accounting.domain.model.Account
 import com.erp.finance.accounting.domain.model.AccountId
 import com.erp.finance.accounting.domain.model.AccountType
 import com.erp.finance.accounting.domain.model.AccountingPeriod
 import com.erp.finance.accounting.domain.model.ChartOfAccounts
+import com.erp.finance.accounting.domain.model.DimensionAssignments
 import com.erp.finance.accounting.domain.model.EntryDirection
 import com.erp.finance.accounting.domain.model.JournalEntry
 import com.erp.finance.accounting.domain.model.JournalEntryLine
@@ -18,7 +20,9 @@ import com.erp.finance.accounting.domain.model.Money
 import io.quarkus.runtime.annotations.RegisterForReflection
 import org.eclipse.microprofile.openapi.annotations.media.Schema
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
+import com.erp.finance.accounting.application.port.input.dto.AccountingPeriodDto as QueryAccountingPeriodDto
 
 @RegisterForReflection
 data class CreateLedgerRequest(
@@ -89,6 +93,7 @@ data class PostJournalEntryRequest(
                         amount = Money(line.amountMinor),
                         currency = line.currency?.uppercase(),
                         description = line.description,
+                        dimensions = line.toAssignments(),
                     )
                 },
         )
@@ -102,6 +107,11 @@ data class PostJournalEntryLineRequest(
     val amountMinor: Long,
     val currency: String? = null,
     val description: String? = null,
+    val costCenterId: UUID? = null,
+    val profitCenterId: UUID? = null,
+    val departmentId: UUID? = null,
+    val projectId: UUID? = null,
+    val businessAreaId: UUID? = null,
 )
 
 @RegisterForReflection
@@ -201,6 +211,15 @@ data class JournalEntryLineResponse(
     val amountMinor: Long,
     val currency: String,
     val description: String?,
+    val dimensions: DimensionAssignmentResponse,
+)
+
+data class DimensionAssignmentResponse(
+    val costCenterId: UUID?,
+    val profitCenterId: UUID?,
+    val departmentId: UUID?,
+    val projectId: UUID?,
+    val businessAreaId: UUID?,
 )
 
 data class AccountingPeriodResponse(
@@ -211,6 +230,21 @@ data class AccountingPeriodResponse(
     val status: String,
     val startDate: String,
     val endDate: String,
+)
+
+data class LedgerPeriodInfoResponse(
+    val ledgerId: UUID,
+    val ledgerCode: String,
+    val currentOpenPeriod: LedgerAccountingPeriodResponse?,
+    val openPeriods: List<LedgerAccountingPeriodResponse>,
+)
+
+data class LedgerAccountingPeriodResponse(
+    val periodId: UUID,
+    val code: String,
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val status: String,
 )
 
 @Schema(
@@ -279,6 +313,14 @@ fun JournalEntryLine.toResponse(): JournalEntryLineResponse =
         amountMinor = amount.amount,
         currency = currency,
         description = description,
+        dimensions =
+            DimensionAssignmentResponse(
+                costCenterId = dimensions.costCenterId,
+                profitCenterId = dimensions.profitCenterId,
+                departmentId = dimensions.departmentId,
+                projectId = dimensions.projectId,
+                businessAreaId = dimensions.businessAreaId,
+            ),
     )
 
 fun AccountingPeriod.toResponse(): AccountingPeriodResponse =
@@ -290,4 +332,30 @@ fun AccountingPeriod.toResponse(): AccountingPeriodResponse =
         status = status.name,
         startDate = startDate.toString(),
         endDate = endDate.toString(),
+    )
+
+fun LedgerPeriodInfoDto.toResponse(): LedgerPeriodInfoResponse =
+    LedgerPeriodInfoResponse(
+        ledgerId = ledgerId,
+        ledgerCode = ledgerCode,
+        currentOpenPeriod = currentOpenPeriod?.toLedgerResponse(),
+        openPeriods = openPeriods.map { it.toLedgerResponse() },
+    )
+
+private fun QueryAccountingPeriodDto.toLedgerResponse(): LedgerAccountingPeriodResponse =
+    LedgerAccountingPeriodResponse(
+        periodId = periodId,
+        code = code,
+        startDate = startDate,
+        endDate = endDate,
+        status = status,
+    )
+
+private fun PostJournalEntryLineRequest.toAssignments(): DimensionAssignments =
+    DimensionAssignments(
+        costCenterId = costCenterId,
+        profitCenterId = profitCenterId,
+        departmentId = departmentId,
+        projectId = projectId,
+        businessAreaId = businessAreaId,
     )

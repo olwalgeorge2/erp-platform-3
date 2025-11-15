@@ -6,6 +6,7 @@ import com.erp.finance.accounting.application.port.output.FinanceEventPublisher
 import com.erp.finance.accounting.application.port.output.JournalEntryRepository
 import com.erp.finance.accounting.application.port.output.LedgerRepository
 import com.erp.finance.accounting.application.service.AccountingCommandHandler
+import com.erp.finance.accounting.application.service.DimensionAssignmentValidator
 import com.erp.finance.accounting.domain.policy.ExchangeRateProvider
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.enterprise.inject.Produces
@@ -20,6 +21,7 @@ class AccountingApplicationConfiguration {
         journalRepository: JournalEntryRepository,
         eventPublisher: FinanceEventPublisher,
         exchangeRateProvider: ExchangeRateProvider,
+        dimensionAssignmentValidator: DimensionAssignmentValidator,
     ): AccountingCommandHandler =
         AccountingCommandHandler(
             ledgerRepository = ledgerRepository,
@@ -28,5 +30,6 @@ class AccountingApplicationConfiguration {
             journalRepository = journalRepository,
             eventPublisher = eventPublisher,
             exchangeRateProvider = exchangeRateProvider,
+            dimensionAssignmentValidator = dimensionAssignmentValidator,
         )
 }

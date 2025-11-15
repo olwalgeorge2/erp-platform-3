@@ -17,7 +17,6 @@ import com.erp.financial.shared.masterdata.PaymentTerms
 import com.erp.financial.shared.validation.FinanceValidationErrorCode
 import com.erp.financial.shared.validation.FinanceValidationException
 import com.erp.financial.shared.validation.InputSanitizer.sanitizeAccountCode
-import com.erp.financial.shared.validation.InputSanitizer.sanitizeCurrencyCode
 import com.erp.financial.shared.validation.InputSanitizer.sanitizeEmail
 import com.erp.financial.shared.validation.InputSanitizer.sanitizeName
 import com.erp.financial.shared.validation.InputSanitizer.sanitizePhoneNumber
@@ -36,7 +35,6 @@ data class CustomerRequest(
     val companyCodeId: UUID,
     @field:NotBlank
     val customerNumber: String,
-    @field:NotBlank
     val name: String,
     @field:NotBlank
     val currency: String,
@@ -167,11 +165,11 @@ fun CustomerSearchRequest.toQuery(): ListCustomersQuery =
 
 private fun CustomerRequest.toProfile(locale: Locale): CustomerProfile =
     CustomerProfile(
-        name = requireNotBlank(name.sanitizeName(), "name", FinanceValidationErrorCode.FINANCE_INVALID_NAME, locale),
+        name = requireNotBlank(name, "name", FinanceValidationErrorCode.FINANCE_INVALID_NAME, locale).sanitizeName(),
         billingAddress =
             billingAddress.toDomainAddress("billingAddress", locale),
         shippingAddress = shippingAddress?.toDomainAddress("shippingAddress", locale),
-        preferredCurrency = normalizeCurrency(currency.sanitizeCurrencyCode(), "currency", locale),
+        preferredCurrency = normalizeCurrency(currency, "currency", locale),
         paymentTerms = paymentTerms.toDomain(locale),
         primaryContact =
             contact?.let {
@@ -185,7 +183,7 @@ private fun CustomerRequest.toProfile(locale: Locale): CustomerProfile =
             creditLimit?.let {
                 Money.fromMajor(
                     major = it.amount,
-                    currency = normalizeCurrency(it.currency.sanitizeCurrencyCode(), "creditLimit.currency", locale),
+                    currency = normalizeCurrency(it.currency, "creditLimit.currency", locale),
                 )
             },
         dimensionDefaults =

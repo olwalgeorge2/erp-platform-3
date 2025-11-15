@@ -89,8 +89,6 @@ object InputSanitizer {
         this
             .trim()
             .uppercase()
-            .replace(Regex("[^A-Z]"), "")
-            .take(3)
 
     /**
      * Sanitize email addresses.

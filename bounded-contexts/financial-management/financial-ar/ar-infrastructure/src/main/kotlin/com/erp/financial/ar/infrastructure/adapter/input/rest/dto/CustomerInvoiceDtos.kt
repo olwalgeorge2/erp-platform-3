@@ -10,7 +10,6 @@ import com.erp.financial.ar.domain.model.invoice.CustomerInvoiceStatus
 import com.erp.financial.shared.masterdata.PaymentTermType
 import com.erp.financial.shared.validation.FinanceValidationErrorCode
 import com.erp.financial.shared.validation.FinanceValidationException
-import com.erp.financial.shared.validation.InputSanitizer.sanitizeCurrencyCode
 import com.erp.financial.shared.validation.InputSanitizer.sanitizeReferenceNumber
 import com.erp.financial.shared.validation.InputSanitizer.sanitizeText
 import com.erp.financial.shared.validation.ValidationMessageResolver
@@ -139,7 +138,7 @@ fun CreateCustomerInvoiceRequest.toCommand(locale: Locale): CreateCustomerInvoic
         invoiceNumber = requireNotBlank(invoiceNumber.sanitizeReferenceNumber(), "invoiceNumber", locale),
         invoiceDate = invoiceDate,
         dueDate = dueDate,
-        currency = normalizeCurrency(currency.sanitizeCurrencyCode(), "currency", locale),
+        currency = normalizeCurrency(currency, "currency", locale),
         lines = lines.mapIndexed { index, line -> line.toCommandLine(index, locale) },
         dimensionAssignments = dimensionDefaults.toAssignments(),
     )

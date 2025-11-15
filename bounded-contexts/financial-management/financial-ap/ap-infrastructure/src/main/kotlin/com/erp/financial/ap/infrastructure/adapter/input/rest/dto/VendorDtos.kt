@@ -17,7 +17,6 @@ import com.erp.financial.shared.masterdata.PaymentTerms
 import com.erp.financial.shared.validation.FinanceValidationErrorCode
 import com.erp.financial.shared.validation.FinanceValidationException
 import com.erp.financial.shared.validation.InputSanitizer.sanitizeAccountCode
-import com.erp.financial.shared.validation.InputSanitizer.sanitizeCurrencyCode
 import com.erp.financial.shared.validation.InputSanitizer.sanitizeEmail
 import com.erp.financial.shared.validation.InputSanitizer.sanitizeName
 import com.erp.financial.shared.validation.InputSanitizer.sanitizePhoneNumber
@@ -268,7 +267,7 @@ fun VendorSearchRequest.toQuery(): ListVendorsQuery =
 private fun VendorRequest.toProfile(locale: Locale): VendorProfile =
     VendorProfile(
         name = requireNotBlank(name.sanitizeName(), "name", FinanceValidationErrorCode.FINANCE_INVALID_NAME, locale),
-        preferredCurrency = normalizeCurrency(currency.sanitizeCurrencyCode(), "currency", locale),
+        preferredCurrency = normalizeCurrency(currency, "currency", locale),
         paymentTerms = paymentTerms.toDomain(locale),
         address =
             Address(

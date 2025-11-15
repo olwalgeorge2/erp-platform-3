@@ -8,6 +8,7 @@ import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.LedgerPe
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.TrialBalanceRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.TrialBalanceResponse
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.toResponse
+import com.erp.financial.shared.validation.preferredLocale
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.validation.Valid
@@ -17,9 +18,12 @@ import jakarta.ws.rs.GET
 import jakarta.ws.rs.NotFoundException
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
+import jakarta.ws.rs.core.Context
+import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import org.eclipse.microprofile.openapi.annotations.Operation
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
+import java.util.Locale
 
 @ApplicationScoped
 @Path("/api/v1/finance")
@@ -30,6 +34,9 @@ class FinanceQueryResource {
     @Inject
     lateinit var queryService: FinanceQueryUseCase
 
+    @Context
+    lateinit var httpHeaders: HttpHeaders
+
     @GET
     @Path("/ledgers/{ledgerId}/trial-balance")
     @Operation(summary = "Get trial balance for a ledger and period")
@@ -37,7 +44,7 @@ class FinanceQueryResource {
         @Valid @BeanParam request: TrialBalanceRequest,
     ): TrialBalanceResponse =
         queryService
-            .getTrialBalance(request.toQuery())
+            .getTrialBalance(request.toQuery(currentLocale()))
             .toResponse()
 
     @GET
@@ -47,7 +54,7 @@ class FinanceQueryResource {
         @Valid @BeanParam request: GlSummaryRequest,
     ): GlSummaryResponse =
         queryService
-            .getGlSummary(request.toQuery())
+            .getGlSummary(request.toQuery(currentLocale()))
             .toResponse()
 
     @GET
@@ -57,7 +64,9 @@ class FinanceQueryResource {
         @Valid @BeanParam request: LedgerInfoRequest,
     ): LedgerPeriodInfoResponse =
         queryService
-            .getLedgerAndPeriodForCompanyCode(request.toQuery())
+            .getLedgerAndPeriodForCompanyCode(request.toQuery(currentLocale()))
             ?.toResponse()
             ?: throw NotFoundException("No ledger mapping found for company code ${request.companyCodeId}")
+
+    private fun currentLocale(): Locale = httpHeaders.preferredLocale()
 }

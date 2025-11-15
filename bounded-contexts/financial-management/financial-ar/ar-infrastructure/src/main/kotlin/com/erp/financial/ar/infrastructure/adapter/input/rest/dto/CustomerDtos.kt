@@ -14,25 +14,50 @@ import com.erp.financial.shared.masterdata.ContactPerson
 import com.erp.financial.shared.masterdata.MasterDataStatus
 import com.erp.financial.shared.masterdata.PaymentTermType
 import com.erp.financial.shared.masterdata.PaymentTerms
+import com.erp.financial.shared.validation.FinanceValidationErrorCode
+import com.erp.financial.shared.validation.FinanceValidationException
+import com.erp.financial.shared.validation.ValidationMessageResolver
+import com.erp.financial.shared.validation.sanitizeAccountCode
+import com.erp.financial.shared.validation.sanitizeCurrencyCode
+import com.erp.financial.shared.validation.sanitizeEmail
+import com.erp.financial.shared.validation.sanitizeName
+import com.erp.financial.shared.validation.sanitizePhoneNumber
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
 import java.math.BigDecimal
+import java.util.Locale
 import java.util.UUID
 
 data class CustomerRequest(
+    @field:NotNull
     val tenantId: UUID,
+    @field:NotNull
     val companyCodeId: UUID,
+    @field:NotBlank
     val customerNumber: String,
+    @field:NotBlank
     val name: String,
+    @field:NotBlank
     val currency: String,
+    @field:Valid
     val paymentTerms: PaymentTermsRequest,
+    @field:Valid
     val billingAddress: AddressRequest,
+    @field:Valid
     val shippingAddress: AddressRequest? = null,
+    @field:Valid
     val contact: ContactRequest? = null,
+    @field:Valid
     val creditLimit: CreditLimitRequest? = null,
+    @field:Valid
     val dimensionDefaults: DimensionDefaultsRequest? = null,
 )
 
 data class PaymentTermsRequest(
+    @field:NotBlank
     val code: String,
+    @field:NotNull
     val type: PaymentTermType,
     val dueInDays: Int,
     val discountPercentage: BigDecimal? = null,
@@ -40,22 +65,28 @@ data class PaymentTermsRequest(
 )
 
 data class AddressRequest(
+    @field:NotBlank
     val line1: String,
     val line2: String? = null,
+    @field:NotBlank
     val city: String,
     val stateOrProvince: String? = null,
     val postalCode: String? = null,
+    @field:NotBlank
     val countryCode: String,
 )
 
 data class ContactRequest(
+    @field:NotBlank
     val name: String,
     val email: String? = null,
     val phoneNumber: String? = null,
 )
 
 data class CreditLimitRequest(
+    @field:NotNull
     val amount: BigDecimal,
+    @field:NotBlank
     val currency: String,
 )
 
@@ -84,29 +115,32 @@ data class CustomerResponse(
 )
 
 data class CustomerStatusRequest(
-    val tenantId: UUID,
-    val status: MasterDataStatus,
+    @field:NotNull val tenantId: UUID,
+    @field:NotNull val status: MasterDataStatus,
 )
 
 data class CustomerSearchRequest(
-    val tenantId: UUID,
+    @field:NotNull val tenantId: UUID,
     val companyCodeId: UUID? = null,
     val status: MasterDataStatus? = null,
 )
 
-fun CustomerRequest.toRegisterCommand(): RegisterCustomerCommand =
+fun CustomerRequest.toRegisterCommand(locale: Locale): RegisterCustomerCommand =
     RegisterCustomerCommand(
         tenantId = tenantId,
         companyCodeId = companyCodeId,
-        customerNumber = CustomerNumber(customerNumber),
-        profile = toProfile(),
+        customerNumber = CustomerNumber(requireNotBlank(customerNumber.sanitizeAccountCode(), "customerNumber", FinanceValidationErrorCode.FINANCE_INVALID_CUSTOMER_NUMBER, locale)),
+        profile = toProfile(locale),
     )
 
-fun CustomerRequest.toUpdateCommand(customerId: UUID): UpdateCustomerCommand =
+fun CustomerRequest.toUpdateCommand(
+    customerId: UUID,
+    locale: Locale,
+): UpdateCustomerCommand =
     UpdateCustomerCommand(
         tenantId = tenantId,
         customerId = customerId,
-        profile = toProfile(),
+        profile = toProfile(locale),
     )
 
 fun CustomerStatusRequest.toStatusCommand(customerId: UUID): UpdateCustomerStatusCommand =
@@ -123,45 +157,21 @@ fun CustomerSearchRequest.toQuery(): ListCustomersQuery =
         status = status,
     )
 
-private fun CustomerRequest.toProfile(): CustomerProfile =
+private fun CustomerRequest.toProfile(locale: Locale): CustomerProfile =
     CustomerProfile(
-        name = name,
+        name = requireNotBlank(name.sanitizeName(), "name", FinanceValidationErrorCode.FINANCE_INVALID_NAME, locale),
         billingAddress =
-            Address(
-                line1 = billingAddress.line1,
-                line2 = billingAddress.line2,
-                city = billingAddress.city,
-                stateOrProvince = billingAddress.stateOrProvince,
-                postalCode = billingAddress.postalCode,
-                countryCode = billingAddress.countryCode,
-            ),
-        shippingAddress =
-            shippingAddress?.let {
-                Address(
-                    line1 = it.line1,
-                    line2 = it.line2,
-                    city = it.city,
-                    stateOrProvince = it.stateOrProvince,
-                    postalCode = it.postalCode,
-                    countryCode = it.countryCode,
-                )
-            },
-        preferredCurrency = currency.uppercase(),
-        paymentTerms =
-            PaymentTerms(
-                code = paymentTerms.code,
-                type = paymentTerms.type,
-                dueInDays = paymentTerms.dueInDays,
-                discountPercentage = paymentTerms.discountPercentage,
-                discountDays = paymentTerms.discountDays,
-            ),
+            billingAddress.toDomainAddress("billingAddress", locale),
+        shippingAddress = shippingAddress?.toDomainAddress("shippingAddress", locale),
+        preferredCurrency = normalizeCurrency(currency.sanitizeCurrencyCode(), "currency", locale),
+        paymentTerms = paymentTerms.toDomain(locale),
         primaryContact =
-            contact?.let { ContactPerson(name = it.name, email = it.email, phoneNumber = it.phoneNumber) },
+            contact?.let { ContactPerson(name = it.name.sanitizeName(), email = it.email?.sanitizeEmail(), phoneNumber = it.phoneNumber?.sanitizePhoneNumber()) },
         creditLimit =
             creditLimit?.let {
                 Money.fromMajor(
                     major = it.amount,
-                    currency = it.currency.uppercase(),
+                    currency = normalizeCurrency(it.currency.sanitizeCurrencyCode(), "creditLimit.currency", locale),
                 )
             },
         dimensionDefaults =
@@ -175,6 +185,85 @@ private fun CustomerRequest.toProfile(): CustomerProfile =
                 )
             } ?: DimensionAssignments(),
     )
+
+private fun PaymentTermsRequest.toDomain(locale: Locale): PaymentTerms {
+    if (dueInDays <= 0) {
+        throw FinanceValidationException(
+            errorCode = FinanceValidationErrorCode.FINANCE_INVALID_PAYMENT_TERMS,
+            field = "paymentTerms.dueInDays",
+            rejectedValue = dueInDays.toString(),
+            locale = locale,
+            message =
+                ValidationMessageResolver.resolve(
+                    FinanceValidationErrorCode.FINANCE_INVALID_PAYMENT_TERMS,
+                    locale,
+                    "dueInDays must be greater than zero",
+                ),
+        )
+    }
+    return PaymentTerms(
+        code = requireNotBlank(code.sanitizeAccountCode(), "paymentTerms.code", FinanceValidationErrorCode.FINANCE_INVALID_PAYMENT_TERMS, locale),
+        type = type,
+        dueInDays = dueInDays,
+        discountPercentage = discountPercentage,
+        discountDays = discountDays,
+    )
+}
+
+private fun AddressRequest.toDomainAddress(
+    fieldPrefix: String,
+    locale: Locale,
+): Address =
+    Address(
+        line1 = requireNotBlank(line1.sanitizeName(), "$fieldPrefix.line1", FinanceValidationErrorCode.FINANCE_INVALID_NAME, locale),
+        line2 = line2?.sanitizeName(),
+        city = requireNotBlank(city.sanitizeName(), "$fieldPrefix.city", FinanceValidationErrorCode.FINANCE_INVALID_NAME, locale),
+        stateOrProvince = stateOrProvince?.sanitizeName(),
+        postalCode = postalCode?.sanitizeAccountCode(),
+        countryCode = requireNotBlank(countryCode.sanitizeAccountCode(), "$fieldPrefix.countryCode", FinanceValidationErrorCode.FINANCE_INVALID_NAME, locale),
+    )
+
+private fun normalizeCurrency(
+    value: String,
+    field: String,
+    locale: Locale,
+): String {
+    val normalized = value.trim().uppercase(Locale.getDefault())
+    if (normalized.length != 3) {
+        throw FinanceValidationException(
+            errorCode = FinanceValidationErrorCode.FINANCE_INVALID_CURRENCY_CODE,
+            field = field,
+            rejectedValue = value,
+            locale = locale,
+            message =
+                ValidationMessageResolver.resolve(
+                    FinanceValidationErrorCode.FINANCE_INVALID_CURRENCY_CODE,
+                    locale,
+                    value,
+                ),
+        )
+    }
+    return normalized
+}
+
+private fun requireNotBlank(
+    value: String?,
+    field: String,
+    code: FinanceValidationErrorCode,
+    locale: Locale,
+): String {
+    val trimmed = value?.trim().orEmpty()
+    if (trimmed.isEmpty()) {
+        throw FinanceValidationException(
+            errorCode = code,
+            field = field,
+            rejectedValue = value,
+            locale = locale,
+            message = ValidationMessageResolver.resolve(code, locale, field),
+        )
+    }
+    return trimmed
+}
 
 fun Customer.toResponse(): CustomerResponse =
     CustomerResponse(

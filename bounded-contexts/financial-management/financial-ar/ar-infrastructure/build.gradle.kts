@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     id("erp.quarkus-conventions")
     alias(libs.plugins.kotlin.noarg)
@@ -24,9 +26,14 @@ dependencies {
     implementation("io.quarkus:quarkus-smallrye-openapi")
     implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
     implementation("io.quarkus:quarkus-config-yaml")
+    implementation(libs.jackson.module.kotlin)
 
     testImplementation("io.quarkus:quarkus-junit5")
     testImplementation("io.rest-assured:rest-assured")
     testImplementation("org.testcontainers:testcontainers:1.20.4")
     testImplementation("org.testcontainers:postgresql:1.20.4")
+}
+
+tasks.named<Test>("test") {
+    enabled = true
 }

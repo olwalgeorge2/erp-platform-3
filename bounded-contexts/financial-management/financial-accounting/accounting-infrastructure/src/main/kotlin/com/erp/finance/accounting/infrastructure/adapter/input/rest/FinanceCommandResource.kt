@@ -1,25 +1,34 @@
 package com.erp.finance.accounting.infrastructure.adapter.input.rest
 
 import com.erp.finance.accounting.application.port.input.FinanceCommandUseCase
+import com.erp.finance.accounting.application.service.DimensionValidationException
+import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.ChartPathParams
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.ClosePeriodRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.CreateLedgerRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.DefineAccountRequest
-import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.ErrorResponse
+import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.LedgerPeriodPathParams
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.PostJournalEntryRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.RunCurrencyRevaluationRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.toResponse
+import com.erp.financial.shared.api.ErrorResponse
+import com.erp.financial.shared.validation.FinanceValidationException
+import com.erp.financial.shared.validation.preferredLocale
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
+import jakarta.validation.Valid
+import jakarta.ws.rs.BeanParam
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
+import jakarta.ws.rs.core.Context
+import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import org.eclipse.microprofile.openapi.annotations.Operation
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
-import java.util.UUID
+import java.util.Locale
 
 private const val FINANCE_API_V1_PREFIX = "/api/v1/finance"
 private const val FINANCE_API_COMPAT_PREFIX = "/api/finance"
@@ -28,6 +37,9 @@ open class BaseFinanceCommandResource() {
     @Inject
     protected lateinit var commandService: FinanceCommandUseCase
 
+    @Context
+    protected var httpHeaders: HttpHeaders? = null
+
     constructor(commandService: FinanceCommandUseCase) : this() {
         this.commandService = commandService
     }
@@ -35,81 +47,106 @@ open class BaseFinanceCommandResource() {
     @POST
     @Path("/ledgers")
     @Operation(summary = "Create a ledger")
-    fun createLedger(request: CreateLedgerRequest): Response =
-        execute {
+    fun createLedger(@Valid request: CreateLedgerRequest): Response {
+        val locale = currentLocale()
+        return execute(locale) {
             commandService
-                .createLedger(request.toCommand())
+                .createLedger(request.toCommand(locale))
                 .toResponse()
         }.created()
+    }
 
     @POST
     @Path("/chart-of-accounts/{chartId}/accounts")
     @Operation(summary = "Define an account in the chart of accounts")
     fun defineAccount(
-        @PathParam("chartId") chartId: String,
-        request: DefineAccountRequest,
-    ): Response =
-        execute {
+        @Valid @BeanParam chartParams: ChartPathParams,
+        @Valid request: DefineAccountRequest,
+    ): Response {
+        val locale = currentLocale()
+        val chartUuid = chartParams.chartId(locale)
+        return execute(locale) {
             commandService
                 .defineAccount(
                     request.toCommand(
-                        chartOfAccountsId = UUID.fromString(chartId),
+                        locale = locale,
+                        chartOfAccountsId = chartUuid,
                     ),
                 ).toResponse()
         }.ok()
+    }
 
     @POST
     @Path("/journal-entries")
     @Operation(summary = "Post a journal entry")
-    fun postJournalEntry(request: PostJournalEntryRequest): Response =
-        execute {
+    fun postJournalEntry(@Valid request: PostJournalEntryRequest): Response {
+        val locale = currentLocale()
+        return execute(locale) {
             commandService
-                .postJournalEntry(request.toCommand())
+                .postJournalEntry(request.toCommand(locale))
                 .toResponse()
         }.accepted()
+    }
 
     @POST
     @Path("/ledgers/{ledgerId}/periods/{periodId}/close")
     @Operation(summary = "Close or freeze an accounting period")
     fun closePeriod(
-        @PathParam("ledgerId") ledgerId: String,
-        @PathParam("periodId") periodId: String,
-        request: ClosePeriodRequest,
-    ): Response =
-        execute {
+        @Valid @BeanParam pathParams: LedgerPeriodPathParams,
+        @Valid request: ClosePeriodRequest,
+    ): Response {
+        val locale = currentLocale()
+        val ledgerUuid = pathParams.ledgerId(locale)
+        val periodUuid = pathParams.periodId(locale)
+        return execute(locale) {
             commandService
                 .closePeriod(
                     request.toCommand(
-                        ledgerId = UUID.fromString(ledgerId),
-                        periodId = UUID.fromString(periodId),
+                        ledgerId = ledgerUuid,
+                        periodId = periodUuid,
                     ),
                 ).toResponse()
         }.ok()
+    }
 
     @POST
     @Path("/ledgers/{ledgerId}/periods/{periodId}/currency-revaluation")
     @Operation(summary = "Run currency revaluation for foreign currency exposures")
     fun runCurrencyRevaluation(
-        @PathParam("ledgerId") ledgerId: String,
-        @PathParam("periodId") periodId: String,
-        request: RunCurrencyRevaluationRequest,
-    ): Response =
-        execute {
+        @Valid @BeanParam pathParams: LedgerPeriodPathParams,
+        @Valid request: RunCurrencyRevaluationRequest,
+    ): Response {
+        val locale = currentLocale()
+        val ledgerUuid = pathParams.ledgerId(locale)
+        val periodUuid = pathParams.periodId(locale)
+        return execute(locale) {
             val result =
                 commandService.runCurrencyRevaluation(
                     request.toCommand(
-                        ledgerId = UUID.fromString(ledgerId),
-                        periodId = UUID.fromString(periodId),
+                        ledgerId = ledgerUuid,
+                        periodId = periodUuid,
                     ),
                 )
             result?.toResponse() ?: mapOf("message" to "No revaluation adjustments needed")
         }.ok()
+    }
 
-    private fun <T> execute(block: () -> T): CommandResult<T> =
+    private fun currentLocale(): Locale = httpHeaders.preferredLocale()
+
+    private fun <T> execute(
+        locale: Locale,
+        block: () -> T,
+    ): CommandResult<T> =
         runCatching { block() }
             .fold(
                 onSuccess = { CommandResult.Success(it) },
-                onFailure = { CommandResult.Failure(it) },
+                onFailure = { throwable ->
+                    when (throwable) {
+                        is FinanceValidationException -> throw throwable
+                        is DimensionValidationException -> throw throwable.toFinanceValidationException(locale)
+                        else -> CommandResult.Failure(throwable)
+                    }
+                },
             )
 
     private fun <T> CommandResult<T>.created(): Response =

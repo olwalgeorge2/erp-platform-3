@@ -16,6 +16,22 @@ import com.erp.identity.domain.model.tenant.SubscriptionPlan
 import com.erp.identity.domain.model.tenant.Tenant
 import com.erp.identity.domain.model.tenant.TenantId
 import com.erp.identity.domain.model.tenant.TenantStatus
+import com.erp.identity.infrastructure.validation.constraints.ValidTenantSlug
+import com.erp.identity.infrastructure.validation.constraints.ValidUsername
+import com.erp.identity.infrastructure.validation.sanitizeDescription
+import com.erp.identity.infrastructure.validation.sanitizeEmail
+import com.erp.identity.infrastructure.validation.sanitizeIndustry
+import com.erp.identity.infrastructure.validation.sanitizeIpAddress
+import com.erp.identity.infrastructure.validation.sanitizeName
+import com.erp.identity.infrastructure.validation.sanitizePermissionIdentifier
+import com.erp.identity.infrastructure.validation.sanitizePhoneNumber
+import com.erp.identity.infrastructure.validation.sanitizePostalCode
+import com.erp.identity.infrastructure.validation.sanitizeReason
+import com.erp.identity.infrastructure.validation.sanitizeRoleName
+import com.erp.identity.infrastructure.validation.sanitizeSlug
+import com.erp.identity.infrastructure.validation.sanitizeTaxId
+import com.erp.identity.infrastructure.validation.sanitizeUserAgent
+import com.erp.identity.infrastructure.validation.sanitizeUsername
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonSetter
@@ -31,6 +47,7 @@ data class ProvisionTenantRequest
         @JsonProperty("name")
         val name: String,
         @JsonProperty("slug")
+        @field:ValidTenantSlug
         val slug: String,
         @JsonProperty("subscription")
         val subscription: SubscriptionPayload,
@@ -44,8 +61,8 @@ data class ProvisionTenantRequest
         @Schema(hidden = true)
         fun toCommand() =
             com.erp.identity.application.port.input.command.ProvisionTenantCommand(
-                name = name,
-                slug = slug,
+                name = name.sanitizeName(),
+                slug = slug.sanitizeSlug(),
                 subscription = subscription.toDomain(),
                 organization = organization?.toDomain(),
                 metadata = metadata ?: emptyMap(),
@@ -102,12 +119,12 @@ data class OrganizationPayload
         @Schema(hidden = true)
         fun toDomain(): Organization =
             Organization(
-                legalName = legalName,
-                taxId = taxId,
-                industry = industry,
+                legalName = legalName.sanitizeName(),
+                taxId = taxId?.sanitizeTaxId(),
+                industry = industry?.sanitizeIndustry(),
                 address = address?.toDomain(),
-                contactEmail = contactEmail,
-                contactPhone = contactPhone,
+                contactEmail = contactEmail.sanitizeEmail(),
+                contactPhone = contactPhone?.sanitizePhoneNumber(),
             )
     }
 
@@ -129,11 +146,11 @@ data class AddressPayload
         @Schema(hidden = true)
         fun toDomain(): Address =
             Address(
-                street = street,
-                city = city,
-                state = state,
-                postalCode = postalCode,
-                country = country,
+                street = street.sanitizeName(),
+                city = city.sanitizeName(),
+                state = state?.sanitizeName(),
+                postalCode = postalCode.sanitizePostalCode(),
+                country = country.sanitizeName(),
             )
     }
 
@@ -162,7 +179,12 @@ data class PermissionPayload
         val scope: PermissionScope = PermissionScope.TENANT,
     ) {
         @Schema(hidden = true)
-        fun toDomain(): Permission = Permission(resource = resource, action = action, scope = scope)
+        fun toDomain(): Permission =
+            Permission(
+                resource = resource.sanitizePermissionIdentifier(),
+                action = action.sanitizePermissionIdentifier(),
+                scope = scope,
+            )
     }
 
 @Schema(name = "CreateRoleRequest")
@@ -188,8 +210,8 @@ data class CreateRoleRequest
         fun toCommand(tenantId: TenantId) =
             com.erp.identity.application.port.input.command.CreateRoleCommand(
                 tenantId = tenantId,
-                name = name,
-                description = description,
+                name = name.sanitizeRoleName(),
+                description = description.sanitizeDescription(),
                 permissions = permissions.map { it.toDomain() }.toSet(),
                 isSystem = isSystem,
                 metadata = metadata,
@@ -221,8 +243,8 @@ data class UpdateRoleRequest
         ) = com.erp.identity.application.port.input.command.UpdateRoleCommand(
             tenantId = tenantId,
             roleId = roleId,
-            name = name,
-            description = description,
+            name = name.sanitizeRoleName(),
+            description = description.sanitizeDescription(),
             permissions = permissions.map { it.toDomain() }.toSet(),
             metadata = metadata,
             updatedBy = updatedBy,
@@ -269,7 +291,7 @@ data class SuspendTenantRequest
         fun toCommand(tenantId: UUID) =
             com.erp.identity.application.port.input.command.SuspendTenantCommand(
                 tenantId = TenantId(tenantId),
-                reason = reason,
+                reason = reason.sanitizeReason(),
                 requestedBy = requestedBy,
             )
     }
@@ -321,6 +343,7 @@ data class CreateUserRequest
         @JsonProperty("tenantId")
         val tenantId: UUID,
         @JsonProperty("username")
+        @field:ValidUsername
         val username: String,
         @JsonProperty("email")
         val email: String,
@@ -340,9 +363,9 @@ data class CreateUserRequest
         fun toCommand() =
             com.erp.identity.application.port.input.command.CreateUserCommand(
                 tenantId = TenantId(tenantId),
-                username = username,
-                email = email,
-                fullName = fullName,
+                username = username.sanitizeUsername(),
+                email = email.sanitizeEmail(),
+                fullName = fullName.sanitizeName(),
                 password = password,
                 roleIds = roleIds.map { RoleId(it) }.toSet(),
                 metadata = metadata,
@@ -431,7 +454,7 @@ data class SuspendUserRequest
             com.erp.identity.application.port.input.command.SuspendUserCommand(
                 tenantId = TenantId(tenantId),
                 userId = UserId(userId),
-                reason = reason,
+                reason = reason.sanitizeReason(),
                 requestedBy = requestedBy,
             )
     }
@@ -496,10 +519,10 @@ data class AuthenticateRequest
         fun toCommand() =
             com.erp.identity.application.port.input.command.AuthenticateUserCommand(
                 tenantId = TenantId(tenantId),
-                usernameOrEmail = usernameOrEmail,
+                usernameOrEmail = usernameOrEmail.sanitizeUsername(),
                 password = password,
-                ipAddress = ipAddress,
-                userAgent = userAgent,
+                ipAddress = ipAddress?.sanitizeIpAddress(),
+                userAgent = userAgent?.sanitizeUserAgent(),
             )
     }
 

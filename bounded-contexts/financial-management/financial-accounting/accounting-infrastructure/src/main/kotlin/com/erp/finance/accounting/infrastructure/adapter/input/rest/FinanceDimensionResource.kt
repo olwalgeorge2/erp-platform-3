@@ -27,10 +27,14 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.QueryParam
+import jakarta.ws.rs.core.Context
+import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
+import com.erp.financial.shared.validation.preferredLocale
 import org.eclipse.microprofile.openapi.annotations.Operation
 import org.eclipse.microprofile.openapi.annotations.tags.Tag
+import java.util.Locale
 import java.util.UUID
 
 @ApplicationScoped
@@ -41,6 +45,9 @@ import java.util.UUID
 class FinanceDimensionResource {
     @Inject
     lateinit var dimensionCommandUseCase: DimensionCommandUseCase
+
+    @Context
+    var httpHeaders: HttpHeaders? = null
 
     @POST
     @Path("/company-codes")
@@ -69,7 +76,7 @@ class FinanceDimensionResource {
             .status(Response.Status.CREATED)
             .entity(
                 dimensionCommandUseCase
-                    .upsertDimension(request.toCommand(parseDimensionType(dimensionType)))
+                    .upsertDimension(request.toCommand(parseDimensionType(dimensionType, currentLocale())))
                     .toDimensionResponse(),
             ).build()
 
@@ -86,7 +93,7 @@ class FinanceDimensionResource {
                 dimensionCommandUseCase
                     .upsertDimension(
                         request.toCommand(
-                            type = parseDimensionType(dimensionType),
+                            type = parseDimensionType(dimensionType, currentLocale()),
                             dimensionId = dimensionId,
                         ),
                     ).toDimensionResponse(),
@@ -107,7 +114,7 @@ class FinanceDimensionResource {
                     tenantId = tenantId,
                     companyCodeId = companyCodeId,
                     status = status,
-                ).toQuery(parseDimensionType(dimensionType)),
+                ).toQuery(parseDimensionType(dimensionType, currentLocale())),
             ).map { it.toDimensionResponse() }
 
     @POST
@@ -177,15 +184,7 @@ class FinanceDimensionResource {
         return Response.status(Response.Status.NO_CONTENT).build()
     }
 
-    private fun parseDimensionType(raw: String): DimensionType =
-        when (raw.lowercase()) {
-            "cost-centers" -> DimensionType.COST_CENTER
-            "profit-centers" -> DimensionType.PROFIT_CENTER
-            "departments" -> DimensionType.DEPARTMENT
-            "projects" -> DimensionType.PROJECT
-            "business-areas" -> DimensionType.BUSINESS_AREA
-            else -> throw IllegalArgumentException("Unsupported dimension type $raw")
-        }
+    private fun currentLocale(): Locale = httpHeaders.preferredLocale()
 }
 
 private fun com.erp.finance.accounting.domain.model.CompanyCode.toCompanyCodeResponse(): CompanyCodeResponse =

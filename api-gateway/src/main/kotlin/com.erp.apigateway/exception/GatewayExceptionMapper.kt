@@ -2,8 +2,12 @@ package com.erp.apigateway.exception
 
 import com.erp.apigateway.routing.RouteNotFoundException
 import com.erp.apigateway.tracing.TraceContext
+import com.erp.apigateway.validation.GatewayValidationAuditLogger
 import com.erp.apigateway.validation.GatewayValidationException
+import com.fasterxml.jackson.databind.ObjectMapper
 import jakarta.inject.Inject
+import jakarta.ws.rs.container.ContainerRequestContext
+import jakarta.ws.rs.core.Context
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.ext.ExceptionMapper
@@ -37,6 +41,17 @@ class GatewayExceptionMapper : ExceptionMapper<Throwable> {
     @Inject
     var traceContext: TraceContext? = null
 
+    @Inject
+    var meterRegistry: io.micrometer.core.instrument.MeterRegistry? = null
+
+    @Inject
+    lateinit var objectMapper: ObjectMapper
+
+    @Context
+    lateinit var requestContext: ContainerRequestContext
+
+    private val auditLogger by lazy { GatewayValidationAuditLogger(objectMapper) }
+
     override fun toResponse(exception: Throwable): Response {
         if (exception is GatewayValidationException) {
             return validationErrorResponse(exception)
@@ -68,6 +83,21 @@ class GatewayExceptionMapper : ExceptionMapper<Throwable> {
     }
 
     private fun validationErrorResponse(exception: GatewayValidationException): Response {
+        // Track validation errors for monitoring and alerting
+        meterRegistry
+            ?.counter(
+                "gateway.validation.errors",
+                "error_code",
+                exception.errorCode.code,
+                "field",
+                exception.field,
+                "http_status",
+                "422",
+            )?.increment()
+
+        // Enhanced audit logging at gateway edge
+        logValidationFailure(exception)
+
         val violation =
             ValidationErrorResponse(
                 field = exception.field,
@@ -88,6 +118,30 @@ class GatewayExceptionMapper : ExceptionMapper<Throwable> {
             .type(MediaType.APPLICATION_JSON_TYPE)
             .build()
     }
+
+    private fun logValidationFailure(exception: GatewayValidationException) {
+        // Skip audit logging if requestContext is not initialized (e.g., in unit tests)
+        if (!this::requestContext.isInitialized) {
+            return
+        }
+
+        val headers = extractHeaders()
+        auditLogger.logValidationFailure(
+            errorCode = exception.errorCode.code,
+            field = exception.field,
+            rejectedValue = exception.rejectedValue,
+            tenantId = GatewayValidationAuditLogger.extractTenantId(headers),
+            clientIp = GatewayValidationAuditLogger.extractClientIp(headers),
+            requestPath = requestContext.uriInfo?.requestUri?.path,
+            userAgent = GatewayValidationAuditLogger.extractUserAgent(headers),
+            httpStatus = 422,
+        )
+    }
+
+    private fun extractHeaders(): Map<String, String> =
+        requestContext.headers.entries.associate { (key, values) ->
+            key to values.firstOrNull().orEmpty()
+        }
 
     companion object {
         private val UNPROCESSABLE_ENTITY =

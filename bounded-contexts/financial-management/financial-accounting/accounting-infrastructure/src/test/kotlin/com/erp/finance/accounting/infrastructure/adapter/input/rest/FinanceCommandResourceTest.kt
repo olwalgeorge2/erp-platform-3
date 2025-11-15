@@ -21,19 +21,24 @@ import com.erp.finance.accounting.domain.model.LedgerId
 import com.erp.finance.accounting.domain.model.Money
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.AccountingPeriodResponse
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.ChartOfAccountsResponse
+import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.ChartPathParams
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.ClosePeriodRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.CreateLedgerRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.DefineAccountRequest
-import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.ErrorResponse
+import com.erp.financial.shared.api.ErrorResponse
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.JournalEntryResponse
+import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.LedgerPeriodPathParams
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.LedgerResponse
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.PostJournalEntryLineRequest
 import com.erp.finance.accounting.infrastructure.adapter.input.rest.dto.PostJournalEntryRequest
+import com.erp.financial.shared.validation.FinanceValidationException
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.time.LocalDate
@@ -96,7 +101,10 @@ class FinanceCommandResourceTest {
                 currency = "usd",
             )
 
-        val response = resource.defineAccount(chartId.toString(), request)
+        val response = resource.defineAccount(
+            ChartPathParams(chartId = chartId.toString()),
+            request,
+        )
 
         assertStatus(Response.Status.OK, response)
         val payload = response.entity as ChartOfAccountsResponse
@@ -173,8 +181,10 @@ class FinanceCommandResourceTest {
         useCase.closePeriodHandler = { period }
         val response =
             resource.closePeriod(
-                ledgerId.toString(),
-                periodId.toString(),
+                LedgerPeriodPathParams(
+                    ledgerId = ledgerId.toString(),
+                    periodId = periodId.toString(),
+                ),
                 ClosePeriodRequest(
                     tenantId = TENANT_ID,
                     freezeOnly = false,
@@ -185,6 +195,29 @@ class FinanceCommandResourceTest {
         val payload = response.entity as AccountingPeriodResponse
         assertEquals(period.id.value, payload.id)
         assertEquals(ledgerId, useCase.lastClosePeriod?.ledgerId)
+    }
+
+    @Test
+    fun `postJournalEntry enforces minimum line count`() {
+        val request =
+            PostJournalEntryRequest(
+                tenantId = TENANT_ID,
+                ledgerId = UUID.randomUUID(),
+                accountingPeriodId = UUID.randomUUID(),
+                lines =
+                    listOf(
+                        PostJournalEntryLineRequest(
+                            accountId = UUID.randomUUID(),
+                            direction = EntryDirection.DEBIT,
+                            amountMinor = 100,
+                        ),
+                    ),
+            )
+
+        assertThrows(FinanceValidationException::class.java) {
+            resource.postJournalEntry(request)
+        }
+        assertNull(useCase.lastPostJournalEntry)
     }
 
     @Test

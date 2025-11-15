@@ -60,11 +60,22 @@ class DimensionValidationService
                         resolved[dimensionId]
                             ?: run {
                                 recordValidationFailure("NOT_FOUND", type, line.accountType)
-                                error("Dimension $dimensionId for $type not found for tenant $tenantId")
+                                throw DimensionValidationException(
+                                    reason = DimensionValidationException.Reason.NOT_FOUND,
+                                    dimensionType = type,
+                                    accountType = line.accountType,
+                                    dimensionId = dimensionId,
+                                )
                             }
                     if (!dimension.isActive(bookingDate)) {
                         recordValidationFailure("INACTIVE", type, line.accountType)
-                        error("Dimension ${dimension.code} ($type) is not active on $bookingDate")
+                        throw DimensionValidationException(
+                            reason = DimensionValidationException.Reason.INACTIVE,
+                            dimensionType = type,
+                            accountType = line.accountType,
+                            dimensionId = dimensionId,
+                            bookingDate = bookingDate,
+                        )
                     }
                 }
             }
@@ -74,7 +85,11 @@ class DimensionValidationService
                 requirements.forEach { (dimensionType, requirement) ->
                     if (requirement == DimensionRequirement.MANDATORY && !line.dimensions.containsKey(dimensionType)) {
                         recordValidationFailure("MANDATORY_MISSING", dimensionType, line.accountType)
-                        error("Dimension ${dimensionType.name} is mandatory for ${line.accountType}")
+                        throw DimensionValidationException(
+                            reason = DimensionValidationException.Reason.MANDATORY_MISSING,
+                            dimensionType = dimensionType,
+                            accountType = line.accountType,
+                        )
                     }
                 }
             }

@@ -35,7 +35,8 @@ class JpaApOpenItemRepository(
         tenantId: UUID,
         openItemId: UUID,
     ): ApOpenItem? =
-        entityManager.find(ApOpenItemEntity::class.java, openItemId)
+        entityManager
+            .find(ApOpenItemEntity::class.java, openItemId)
             ?.takeIf { it.tenantId == tenantId }
             ?.toDomain()
 

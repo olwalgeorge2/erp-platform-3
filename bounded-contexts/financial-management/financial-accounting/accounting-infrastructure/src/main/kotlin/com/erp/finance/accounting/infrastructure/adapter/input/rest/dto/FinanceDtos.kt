@@ -17,94 +17,137 @@ import com.erp.finance.accounting.domain.model.JournalEntry
 import com.erp.finance.accounting.domain.model.JournalEntryLine
 import com.erp.finance.accounting.domain.model.Ledger
 import com.erp.finance.accounting.domain.model.Money
+import com.erp.financial.shared.validation.FinanceValidationErrorCode
+import com.erp.financial.shared.validation.FinanceValidationException
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeAccountCode
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeForXss
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeReferenceNumber
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeText
+import com.erp.financial.shared.validation.constraints.ValidDateRange
+import com.erp.financial.shared.validation.ValidationMessageResolver
+import com.erp.financial.shared.validation.constraints.ValidAccountCode
+import com.erp.financial.shared.validation.constraints.ValidCurrencyCode
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.NotNull
+import jakarta.validation.constraints.Size
 import io.quarkus.runtime.annotations.RegisterForReflection
 import org.eclipse.microprofile.openapi.annotations.media.Schema
 import java.time.Instant
 import java.time.LocalDate
+import java.util.Locale
 import java.util.UUID
 import com.erp.finance.accounting.application.port.input.dto.AccountingPeriodDto as QueryAccountingPeriodDto
 
 @RegisterForReflection
 data class CreateLedgerRequest(
+    @field:NotNull
     val tenantId: UUID,
+    @field:NotNull
     val chartOfAccountsId: UUID,
+    @field:NotBlank
+    @field:ValidCurrencyCode
     val baseCurrency: String,
+    @field:ValidAccountCode
     val chartCode: String? = null,
     val chartName: String? = null,
     val reference: String? = null,
 ) {
-    fun toCommand(): CreateLedgerCommand =
-        CreateLedgerCommand(
+    fun toCommand(locale: Locale): CreateLedgerCommand {
+        val normalizedCurrency = normalizeCurrency(baseCurrency, "baseCurrency", locale)
+        val normalizedChartCode = chartCode?.takeIf { it.isNotBlank() }?.sanitizeAccountCode() ?: "DEFAULT"
+        val normalizedChartName = chartName?.takeIf { it.isNotBlank() }?.sanitizeForXss() ?: "Default Chart"
+        return CreateLedgerCommand(
             tenantId = tenantId,
             chartOfAccountsId = chartOfAccountsId,
-            baseCurrency = baseCurrency.uppercase(),
-            chartCode = chartCode?.takeIf { it.isNotBlank() } ?: "DEFAULT",
-            chartName = chartName?.takeIf { it.isNotBlank() } ?: "Default Chart",
-            reference = reference,
+            baseCurrency = normalizedCurrency,
+            chartCode = normalizedChartCode,
+            chartName = normalizedChartName,
+            reference = reference?.sanitizeReferenceNumber(),
         )
+    }
 }
 
 @RegisterForReflection
 data class DefineAccountRequest(
+    @field:NotNull
     val tenantId: UUID,
     val parentAccountId: UUID? = null,
+    @field:NotBlank
+    @field:ValidAccountCode
     val code: String,
+    @field:NotBlank
     val name: String,
+    @field:NotNull
     val type: AccountType,
+    @field:ValidCurrencyCode
     val currency: String? = null,
     val isPosting: Boolean = true,
 ) {
-    fun toCommand(chartOfAccountsId: UUID): DefineAccountCommand =
+    fun toCommand(
+        locale: Locale,
+        chartOfAccountsId: UUID,
+    ): DefineAccountCommand =
         DefineAccountCommand(
             tenantId = tenantId,
             chartOfAccountsId = chartOfAccountsId,
             parentAccountId = parentAccountId,
-            code = code,
-            name = name,
+            code = code.sanitizeAccountCode(),
+            name = name.sanitizeForXss(),
             type = type,
-            currency = currency?.uppercase(),
+            currency = currency?.takeIf { it.isNotBlank() }?.let { normalizeCurrency(it, "currency", locale) },
             isPosting = isPosting,
         )
 }
 
 @RegisterForReflection
 data class PostJournalEntryRequest(
+    @field:NotNull
     val tenantId: UUID,
+    @field:NotNull
     val ledgerId: UUID,
+    @field:NotNull
     val accountingPeriodId: UUID,
     val reference: String? = null,
     val description: String? = null,
     val bookedAt: Instant? = null,
+    @field:NotEmpty
+    @field:Valid
     val lines: List<PostJournalEntryLineRequest>,
 ) {
-    fun toCommand(): PostJournalEntryCommand =
-        PostJournalEntryCommand(
+    fun toCommand(locale: Locale): PostJournalEntryCommand {
+        val resolvedLines =
+            lines.takeIf { it.size >= 2 }
+                ?: throw FinanceValidationException(
+                    errorCode = FinanceValidationErrorCode.FINANCE_INVALID_JOURNAL_LINES,
+                    field = "lines",
+                    rejectedValue = null,
+                    locale = locale,
+                    message = ValidationMessageResolver.resolve(FinanceValidationErrorCode.FINANCE_INVALID_JOURNAL_LINES, locale),
+                )
+
+        return PostJournalEntryCommand(
             tenantId = tenantId,
             ledgerId = ledgerId,
             accountingPeriodId = accountingPeriodId,
-            reference = reference,
-            description = description,
+            reference = reference?.sanitizeReferenceNumber(),
+            description = description?.sanitizeText(500),
             bookedAt = bookedAt ?: Instant.now(),
-            lines =
-                lines.map { line ->
-                    JournalEntryLineCommand(
-                        accountId = AccountId(line.accountId),
-                        direction = line.direction,
-                        amount = Money(line.amountMinor),
-                        currency = line.currency?.uppercase(),
-                        description = line.description,
-                        dimensions = line.toAssignments(),
-                    )
-                },
+            lines = resolvedLines.mapIndexed { index, line -> line.toCommand(index, locale) },
         )
+    }
 }
 
 @RegisterForReflection
 data class PostJournalEntryLineRequest(
+    @field:NotNull
     val accountId: UUID,
+    @field:NotNull
     val direction: EntryDirection,
     @Schema(description = "Monetary amount expressed in minor units (e.g. cents)")
     val amountMinor: Long,
+    @field:ValidCurrencyCode
     val currency: String? = null,
     val description: String? = null,
     val costCenterId: UUID? = null,
@@ -112,10 +155,41 @@ data class PostJournalEntryLineRequest(
     val departmentId: UUID? = null,
     val projectId: UUID? = null,
     val businessAreaId: UUID? = null,
-)
+) {
+    fun toCommand(
+        index: Int,
+        locale: Locale,
+    ): JournalEntryLineCommand {
+        if (amountMinor <= 0) {
+            val field = "lines[$index].amountMinor"
+            throw FinanceValidationException(
+                errorCode = FinanceValidationErrorCode.FINANCE_INVALID_JOURNAL_LINE_AMOUNT,
+                field = field,
+                rejectedValue = amountMinor.toString(),
+                locale = locale,
+                message =
+                    ValidationMessageResolver.resolve(
+                        FinanceValidationErrorCode.FINANCE_INVALID_JOURNAL_LINE_AMOUNT,
+                        locale,
+                        field,
+                    ),
+            )
+        }
+
+        return JournalEntryLineCommand(
+            accountId = AccountId(accountId),
+            direction = direction,
+            amount = Money(amountMinor),
+            currency = currency?.takeIf { it.isNotBlank() }?.let { normalizeCurrency(it, "lines[$index].currency", locale) },
+            description = description?.sanitizeText(200),
+            dimensions = toAssignments(),
+        )
+    }
+}
 
 @RegisterForReflection
 data class ClosePeriodRequest(
+    @field:NotNull
     val tenantId: UUID,
     val freezeOnly: Boolean = false,
 ) {
@@ -133,8 +207,11 @@ data class ClosePeriodRequest(
 
 @RegisterForReflection
 data class RunCurrencyRevaluationRequest(
+    @field:NotNull
     val tenantId: UUID,
+    @field:NotNull
     val gainAccountId: UUID,
+    @field:NotNull
     val lossAccountId: UUID,
     val asOfTimestamp: Instant? = null,
     val bookedAt: Instant? = null,
@@ -239,6 +316,7 @@ data class LedgerPeriodInfoResponse(
     val openPeriods: List<LedgerAccountingPeriodResponse>,
 )
 
+@ValidDateRange(startField = "startDate", endField = "endDate")
 data class LedgerAccountingPeriodResponse(
     val periodId: UUID,
     val code: String,
@@ -247,15 +325,28 @@ data class LedgerAccountingPeriodResponse(
     val status: String,
 )
 
-@Schema(
-    name = "ErrorResponse",
-    description = "Financial accounting service error payload",
-)
-data class ErrorResponse(
-    val code: String,
-    val message: String,
-    val details: Map<String, Any?> = emptyMap(),
-)
+private fun normalizeCurrency(
+    value: String,
+    field: String,
+    locale: Locale,
+): String {
+    val normalized = value.trim().uppercase(Locale.getDefault())
+    if (normalized.length != 3) {
+        throw FinanceValidationException(
+            errorCode = FinanceValidationErrorCode.FINANCE_INVALID_CURRENCY_CODE,
+            field = field,
+            rejectedValue = value,
+            locale = locale,
+            message =
+                ValidationMessageResolver.resolve(
+                    FinanceValidationErrorCode.FINANCE_INVALID_CURRENCY_CODE,
+                    locale,
+                    value,
+                ),
+        )
+    }
+    return normalized
+}
 
 fun Ledger.toResponse(): LedgerResponse =
     LedgerResponse(

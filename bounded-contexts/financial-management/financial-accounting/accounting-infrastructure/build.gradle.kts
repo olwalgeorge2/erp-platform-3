@@ -14,6 +14,7 @@ noArg {
 dependencies {
     implementation(project(":bounded-contexts:financial-management:financial-accounting:accounting-application"))
     implementation(project(":bounded-contexts:financial-management:financial-accounting:accounting-domain"))
+    implementation(project(":bounded-contexts:financial-management:financial-shared"))
     implementation(project(":platform-shared:common-types"))
 
     implementation("io.quarkus:quarkus-jdbc-postgresql")

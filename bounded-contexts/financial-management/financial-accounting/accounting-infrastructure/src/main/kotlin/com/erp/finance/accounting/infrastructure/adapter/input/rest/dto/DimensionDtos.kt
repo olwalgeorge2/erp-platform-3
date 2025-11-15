@@ -17,6 +17,9 @@ import com.erp.finance.accounting.domain.model.DimensionStatus
 import com.erp.finance.accounting.domain.model.DimensionType
 import com.erp.finance.accounting.domain.model.FiscalYearVariant
 import com.erp.finance.accounting.domain.model.PeriodBlackout
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeAccountCode
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeForXss
+import com.erp.financial.shared.validation.InputSanitizer.sanitizeText
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -34,12 +37,12 @@ data class CreateCompanyCodeRequest(
     fun toCommand(): CreateCompanyCodeCommand =
         CreateCompanyCodeCommand(
             tenantId = tenantId,
-            code = code,
-            name = name,
-            legalEntityName = legalEntityName,
-            countryCode = countryCode,
-            baseCurrency = baseCurrency,
-            timezone = timezone,
+            code = code.sanitizeAccountCode(),
+            name = name.sanitizeForXss(),
+            legalEntityName = legalEntityName.sanitizeForXss(),
+            countryCode = countryCode.trim().uppercase().take(2),
+            baseCurrency = baseCurrency.trim().uppercase().take(3),
+            timezone = timezone.trim(),
             status = status,
         )
 }
@@ -92,9 +95,9 @@ data class DimensionRequest(
             tenantId = tenantId,
             companyCodeId = companyCodeId,
             type = type,
-            code = code,
-            name = name,
-            description = description,
+            code = code.sanitizeAccountCode(),
+            name = name.sanitizeForXss(),
+            description = description?.sanitizeText(500),
             parentId = parentId,
             status = status,
             validFrom = validFrom,
@@ -148,9 +151,9 @@ data class FiscalYearVariantRequest(
     fun toCommand(): CreateFiscalYearVariantCommand =
         CreateFiscalYearVariantCommand(
             tenantId = tenantId,
-            code = code,
-            name = name,
-            description = description,
+            code = code.sanitizeAccountCode(),
+            name = name.sanitizeForXss(),
+            description = description?.sanitizeText(500),
             startMonth = startMonth,
             calendarPattern = calendarPattern,
             periods = periods.map(FiscalYearVariantPeriodRequest::toDefinition),

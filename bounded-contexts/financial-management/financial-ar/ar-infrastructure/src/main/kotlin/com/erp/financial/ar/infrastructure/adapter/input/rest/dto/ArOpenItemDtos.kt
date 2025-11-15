@@ -6,13 +6,16 @@ import com.erp.financial.ar.application.port.input.query.ArAgingDetailResult
 import com.erp.financial.ar.application.port.input.query.ArAgingQuery
 import com.erp.financial.ar.application.port.input.query.ArAgingSummaryLine
 import com.erp.financial.ar.application.port.input.query.ArAgingSummaryResult
+import com.erp.financial.shared.validation.FinanceValidationErrorCode
+import com.erp.financial.shared.validation.FinanceValidationException
+import com.erp.financial.shared.validation.ValidationMessageResolver
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Pattern
-import jakarta.ws.rs.BadRequestException
 import jakarta.ws.rs.QueryParam
 import java.time.LocalDate
 import java.time.format.DateTimeParseException
+import java.util.Locale
 import java.util.UUID
 
 data class ArAgingRequest(
@@ -28,22 +31,50 @@ data class ArAgingRequest(
     @field:QueryParam("asOfDate")
     var asOfDate: String? = null,
 ) {
-    fun toQuery(): ArAgingQuery =
+    fun toQuery(locale: Locale): ArAgingQuery =
         ArAgingQuery(
-            tenantId = tenantId ?: throw BadRequestException("tenantId is required"),
+            tenantId = tenantId ?: missingField("tenantId", FinanceValidationErrorCode.FINANCE_INVALID_TENANT_ID, locale),
             companyCodeId = companyCodeId,
             customerId = customerId,
-            asOfDate = parseAsOfDate(),
+            asOfDate = parseAsOfDate(locale),
         )
 
-    private fun parseAsOfDate(): LocalDate {
-        val value = asOfDate ?: throw BadRequestException("asOfDate is required")
+    private fun parseAsOfDate(locale: Locale): LocalDate {
+        val value =
+            asOfDate
+                ?: missingField("asOfDate", FinanceValidationErrorCode.FINANCE_INVALID_DATE, locale, "<missing>", "yyyy-MM-dd")
         return try {
             LocalDate.parse(value)
         } catch (ex: DateTimeParseException) {
-            throw BadRequestException("Invalid asOfDate '$value'. Expected format yyyy-MM-dd.")
+            throw FinanceValidationException(
+                errorCode = FinanceValidationErrorCode.FINANCE_INVALID_DATE,
+                field = "asOfDate",
+                rejectedValue = value,
+                locale = locale,
+                message =
+                    ValidationMessageResolver.resolve(
+                        FinanceValidationErrorCode.FINANCE_INVALID_DATE,
+                        locale,
+                        value,
+                        "yyyy-MM-dd",
+                    ),
+            )
         }
     }
+
+    private fun missingField(
+        field: String,
+        code: FinanceValidationErrorCode,
+        locale: Locale,
+        vararg args: Any?,
+    ): Nothing =
+        throw FinanceValidationException(
+            errorCode = code,
+            field = field,
+            rejectedValue = null,
+            locale = locale,
+            message = ValidationMessageResolver.resolve(code, locale, *args),
+        )
 }
 
 data class ArAgingDetailResponse(

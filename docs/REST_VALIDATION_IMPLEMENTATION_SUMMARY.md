@@ -4,6 +4,35 @@
 
 This document summarizes the implementation of standardized REST API validation across the ERP platform's bounded contexts, establishing the `@BeanParam` pattern with Bean Validation for consistent error handling and type safety.
 
+## Shared Error Envelope for Consumers
+
+All finance services (accounting, AP, AR, gateway) now emit the same error payload exposed from `bounded-contexts/financial-management/financial-shared/src/main/kotlin/com/erp/financial/shared/api/ErrorResponse.kt`. Downstream UI clients and integrations can rely on the following schema:
+
+```json
+{
+  "code": "FINANCE_INVALID_VENDOR_NUMBER",
+  "message": "Die Lieferantennummer darf nicht leer sein.",
+  "validationErrors": [
+    {
+      "field": "vendorNumber",
+      "code": "FINANCE_INVALID_VENDOR_NUMBER",
+      "message": "Die Lieferantennummer darf nicht leer sein.",
+      "rejectedValue": ""
+    }
+  ]
+}
+```
+
+Key points for consumers:
+
+- `code` is always one of the entries declared in `financial-shared/.../validation/FinanceValidationErrorCode.kt` and is stable for automation, dashboards, and UI translations.
+- `validationErrors` contains field-level diagnostics; clients should surface the localized `message` and use `field` to map back to form controls.
+- Language negotiation happens via `Accept-Language` or `Content-Language`; if no header is provided the default locale is used. Localized strings live in `financial-shared/src/main/resources/ValidationMessages*.properties`.
+- Every service installs the shared `FinanceValidationExceptionMapper` and `ValidationAuditFilter`, so HTTP status `422` + error envelope is guaranteed whenever a request fails validation.
+- OpenAPI descriptions now reuse the shared `FinanceErrorResponsesFilter` plus `META-INF/openapi/error-responses.yaml` so downstream UIs/integrations can introspect the `ErrorResponse`/`ValidationError` schemas directly from `/q/openapi`.
+
+Existing REST specs should be updated to reference `ErrorResponse` when documenting client-error responses.
+
 ## Pattern Documentation
 
 **Primary Reference**: `docs/REST_VALIDATION_PATTERN.md`
@@ -268,6 +297,15 @@ When creating a new REST endpoint:
 - [ ] Keep resource method to 1-line delegation if possible
 - [ ] Add unit tests for DTO validation logic
 - [ ] Add integration tests for HTTP 400 scenarios
+
+### Implemented Contract Tests
+- `ApOpenItemResourceValidationTest` and `ArOpenItemResourceValidationTest` boot Quarkus with mocked query ports to assert that invalid `asOfDate` parameters produce HTTP `422` + localized `FINANCE_INVALID_DATE` payloads (English and Spanish respectively). These tests run via `./gradlew :bounded-contexts:financial-management:financial-ap:ap-infrastructure:test` and the AR equivalent.
+- `VendorBillResourceValidationTest` issues an invalid `POST /api/v1/finance/ap/invoices` with `Accept-Language: de-DE` and verifies the envelope returns `FINANCE_INVALID_NAME` plus the German translation, guaranteeing AP command endpoints honor language negotiation.
+- `CustomerResourceValidationTest` performs an invalid `POST /api/v1/finance/customers` with `Accept-Language: es-ES` and asserts the `FINANCE_INVALID_NAME` payload is localized for AR command consumers.
+
+## Known Gaps
+
+- AR command DTOs still rely on manual `require*` parsing. Add Bean Validation annotations + BeanParam wrappers so requests fail-fast before hitting the command use cases.
 
 ## Future Considerations
 

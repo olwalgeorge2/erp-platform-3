@@ -1,9 +1,16 @@
 quarkus:
   application:
     name: financial-ap-service
+  index-dependency:
+    financial-shared:
+      group-id: com.example.erp
+      artifact-id: financial-shared
   http:
     port: ${FINANCE_AP_HTTP_PORT:8092}
     host: ${FINANCE_AP_HTTP_HOST:0.0.0.0}
+    limits:
+      max-body-size: 10M
+      max-header-size: 8K
   datasource:
     db-kind: postgresql
   flyway:
@@ -26,6 +33,7 @@ quarkus:
         path: /q/metrics
   smallrye-openapi:
     path: /q/openapi
+    additional-docs: META-INF/openapi/error-responses.yaml
   swagger-ui:
     always-include: true
     path: /q/swagger-ui
@@ -43,3 +51,7 @@ quarkus:
         max-size: 8
         initial-size: 2
         acquisition-timeout: 30s
+
+mp:
+  openapi:
+    filter: com.erp.financial.shared.openapi.FinanceErrorResponsesFilter

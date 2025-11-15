@@ -1,0 +1,239 @@
+# Prometheus Alert Rules for REST Validation Monitoring
+# Deploy to: /etc/prometheus/rules/validation-alerts.yml
+
+groups:
+  - name: validation_critical
+    interval: 30s
+    rules:
+      # Finance Context - SOX Compliance Alerts
+      - alert: FinanceValidationHighErrorRate
+        expr: rate(finance_validation_errors_total[5m]) > 1
+        for: 2m
+        labels:
+          severity: critical
+          context: finance
+          compliance: sox
+        annotations:
+          summary: "High finance validation error rate detected"
+          description: "Finance validation errors are occurring at {{ $value | humanize }} errors/sec (threshold: 1/sec). This may indicate data quality issues or potential fraud attempts."
+          runbook_url: "https://wiki.company.com/runbooks/finance-validation-errors"
+
+      - alert: FinanceSOXRelevantFailures
+        expr: |
+          count_over_time({app="finance"} |= "validation_failure" | json | requires_sox_review="true" [5m]) > 10
+        for: 1m
+        labels:
+          severity: critical
+          context: finance
+          compliance: sox
+          requires_review: "true"
+        annotations:
+          summary: "SOX-relevant validation failures detected in Finance"
+          description: "{{ $value }} SOX-relevant validation failures detected in the last 5 minutes. Immediate review required for JOURNAL/ACCOUNT/LEDGER/TRANSACTION errors."
+          action: "Review audit logs for tenant_id and user_id. Escalate to finance compliance team."
+
+      - alert: FinancePIIValidationFailures
+        expr: |
+          count_over_time({app="finance"} |= "validation_failure" | json | contains_pii="true" [10m]) > 5
+        for: 2m
+        labels:
+          severity: high
+          context: finance
+          compliance: gdpr
+        annotations:
+          summary: "Multiple validation failures containing PII detected"
+          description: "{{ $value }} validation failures with PII (email, phone, SSN, address) in the last 10 minutes. Verify data masking is working correctly."
+
+      # Identity Context - Security Alerts
+      - alert: IdentityAuthenticationFailureSpike
+        expr: |
+          count_over_time({app="identity"} |= "identity_validation_failure" | json | is_authentication_failure="true" [5m]) > 20
+        for: 1m
+        labels:
+          severity: critical
+          context: identity
+          security: authentication
+        annotations:
+          summary: "Authentication failure spike detected"
+          description: "{{ $value }} authentication failures in the last 5 minutes. Potential brute force attack or credential stuffing attempt."
+          action: "Review client_ip addresses in audit logs. Consider rate limiting or IP blocking."
+
+      - alert: IdentityAuthorizationFailurePattern
+        expr: |
+          count_over_time({app="identity"} |= "identity_validation_failure" | json | is_authorization_failure="true" [10m]) > 30
+        for: 2m
+        labels:
+          severity: high
+          context: identity
+          security: authorization
+        annotations:
+          summary: "Elevated authorization failure rate detected"
+          description: "{{ $value }} authorization failures in the last 10 minutes. Potential privilege escalation attempt or misconfigured roles."
+
+      - alert: IdentityTenantSuspendedAccess
+        expr: |
+          count_over_time({app="identity"} |= "TENANT_SUSPENDED" [5m]) > 0
+        for: 30s
+        labels:
+          severity: high
+          context: identity
+          requires_review: "true"
+        annotations:
+          summary: "Suspended tenant attempting access"
+          description: "Suspended tenant attempted {{ $value }} operations in the last 5 minutes. Review tenant_id and reason for suspension."
+
+      - alert: IdentityUserLockedAttempts
+        expr: |
+          count_over_time({app="identity"} |= "USER_LOCKED" [5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+          context: identity
+        annotations:
+          summary: "Multiple locked user access attempts"
+          description: "{{ $value }} attempts by locked users in the last 5 minutes. Verify account lock mechanisms are working."
+
+      # Gateway Context - Edge Security Alerts
+      - alert: GatewayRateLimitViolations
+        expr: rate(gateway_validation_errors_total{error_code="RATE_LIMIT"}[5m]) > 0.5
+        for: 2m
+        labels:
+          severity: critical
+          context: gateway
+          security: ddos
+        annotations:
+          summary: "Elevated rate limit violations at gateway"
+          description: "Rate limit violations occurring at {{ $value | humanize }} violations/sec. Potential DDoS attack or misbehaving client."
+          action: "Review client_ip and user_agent in audit logs. Consider dynamic rate limiting or IP blocking."
+
+      - alert: GatewayDDoSPattern
+        expr: |
+          count_over_time({app="gateway"} |= "gateway_validation_failure" | json | is_rate_limit_violation="true" [2m]) > 100
+        for: 30s
+        labels:
+          severity: critical
+          context: gateway
+          security: ddos
+          pager: "true"
+        annotations:
+          summary: "DDoS attack pattern detected at gateway"
+          description: "{{ $value }} rate limit violations in 2 minutes. Immediate action required to protect infrastructure."
+          action: "Enable emergency rate limiting. Review WAF rules. Escalate to SRE team."
+
+      - alert: GatewayRoutingFailures
+        expr: |
+          count_over_time({app="gateway"} |= "gateway_validation_failure" | json | is_routing_failure="true" [5m]) > 10
+        for: 1m
+        labels:
+          severity: high
+          context: gateway
+        annotations:
+          summary: "Gateway routing failures detected"
+          description: "{{ $value }} routing failures in the last 5 minutes. Downstream services may be unavailable."
+
+      - alert: GatewayValidationErrorRate
+        expr: rate(gateway_validation_errors_total[5m]) > 2
+        for: 2m
+        labels:
+          severity: warning
+          context: gateway
+        annotations:
+          summary: "High gateway validation error rate"
+          description: "Gateway validation errors at {{ $value | humanize }} errors/sec. Check for invalid requests or client issues."
+
+      # Cross-Context Alerts
+      - alert: ValidationFailureAcrossAllContexts
+        expr: |
+          (rate(finance_validation_errors_total[5m]) > 0.5) and
+          (rate(identity_validation_errors_total[5m]) > 0.5) and
+          (rate(gateway_validation_errors_total[5m]) > 0.5)
+        for: 3m
+        labels:
+          severity: critical
+          scope: platform
+        annotations:
+          summary: "Validation failures detected across all bounded contexts"
+          description: "Simultaneous validation failures in Finance, Identity, and Gateway. Potential platform-wide issue or coordinated attack."
+          action: "Escalate to platform team. Review correlation_id patterns in audit logs."
+
+      - alert: CriticalSeverityValidationFailures
+        expr: |
+          count_over_time({app=~"finance|identity|gateway"} |= "validation_failure" | json | severity="CRITICAL" [5m]) > 5
+        for: 1m
+        labels:
+          severity: critical
+          requires_review: "true"
+        annotations:
+          summary: "Multiple CRITICAL severity validation failures"
+          description: "{{ $value }} CRITICAL validation failures in the last 5 minutes. Immediate investigation required."
+
+      - alert: HighSeverityValidationTrend
+        expr: |
+          count_over_time({app=~"finance|identity|gateway"} |= "validation_failure" | json | severity="HIGH" [10m]) > 20
+        for: 2m
+        labels:
+          severity: high
+        annotations:
+          summary: "Elevated HIGH severity validation failure rate"
+          description: "{{ $value }} HIGH severity failures in 10 minutes. Review for patterns or systemic issues."
+
+      # Data Quality Alerts
+      - alert: SpecificFieldFailurePattern
+        expr: sum by (field) (increase(finance_validation_errors_total[1h])) > 100
+        for: 5m
+        labels:
+          severity: warning
+          category: data_quality
+        annotations:
+          summary: "High failure rate for specific field: {{ $labels.field }}"
+          description: "Field '{{ $labels.field }}' has failed validation over 100 times in the last hour. Investigate input data sources or validation rules."
+
+      - alert: SpecificErrorCodeSpike
+        expr: sum by (error_code) (rate(finance_validation_errors_total[10m])) > 0.3
+        for: 3m
+        labels:
+          severity: warning
+          category: data_quality
+        annotations:
+          summary: "Spike in error code: {{ $labels.error_code }}"
+          description: "Error code '{{ $labels.error_code }}' occurring at {{ $value | humanize }} errors/sec. Review validation logic or data sources."
+
+      # Compliance Monitoring
+      - alert: UnmaskedSensitiveDataInLogs
+        expr: |
+          count_over_time({app=~"finance|identity|gateway"} |= "validation_failure" |~ "password|token|secret|ssn|credit" [10m]) > 0
+        for: 30s
+        labels:
+          severity: critical
+          compliance: gdpr
+          security: data_leak
+        annotations:
+          summary: "Potential unmasked sensitive data in audit logs"
+          description: "{{ $value }} audit log entries may contain unmasked sensitive data. Verify sanitization is working."
+          action: "Immediate review required. Potential GDPR violation. Escalate to security team."
+
+      # Operational Alerts
+      - alert: ValidationAuditLogsMissing
+        expr: |
+          absent_over_time({app=~"finance|identity|gateway"} |= "validation_failure" [15m]) and
+          (rate(finance_validation_errors_total[15m]) > 0 or
+           rate(identity_validation_errors_total[15m]) > 0 or
+           rate(gateway_validation_errors_total[15m]) > 0)
+        for: 2m
+        labels:
+          severity: high
+          category: operational
+        annotations:
+          summary: "Validation audit logs are missing"
+          description: "Validation errors are being recorded by metrics but audit logs are not appearing. Check log aggregation pipeline."
+
+      - alert: CorrelationIdMissing
+        expr: |
+          count_over_time({app=~"finance|identity|gateway"} |= "validation_failure" | json | correlation_id="" [10m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          category: operational
+        annotations:
+          summary: "Validation failures without correlation IDs"
+          description: "{{ $value }} validation failures missing correlation_id in the last 10 minutes. Verify MDC context propagation."

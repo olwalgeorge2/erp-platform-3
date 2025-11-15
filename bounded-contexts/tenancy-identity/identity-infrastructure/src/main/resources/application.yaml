@@ -1,6 +1,9 @@
 quarkus:
   http:
     port: ${QUARKUS_HTTP_PORT:8081}
+    limits:
+      max-body-size: 10M
+      max-header-size: 8K
   smallrye-openapi:
     path: /q/openapi
     additional-docs: META-INF/openapi/error-responses.yaml

@@ -35,6 +35,7 @@ dependencies {
     // Scheduling + Bean validation
     implementation("io.quarkus:quarkus-scheduler")
     implementation("io.quarkus:quarkus-hibernate-validator")
+    implementation("jakarta.validation:jakarta.validation-api:3.0.2")
 
     // Observability + Messaging + Config
     implementation("io.quarkus:quarkus-micrometer-registry-prometheus")
@@ -45,6 +46,9 @@ dependencies {
 
     // Security: Credential hashing (Argon2id)
     implementation("de.mkammerer:argon2-jvm:2.11")
+
+    // Security: Input sanitization (XSS, SQL injection prevention)
+    implementation("com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20220608.1")
 
     // Kotlin reflection (required by some frameworks/serializers)
     implementation("org.jetbrains.kotlin:kotlin-reflect")

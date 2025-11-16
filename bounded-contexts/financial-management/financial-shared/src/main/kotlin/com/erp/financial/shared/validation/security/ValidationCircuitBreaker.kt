@@ -17,7 +17,7 @@ class ValidationCircuitBreaker {
         successThreshold = 3,
     )
     @Timeout(750)
-    private fun <T> execute(supplier: Supplier<T>): T = supplier.get()
+    internal fun <T> execute(supplier: Supplier<T>): T = supplier.get()
 
     fun <T> guard(
         operation: String,

@@ -22,6 +22,7 @@ class ApValidationTestProfile : QuarkusTestProfile {
         private val EXCLUDED_TYPES =
             listOf(
                 "com.erp.financial.ap.application.service.*",
+                "com.erp.financial.ap.application.cache.*",
                 "com.erp.financial.ap.infrastructure.adapter.output.*",
                 "com.erp.financial.ap.infrastructure.adapter.output.persistence.*",
                 "com.erp.financial.ap.infrastructure.adapter.input.rest.PaymentProposalResource",

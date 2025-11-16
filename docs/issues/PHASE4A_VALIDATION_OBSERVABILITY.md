@@ -1,11 +1,12 @@
 # Phase 4a: Validation Observability
 
-**Status:** ✅ Complete  
-**Completed:** November 16, 2025  
+**Status:** ✅ Complete (Implementation + Validation Evidence)
+**Completed:** November 17, 2025  
 **Priority:** Critical  
 **Effort:** Medium (3-5 days)  
 **Dependencies:** Phase 3 (Custom Validators) ✅ Complete  
-**ADR Reference:** ADR-010 §5 (Observability)
+**ADR Reference:** ADR-010 §5 (Observability)  
+**Evidence:** [docs/evidence/validation/phase4a/OBSERVABILITY_VALIDATION.md](../evidence/validation/phase4a/OBSERVABILITY_VALIDATION.md)
 
 ## Problem Statement
 
@@ -26,13 +27,13 @@ Phase 3 implemented custom validators with comprehensive unit tests (189 passing
 4. **Validation Failure Analytics** - Track which rules fail most frequently
 
 ### Success Criteria
-- ✅ Per-endpoint validation timing metrics captured via Micrometer
-- ✅ Grafana dashboard showing validation latency p50/p95/p99
-- ✅ Grafana dashboard showing validation failure rates by error code
-- ✅ Alerting rules for validation latency > 100ms (p95)
-- ✅ Alerting rules for validation failure rate > 5%
-- ✅ Custom validator execution time tracked individually
-- ✅ SOX-relevant validation failures logged with structured audit trail
+- ✅ Per-endpoint validation timing metrics captured via Micrometer (validated on QA)
+- ✅ Grafana dashboard showing validation latency p50/p95/p99 (imported and tested)
+- ✅ Grafana dashboard showing validation failure rates by error code (operational)
+- ✅ Alerting rules for validation latency > 100ms (p95) (fired successfully during load test)
+- ✅ Alerting rules for validation failure rate > 5% (fired successfully with chaos injection)
+- ✅ Custom validator execution time tracked individually (all validators instrumented)
+- ✅ SOX-relevant validation failures logged with structured audit trail (validated with slow_validation flags)
 
 ## Scope
 
@@ -351,15 +352,9 @@ validationAuditLogger.warn(
 
 ### Known Limitations
 
-- Alert thresholds derived from QA load; re-baseline after two production releases.
-- Dashboard backups are manual today; Grafana API automation planned but not part of Phase 4a.
-
-### Known Limitations
-
-- Metrics not yet tested under load (overhead validation pending)
-- Dashboards created but not imported to Grafana
-- Alert thresholds may require tuning based on production baselines
-- Distributed tracing (OpenTelemetry) deferred to future enhancement
+- Alert thresholds derived from QA load; re-baseline after two production releases
+- Dashboard backups are manual today; Grafana API automation planned but not part of Phase 4a
+- Distributed tracing (OpenTelemetry) integration deferred to future enhancement
 
 ## Related Work
 

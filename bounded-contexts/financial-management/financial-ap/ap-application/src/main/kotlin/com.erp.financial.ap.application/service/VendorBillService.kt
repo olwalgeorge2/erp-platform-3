@@ -15,7 +15,6 @@ import com.erp.financial.ap.domain.model.bill.BillId
 import com.erp.financial.ap.domain.model.bill.BillLine
 import com.erp.financial.ap.domain.model.bill.BillStatus
 import com.erp.financial.ap.domain.model.bill.VendorBill
-import com.erp.financial.ap.domain.model.vendor.VendorId
 import com.erp.financial.shared.Money
 import com.erp.financial.shared.validation.security.ValidationCircuitBreaker
 import jakarta.enterprise.context.ApplicationScoped

@@ -12,7 +12,5 @@ interface ChartOfAccountsRepository {
         tenantId: UUID,
     ): ChartOfAccounts?
 
-    fun findRecent(
-        limit: Int,
-    ): List<ChartOfAccounts>
+    fun findRecent(limit: Int): List<ChartOfAccounts>
 }

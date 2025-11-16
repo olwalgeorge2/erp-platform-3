@@ -12,7 +12,9 @@ import jakarta.ws.rs.ext.Provider
 
 @Provider
 @Priority(Priorities.USER - 10)
-class ValidationMetricsFilter : ContainerRequestFilter, ContainerResponseFilter {
+class ValidationMetricsFilter :
+    ContainerRequestFilter,
+    ContainerResponseFilter {
     override fun filter(requestContext: ContainerRequestContext) {
         requestContext.setProperty(ValidationMetrics.REQUEST_START_ATTRIBUTE, System.nanoTime())
     }
@@ -36,13 +38,10 @@ class ValidationMetricsFilter : ContainerRequestFilter, ContainerResponseFilter 
     }
 
     private fun buildPathTemplate(requestContext: ContainerRequestContext): String {
-        val templates = requestContext.uriInfo.matchedTemplates
+        val templates = requestContext.uriInfo.matchedURIs
         if (templates.isEmpty()) {
             return "/" + requestContext.uriInfo.path.trimStart('/')
         }
-        return templates
-            .reversed()
-            .joinToString(prefix = "/", separator = "") { tmpl -> tmpl.template.trim('/') }
-            .replace("//", "/")
+        return "/" + requestContext.uriInfo.path.trimStart('/')
     }
 }

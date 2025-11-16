@@ -5,7 +5,6 @@ import com.erp.financial.shared.validation.FinanceValidationException
 import jakarta.enterprise.context.ApplicationScoped
 import org.eclipse.microprofile.faulttolerance.CircuitBreaker
 import org.eclipse.microprofile.faulttolerance.Timeout
-import java.time.Duration
 import java.util.Locale
 import java.util.function.Supplier
 

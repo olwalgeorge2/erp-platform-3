@@ -17,7 +17,7 @@ data class RateLimitDecision(
     val key: String,
 )
 
-private data class RateLimitBucket(
+internal data class RateLimitBucket(
     val name: String,
     val limit: Int,
     val windowSeconds: Long,
@@ -54,7 +54,8 @@ class ValidationRateLimiter(
 
     private val rateCounters = ConcurrentHashMap<String, RateLimitState>()
     private val abuseCounters =
-        Caffeine.newBuilder()
+        Caffeine
+            .newBuilder()
             .expireAfterWrite(Duration.ofSeconds(abuseWindowSeconds))
             .build<String, AtomicInteger>()
 
@@ -64,14 +65,17 @@ class ValidationRateLimiter(
             if (trimmed.isEmpty()) null else trimmed
         }
 
-    fun determineBucket(path: String): RateLimitBucket =
+    internal fun determineBucket(path: String): RateLimitBucket =
         if (soxPathPrefixes.any { path.startsWith(it.trim()) }) {
             ipBuckets.getValue("validation-sox")
         } else {
             ipBuckets.getValue("validation-default")
         }
 
-    fun checkIpLimit(ip: String, path: String): RateLimitDecision =
+    fun checkIpLimit(
+        ip: String,
+        path: String,
+    ): RateLimitDecision =
         checkLimit(
             bucket = determineBucket(path),
             keyType = "ip",
@@ -129,7 +133,12 @@ class ValidationRateLimiter(
         val counter = abuseCounters.get(key) { AtomicInteger(0) }
         val current = counter.incrementAndGet()
         if (current == abuseThreshold) {
-            logger.warnf("Validation abuse threshold exceeded key=%s threshold=%d window=%ds", key, abuseThreshold, abuseWindowSeconds)
+            logger.warnf(
+                "Validation abuse threshold exceeded key=%s threshold=%d window=%ds",
+                key,
+                abuseThreshold,
+                abuseWindowSeconds,
+            )
         }
     }
 

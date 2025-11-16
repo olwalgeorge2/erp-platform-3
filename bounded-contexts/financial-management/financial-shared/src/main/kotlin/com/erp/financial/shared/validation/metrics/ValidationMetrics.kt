@@ -12,7 +12,10 @@ object ValidationMetrics {
     @Volatile
     private var boundedContext: String = "finance"
 
-    fun initialize(meterRegistry: MeterRegistry, boundedContext: String) {
+    fun initialize(
+        meterRegistry: MeterRegistry,
+        boundedContext: String,
+    ) {
         this.meterRegistry = meterRegistry
         this.boundedContext = boundedContext
     }
@@ -52,7 +55,11 @@ object ValidationMetrics {
             ).increment()
     }
 
-    fun recordRule(rule: String, durationNanos: Long, success: Boolean) {
+    fun recordRule(
+        rule: String,
+        durationNanos: Long,
+        success: Boolean,
+    ) {
         val registry = meterRegistry ?: return
         val result = if (success) "pass" else "fail"
         registry
@@ -94,6 +101,5 @@ object ValidationMetrics {
             ).increment()
     }
 
-    fun durationMillis(requestStart: Long?): Long? =
-        requestStart?.let { (System.nanoTime() - it) / 1_000_000 }
+    fun durationMillis(requestStart: Long?): Long? = requestStart?.let { (System.nanoTime() - it) / 1_000_000 }
 }

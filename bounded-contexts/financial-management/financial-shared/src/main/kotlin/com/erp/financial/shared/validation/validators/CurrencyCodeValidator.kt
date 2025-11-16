@@ -67,11 +67,10 @@ class CurrencyCodeValidator : ConstraintValidator<ValidCurrencyCode, String?> {
                 }
                 value !in SUPPORTED_CURRENCIES -> {
                     context?.disableDefaultConstraintViolation()
+                    val supportedList = SUPPORTED_CURRENCIES.joinToString(", ")
                     context
                         ?.buildConstraintViolationWithTemplate(
-                            "Currency code '$value' is not supported. Supported currencies: ${SUPPORTED_CURRENCIES.joinToString(
-                                ", ",
-                            )}",
+                            "Currency code '$value' is not supported. Supported currencies: $supportedList",
                         )?.addConstraintViolation()
                     false
                 }

@@ -24,10 +24,14 @@ class VendorExistenceCache(
     @ConfigProperty(name = "validation.performance.cache.vendor.ttl", defaultValue = "PT5M")
     private val ttl: Duration,
 ) {
-    private data class CacheKey(val tenantId: UUID, val vendorId: UUID)
+    private data class CacheKey(
+        val tenantId: UUID,
+        val vendorId: UUID,
+    )
 
     private val cache: Cache<CacheKey, Optional<Vendor>> =
-        Caffeine.newBuilder()
+        Caffeine
+            .newBuilder()
             .expireAfterWrite(ttl)
             .maximumSize(maxSize)
             .recordStats()
@@ -40,8 +44,7 @@ class VendorExistenceCache(
     fun find(
         tenantId: UUID,
         vendorId: UUID,
-    ): Vendor? =
-        cache.get(CacheKey(tenantId, vendorId)).orElse(null)
+    ): Vendor? = cache.get(CacheKey(tenantId, vendorId)) { key -> loadVendor(key) }.orElse(null)
 
     fun put(vendor: Vendor) {
         cache.put(CacheKey(vendor.tenantId, vendor.id.value), Optional.of(vendor))

@@ -24,7 +24,10 @@ class LedgerExistenceCache(
     @ConfigProperty(name = "validation.performance.cache.ledger.ttl", defaultValue = "PT10M")
     private val ttl: Duration,
 ) {
-    private data class CacheKey(val tenantId: UUID, val ledgerId: UUID)
+    private data class CacheKey(
+        val tenantId: UUID,
+        val ledgerId: UUID,
+    )
 
     private val cache: Cache<CacheKey, Optional<Ledger>> =
         Caffeine
@@ -41,7 +44,7 @@ class LedgerExistenceCache(
     fun find(
         tenantId: UUID,
         ledgerId: UUID,
-    ): Ledger? = cache.get(CacheKey(tenantId, ledgerId)).orElse(null)
+    ): Ledger? = cache.get(CacheKey(tenantId, ledgerId)) { key -> loadLedger(key) }.orElse(null)
 
     fun put(ledger: Ledger) {
         cache.put(CacheKey(ledger.tenantId, ledger.id.value), Optional.of(ledger))

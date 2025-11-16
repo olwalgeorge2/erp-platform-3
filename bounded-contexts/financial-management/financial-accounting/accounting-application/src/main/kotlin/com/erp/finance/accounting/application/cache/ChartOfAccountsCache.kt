@@ -26,7 +26,10 @@ class ChartOfAccountsCache(
     @ConfigProperty(name = "validation.performance.cache.chart.ttl", defaultValue = "PT10M")
     private val ttl: Duration,
 ) {
-    private data class CacheKey(val tenantId: UUID, val chartId: UUID)
+    private data class CacheKey(
+        val tenantId: UUID,
+        val chartId: UUID,
+    )
 
     private val cache: Cache<CacheKey, Optional<ChartOfAccounts>> =
         Caffeine
@@ -43,7 +46,7 @@ class ChartOfAccountsCache(
     fun find(
         tenantId: UUID,
         chartId: UUID,
-    ): ChartOfAccounts? = cache.get(CacheKey(tenantId, chartId)).orElse(null)
+    ): ChartOfAccounts? = cache.get(CacheKey(tenantId, chartId)) { key -> loadChart(key) }.orElse(null)
 
     fun findAccount(
         tenantId: UUID,

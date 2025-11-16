@@ -14,9 +14,9 @@ import jakarta.ws.rs.core.HttpHeaders
 import jakarta.ws.rs.core.Response
 import jakarta.ws.rs.core.SecurityContext
 import jakarta.ws.rs.ext.Provider
-import java.util.Locale
 import org.eclipse.microprofile.config.inject.ConfigProperty
 import org.jboss.logging.Logger
+import java.util.Locale
 
 @Provider
 @Priority(Priorities.AUTHENTICATION - 10)
@@ -52,18 +52,18 @@ class ValidationRateLimitFilter
             }
         }
 
-    private fun handleViolation(
-        requestContext: ContainerRequestContext,
-        decision: RateLimitDecision,
-        path: String,
-    ) {
-        ValidationMetrics.recordRateLimitViolation(decision.bucket, decision.keyType)
-        val message =
-            ValidationMessageResolver.resolve(
-                FinanceValidationErrorCode.FINANCE_RATE_LIMIT_EXCEEDED,
-                localeFromHeaders(requestContext),
-                path,
-            )
+        private fun handleViolation(
+            requestContext: ContainerRequestContext,
+            decision: RateLimitDecision,
+            path: String,
+        ) {
+            ValidationMetrics.recordRateLimitViolation(decision.bucket, decision.keyType)
+            val message =
+                ValidationMessageResolver.resolve(
+                    FinanceValidationErrorCode.FINANCE_RATE_LIMIT_EXCEEDED,
+                    localeFromHeaders(requestContext),
+                    path,
+                )
             val response =
                 ErrorResponse(
                     code = FinanceValidationErrorCode.FINANCE_RATE_LIMIT_EXCEEDED.code,
@@ -79,7 +79,7 @@ class ValidationRateLimitFilter
                 decision.remaining,
                 decision.resetEpochSeconds,
             )
-        requestContext.abortWith(
+            requestContext.abortWith(
                 Response
                     .status(Response.Status.TOO_MANY_REQUESTS)
                     .entity(response)
@@ -88,26 +88,26 @@ class ValidationRateLimitFilter
                     .header("X-RateLimit-Reset", decision.resetEpochSeconds)
                     .build(),
             )
-    }
+        }
 
-    private fun extractClientIp(requestContext: ContainerRequestContext): String {
-        val forwarded = requestContext.getHeaderString("X-Forwarded-For")
-        if (!forwarded.isNullOrBlank()) {
-            return forwarded.split(',').first().trim()
+        private fun extractClientIp(requestContext: ContainerRequestContext): String {
+            val forwarded = requestContext.getHeaderString("X-Forwarded-For")
+            if (!forwarded.isNullOrBlank()) {
+                return forwarded.split(',').first().trim()
+            }
+            val realIp = requestContext.getHeaderString("X-Real-IP")
+            if (!realIp.isNullOrBlank()) {
+                return realIp.trim()
+            }
+            return requestContext.headers["remote-ip"]?.firstOrNull() ?: "unknown"
         }
-        val realIp = requestContext.getHeaderString("X-Real-IP")
-        if (!realIp.isNullOrBlank()) {
-            return realIp.trim()
-        }
-        return requestContext.headers["remote-ip"]?.firstOrNull() ?: "unknown"
-    }
 
-    private fun localeFromHeaders(requestContext: ContainerRequestContext): Locale {
-        val header = requestContext.getHeaderString(HttpHeaders.ACCEPT_LANGUAGE)
-        return if (header.isNullOrBlank()) {
-            Locale.getDefault()
-        } else {
-            Locale.forLanguageTag(header)
+        private fun localeFromHeaders(requestContext: ContainerRequestContext): Locale {
+            val header = requestContext.getHeaderString(HttpHeaders.ACCEPT_LANGUAGE)
+            return if (header.isNullOrBlank()) {
+                Locale.getDefault()
+            } else {
+                Locale.forLanguageTag(header)
+            }
         }
     }
-}

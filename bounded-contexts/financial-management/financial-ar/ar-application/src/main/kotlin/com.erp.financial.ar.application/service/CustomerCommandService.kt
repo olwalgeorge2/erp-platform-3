@@ -75,9 +75,7 @@ class CustomerCommandService(
         tenantId: UUID,
         customerId: UUID,
     ) {
-        validationCircuitBreaker.guard("customer_delete") {
         customerRepository.delete(tenantId, CustomerId(customerId))
         customerExistenceCache.evict(tenantId, customerId)
     }
-}
 }

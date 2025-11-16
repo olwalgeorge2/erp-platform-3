@@ -24,10 +24,14 @@ class CustomerExistenceCache(
     @ConfigProperty(name = "validation.performance.cache.customer.ttl", defaultValue = "PT5M")
     private val ttl: Duration,
 ) {
-    private data class CacheKey(val tenantId: UUID, val customerId: UUID)
+    private data class CacheKey(
+        val tenantId: UUID,
+        val customerId: UUID,
+    )
 
     private val cache: Cache<CacheKey, Optional<Customer>> =
-        Caffeine.newBuilder()
+        Caffeine
+            .newBuilder()
             .expireAfterWrite(ttl)
             .maximumSize(maxSize)
             .recordStats()
@@ -40,8 +44,7 @@ class CustomerExistenceCache(
     fun find(
         tenantId: UUID,
         customerId: UUID,
-    ): Customer? =
-        cache.get(CacheKey(tenantId, customerId)).orElse(null)
+    ): Customer? = cache.get(CacheKey(tenantId, customerId)) { key -> loadCustomer(key) }.orElse(null)
 
     fun put(customer: Customer) {
         cache.put(CacheKey(customer.tenantId, customer.id.value), Optional.of(customer))

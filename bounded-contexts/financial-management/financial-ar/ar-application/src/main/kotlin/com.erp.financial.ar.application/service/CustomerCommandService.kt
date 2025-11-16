@@ -1,5 +1,6 @@
 package com.erp.financial.ar.application.service
 
+import com.erp.financial.ar.application.cache.CustomerExistenceCache
 import com.erp.financial.ar.application.port.input.CustomerCommandUseCase
 import com.erp.financial.ar.application.port.input.command.RegisterCustomerCommand
 import com.erp.financial.ar.application.port.input.command.UpdateCustomerCommand
@@ -18,6 +19,7 @@ import java.util.UUID
 class CustomerCommandService(
     private val customerRepository: CustomerRepository,
     private val clock: Clock,
+    private val customerExistenceCache: CustomerExistenceCache,
 ) : CustomerCommandUseCase {
     override fun registerCustomer(command: RegisterCustomerCommand): Customer {
         customerRepository
@@ -32,41 +34,50 @@ class CustomerCommandService(
                 profile = command.profile,
                 clock = clock,
             )
-        return customerRepository.save(customer)
+        val saved = customerRepository.save(customer)
+        customerExistenceCache.put(saved)
+        return saved
     }
 
     override fun updateCustomer(command: UpdateCustomerCommand): Customer {
         val id = CustomerId(command.customerId)
         val existing =
-            customerRepository.findById(command.tenantId, id)
+            customerExistenceCache.find(command.tenantId, command.customerId)
                 ?: throw IllegalArgumentException("Customer not found")
         val updated = existing.updateProfile(command.profile, clock)
-        return customerRepository.save(updated)
+        val saved = customerRepository.save(updated)
+        customerExistenceCache.put(saved)
+        return saved
     }
 
     override fun updateCustomerStatus(command: UpdateCustomerStatusCommand): Customer {
         val id = CustomerId(command.customerId)
         val customer =
-            customerRepository.findById(command.tenantId, id)
+            customerExistenceCache.find(command.tenantId, command.customerId)
                 ?: throw IllegalArgumentException("Customer not found")
         val updated =
             when (command.targetStatus) {
                 MasterDataStatus.ACTIVE -> customer.activate(clock)
                 MasterDataStatus.INACTIVE -> customer.deactivate(clock)
             }
-        return customerRepository.save(updated)
+        val saved = customerRepository.save(updated)
+        customerExistenceCache.put(saved)
+        return saved
     }
 
     override fun listCustomers(query: ListCustomersQuery): List<Customer> =
         customerRepository.list(query.tenantId, query.companyCodeId, query.status)
 
     override fun getCustomer(query: CustomerDetailQuery): Customer? =
-        customerRepository.findById(query.tenantId, CustomerId(query.customerId))
+        customerExistenceCache.find(query.tenantId, query.customerId)
 
     override fun deleteCustomer(
         tenantId: UUID,
         customerId: UUID,
     ) {
+        validationCircuitBreaker.guard("customer_delete") {
         customerRepository.delete(tenantId, CustomerId(customerId))
+        customerExistenceCache.evict(tenantId, customerId)
     }
+}
 }

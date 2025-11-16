@@ -1,6 +1,7 @@
 package com.erp.financial.shared.validation.validators
 
 import com.erp.financial.shared.validation.constraints.ValidAmount
+import com.erp.financial.shared.validation.metrics.ValidationMetrics
 import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
 import java.math.BigDecimal
@@ -32,12 +33,20 @@ class AmountValidator : ConstraintValidator<ValidAmount, BigDecimal?> {
         value: BigDecimal?,
         context: ConstraintValidatorContext?,
     ): Boolean {
-        // Null values are considered valid (use @NotNull separately if required)
-        if (value == null) {
-            return true
-        }
+        val start = System.nanoTime()
+        val result =
+            when {
+                value == null -> true
+                else -> validateScale(value, context) && validateSign(value, context)
+            }
+        ValidationMetrics.recordRule("amount", System.nanoTime() - start, result)
+        return result
+    }
 
-        // Validate scale
+    private fun validateScale(
+        value: BigDecimal,
+        context: ConstraintValidatorContext?,
+    ): Boolean {
         val scale = value.scale()
         if (scale < minScale || scale > maxScale) {
             context?.disableDefaultConstraintViolation()
@@ -47,17 +56,22 @@ class AmountValidator : ConstraintValidator<ValidAmount, BigDecimal?> {
                 )?.addConstraintViolation()
             return false
         }
+        return true
+    }
 
-        // Validate sign
+    private fun validateSign(
+        value: BigDecimal,
+        context: ConstraintValidatorContext?,
+    ): Boolean {
         val signum = value.signum()
-        when {
+        return when {
             signum < 0 && !allowNegative -> {
                 context?.disableDefaultConstraintViolation()
                 context
                     ?.buildConstraintViolationWithTemplate(
                         "Amount cannot be negative",
                     )?.addConstraintViolation()
-                return false
+                false
             }
             signum > 0 && !allowPositive -> {
                 context?.disableDefaultConstraintViolation()
@@ -65,7 +79,7 @@ class AmountValidator : ConstraintValidator<ValidAmount, BigDecimal?> {
                     ?.buildConstraintViolationWithTemplate(
                         "Amount cannot be positive",
                     )?.addConstraintViolation()
-                return false
+                false
             }
             signum == 0 && !allowZero -> {
                 context?.disableDefaultConstraintViolation()
@@ -73,10 +87,9 @@ class AmountValidator : ConstraintValidator<ValidAmount, BigDecimal?> {
                     ?.buildConstraintViolationWithTemplate(
                         "Amount cannot be zero",
                     )?.addConstraintViolation()
-                return false
+                false
             }
+            else -> true
         }
-
-        return true
     }
 }

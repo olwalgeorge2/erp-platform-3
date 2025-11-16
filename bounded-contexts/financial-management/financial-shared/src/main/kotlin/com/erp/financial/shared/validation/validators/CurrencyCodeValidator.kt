@@ -1,6 +1,7 @@
 package com.erp.financial.shared.validation.validators
 
 import com.erp.financial.shared.validation.constraints.ValidCurrencyCode
+import com.erp.financial.shared.validation.metrics.ValidationMetrics
 import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
 
@@ -36,53 +37,47 @@ class CurrencyCodeValidator : ConstraintValidator<ValidCurrencyCode, String?> {
         value: String?,
         context: ConstraintValidatorContext?,
     ): Boolean {
-        // Null values are considered valid (use @NotNull separately if required)
-        if (value == null) {
-            return true
-        }
-
-        // Blank strings are invalid
-        if (value.isBlank()) {
-            context?.disableDefaultConstraintViolation()
-            context
-                ?.buildConstraintViolationWithTemplate(
-                    "Currency code cannot be blank",
-                )?.addConstraintViolation()
-            return false
-        }
-
-        // Validate uppercase (ISO 4217 standard)
-        if (value != value.uppercase()) {
-            context?.disableDefaultConstraintViolation()
-            context
-                ?.buildConstraintViolationWithTemplate(
-                    "Currency code must be uppercase (ISO 4217 standard)",
-                )?.addConstraintViolation()
-            return false
-        }
-
-        // Validate length (ISO 4217 codes are always 3 characters)
-        if (value.length != 3) {
-            context?.disableDefaultConstraintViolation()
-            context
-                ?.buildConstraintViolationWithTemplate(
-                    "Currency code must be exactly 3 characters (ISO 4217 standard)",
-                )?.addConstraintViolation()
-            return false
-        }
-
-        // Validate against whitelist
-        if (value !in SUPPORTED_CURRENCIES) {
-            context?.disableDefaultConstraintViolation()
-            context
-                ?.buildConstraintViolationWithTemplate(
-                    "Currency code '$value' is not supported. Supported currencies: ${SUPPORTED_CURRENCIES.joinToString(
-                        ", ",
-                    )}",
-                )?.addConstraintViolation()
-            return false
-        }
-
-        return true
+        val start = System.nanoTime()
+        val result =
+            when {
+                value == null -> true
+                value.isBlank() -> {
+                    context?.disableDefaultConstraintViolation()
+                    context
+                        ?.buildConstraintViolationWithTemplate(
+                            "Currency code cannot be blank",
+                        )?.addConstraintViolation()
+                    false
+                }
+                value != value.uppercase() -> {
+                    context?.disableDefaultConstraintViolation()
+                    context
+                        ?.buildConstraintViolationWithTemplate(
+                            "Currency code must be uppercase (ISO 4217 standard)",
+                        )?.addConstraintViolation()
+                    false
+                }
+                value.length != 3 -> {
+                    context?.disableDefaultConstraintViolation()
+                    context
+                        ?.buildConstraintViolationWithTemplate(
+                            "Currency code must be exactly 3 characters (ISO 4217 standard)",
+                        )?.addConstraintViolation()
+                    false
+                }
+                value !in SUPPORTED_CURRENCIES -> {
+                    context?.disableDefaultConstraintViolation()
+                    context
+                        ?.buildConstraintViolationWithTemplate(
+                            "Currency code '$value' is not supported. Supported currencies: ${SUPPORTED_CURRENCIES.joinToString(
+                                ", ",
+                            )}",
+                        )?.addConstraintViolation()
+                    false
+                }
+                else -> true
+            }
+        ValidationMetrics.recordRule("currency_code", System.nanoTime() - start, result)
+        return result
     }
 }

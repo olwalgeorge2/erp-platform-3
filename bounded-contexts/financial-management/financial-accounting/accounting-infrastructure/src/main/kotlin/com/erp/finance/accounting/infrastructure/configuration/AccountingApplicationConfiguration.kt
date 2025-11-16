@@ -1,5 +1,7 @@
 package com.erp.finance.accounting.infrastructure.configuration
 
+import com.erp.finance.accounting.application.cache.ChartOfAccountsCache
+import com.erp.finance.accounting.application.cache.LedgerExistenceCache
 import com.erp.finance.accounting.application.port.output.AccountingPeriodRepository
 import com.erp.finance.accounting.application.port.output.ChartOfAccountsRepository
 import com.erp.finance.accounting.application.port.output.FinanceEventPublisher
@@ -22,6 +24,8 @@ class AccountingApplicationConfiguration {
         eventPublisher: FinanceEventPublisher,
         exchangeRateProvider: ExchangeRateProvider,
         dimensionAssignmentValidator: DimensionAssignmentValidator,
+        ledgerCache: LedgerExistenceCache,
+        chartCache: ChartOfAccountsCache,
     ): AccountingCommandHandler =
         AccountingCommandHandler(
             ledgerRepository = ledgerRepository,
@@ -31,5 +35,7 @@ class AccountingApplicationConfiguration {
             eventPublisher = eventPublisher,
             exchangeRateProvider = exchangeRateProvider,
             dimensionAssignmentValidator = dimensionAssignmentValidator,
+            ledgerCache = ledgerCache,
+            chartCache = chartCache,
         )
 }

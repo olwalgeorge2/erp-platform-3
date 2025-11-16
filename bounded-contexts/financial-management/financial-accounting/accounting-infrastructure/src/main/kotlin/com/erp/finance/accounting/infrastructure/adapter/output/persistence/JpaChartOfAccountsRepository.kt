@@ -53,4 +53,18 @@ class JpaChartOfAccountsRepository(
             .resultList
             .firstOrNull()
             ?.toDomain()
+
+    override fun findRecent(limit: Int): List<ChartOfAccounts> =
+        entityManager
+            .createQuery(
+                """
+                SELECT DISTINCT c
+                FROM ChartOfAccountsEntity c
+                LEFT JOIN FETCH c.accounts
+                ORDER BY c.updatedAt DESC
+                """.trimIndent(),
+                ChartOfAccountsEntity::class.java,
+            ).setMaxResults(limit)
+            .resultList
+            .map { it.toDomain() }
 }

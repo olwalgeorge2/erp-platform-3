@@ -1,6 +1,7 @@
 package com.erp.financial.shared.validation.validators
 
 import com.erp.financial.shared.validation.constraints.ValidAccountCode
+import com.erp.financial.shared.validation.metrics.ValidationMetrics
 import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
 
@@ -20,31 +21,29 @@ class AccountCodeValidator : ConstraintValidator<ValidAccountCode, String?> {
         value: String?,
         context: ConstraintValidatorContext?,
     ): Boolean {
-        // Null values are considered valid (use @NotNull separately if required)
-        if (value == null) {
-            return true
-        }
-
-        // Blank strings are invalid
-        if (value.isBlank()) {
-            context?.disableDefaultConstraintViolation()
-            context
-                ?.buildConstraintViolationWithTemplate(
-                    "Account code cannot be blank",
-                )?.addConstraintViolation()
-            return false
-        }
-
-        // Validate format
-        if (!accountCodePattern.matches(value)) {
-            context?.disableDefaultConstraintViolation()
-            context
-                ?.buildConstraintViolationWithTemplate(
-                    "Account code must be 4-6 digits with optional sub-account (2-4 digits after hyphen). Example: 1000 or 1000-01",
-                )?.addConstraintViolation()
-            return false
-        }
-
-        return true
+        val start = System.nanoTime()
+        val result =
+            when {
+                value == null -> true
+                value.isBlank() -> {
+                    context?.disableDefaultConstraintViolation()
+                    context
+                        ?.buildConstraintViolationWithTemplate(
+                            "Account code cannot be blank",
+                        )?.addConstraintViolation()
+                    false
+                }
+                !accountCodePattern.matches(value) -> {
+                    context?.disableDefaultConstraintViolation()
+                    context
+                        ?.buildConstraintViolationWithTemplate(
+                            "Account code must be 4-6 digits with optional sub-account (2-4 digits after hyphen). Example: 1000 or 1000-01",
+                        )?.addConstraintViolation()
+                    false
+                }
+                else -> true
+            }
+        ValidationMetrics.recordRule("account_code", System.nanoTime() - start, result)
+        return result
     }
 }

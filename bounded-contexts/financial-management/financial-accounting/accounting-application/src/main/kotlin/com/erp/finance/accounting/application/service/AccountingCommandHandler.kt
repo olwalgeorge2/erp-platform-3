@@ -1,5 +1,7 @@
 package com.erp.finance.accounting.application.service
 
+import com.erp.finance.accounting.application.cache.ChartOfAccountsCache
+import com.erp.finance.accounting.application.cache.LedgerExistenceCache
 import com.erp.finance.accounting.application.port.input.command.CloseAccountingPeriodCommand
 import com.erp.finance.accounting.application.port.input.command.CreateLedgerCommand
 import com.erp.finance.accounting.application.port.input.command.DefineAccountCommand
@@ -36,6 +38,8 @@ class AccountingCommandHandler(
     private val eventPublisher: FinanceEventPublisher,
     private val exchangeRateProvider: ExchangeRateProvider,
     private val dimensionAssignmentValidator: DimensionAssignmentValidator,
+    private val ledgerCache: LedgerExistenceCache,
+    private val chartCache: ChartOfAccountsCache,
 ) {
     fun createLedger(command: CreateLedgerCommand): Ledger {
         val baseCurrency = command.baseCurrency.uppercase()
@@ -43,16 +47,19 @@ class AccountingCommandHandler(
         val chartId = ChartOfAccountsId(command.chartOfAccountsId)
 
         val chart =
-            chartRepository.findById(chartId, command.tenantId)
-                ?: chartRepository.save(
-                    ChartOfAccounts(
-                        id = chartId,
-                        tenantId = command.tenantId,
-                        baseCurrency = baseCurrency,
-                        code = command.chartCode,
-                        name = command.chartName,
-                    ),
-                )
+            chartCache
+                .find(command.tenantId, chartId.value)
+                ?: chartRepository.findById(chartId, command.tenantId)?.also { chartCache.put(it) }
+                ?: chartRepository
+                    .save(
+                        ChartOfAccounts(
+                            id = chartId,
+                            tenantId = command.tenantId,
+                            baseCurrency = baseCurrency,
+                            code = command.chartCode,
+                            name = command.chartName,
+                        ),
+                    ).also { chartCache.put(it) }
 
         val ledger =
             Ledger(
@@ -60,13 +67,17 @@ class AccountingCommandHandler(
                 chartOfAccountsId = chart.id,
                 baseCurrency = baseCurrency,
             )
-        return ledgerRepository.save(ledger)
+        return ledgerRepository
+            .save(ledger)
+            .also { saved -> ledgerCache.put(saved) }
     }
 
     fun defineAccount(command: DefineAccountCommand): ChartOfAccounts {
         val chartId = ChartOfAccountsId(command.chartOfAccountsId)
         val chart =
-            chartRepository.findById(chartId, command.tenantId)
+            chartCache
+                .find(command.tenantId, chartId.value)
+                ?: chartRepository.findById(chartId, command.tenantId)?.also { chartCache.put(it) }
                 ?: error("Chart of accounts not found")
 
         val updated =
@@ -79,7 +90,9 @@ class AccountingCommandHandler(
                 isPosting = command.isPosting,
             )
 
-        return chartRepository.save(updated)
+        return chartRepository
+            .save(updated)
+            .also { chartCache.put(it) }
     }
 
     fun postJournalEntry(command: PostJournalEntryCommand): JournalEntry {
@@ -87,10 +100,11 @@ class AccountingCommandHandler(
         val periodId = AccountingPeriodId(command.accountingPeriodId)
 
         val ledger =
-            ledgerRepository.findById(ledgerId, command.tenantId)
+            ledgerCache.find(command.tenantId, ledgerId.value)
                 ?: error("Ledger not found")
         val chart =
-            chartRepository.findById(ledger.chartOfAccountsId, command.tenantId)
+            chartCache.find(command.tenantId, ledger.chartOfAccountsId.value)
+                ?: chartRepository.findById(ledger.chartOfAccountsId, command.tenantId)?.also { chartCache.put(it) }
                 ?: error("Chart of accounts not found for ledger ${ledger.id.value}")
 
         val period =
@@ -152,7 +166,7 @@ class AccountingCommandHandler(
         val ledgerId = LedgerId(command.ledgerId)
         val periodId = AccountingPeriodId(command.accountingPeriodId)
 
-        ledgerRepository.findById(ledgerId, command.tenantId)
+        ledgerCache.find(command.tenantId, ledgerId.value)
             ?: error("Ledger not found")
 
         val period =
@@ -180,7 +194,7 @@ class AccountingCommandHandler(
         val periodId = AccountingPeriodId(command.accountingPeriodId)
 
         val ledger =
-            ledgerRepository.findById(ledgerId, command.tenantId)
+            ledgerCache.find(command.tenantId, ledgerId.value)
                 ?: error("Ledger not found")
         periodRepository.findById(periodId, command.tenantId)
             ?: error("Accounting period not found")

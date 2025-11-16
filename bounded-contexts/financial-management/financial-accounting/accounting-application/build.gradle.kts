@@ -4,6 +4,7 @@ plugins {
 
 dependencies {
     implementation(project(":bounded-contexts:financial-management:financial-accounting:accounting-domain"))
+    implementation(project(":bounded-contexts:financial-management:financial-shared"))
     implementation(project(":platform-shared:common-types"))
 
     implementation("io.quarkus:quarkus-hibernate-validator")
@@ -11,6 +12,7 @@ dependencies {
     implementation("io.quarkus:quarkus-jdbc-postgresql")
     implementation("io.quarkus:quarkus-flyway")
     implementation("io.quarkus:quarkus-hibernate-orm")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
 }
 
 tasks.withType<Test>().configureEach {

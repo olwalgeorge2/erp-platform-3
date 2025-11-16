@@ -1,0 +1,163 @@
+{
+  "title": "Validation Performance - Finance",
+  "uid": "validation-performance",
+  "timezone": "browser",
+  "schemaVersion": 27,
+  "version": 1,
+  "style": "dark",
+  "editable": true,
+  "graphTooltip": 0,
+  "description": "Per-endpoint validation latency and throughput metrics for finance services.",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Validation Request Latency (ms)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum(rate(validation_request_duration_seconds_bucket{bounded_context=\"finance-accounting\"}[5m])) by (le)) * 1000",
+          "legendFormat": "Accounting p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum(rate(validation_request_duration_seconds_bucket{bounded_context=\"finance-accounting\"}[5m])) by (le)) * 1000",
+          "legendFormat": "Accounting p95"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum(rate(validation_request_duration_seconds_bucket{bounded_context=\"finance-accounting\"}[5m])) by (le)) * 1000",
+          "legendFormat": "Accounting p99"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Validation Throughput (req/s)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "showPoints": "never"
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(validation_request_total{bounded_context=\"finance-accounting\"}[5m])",
+          "legendFormat": "Accounting"
+        },
+        {
+          "refId": "B",
+          "expr": "rate(validation_request_total{bounded_context=\"finance-ap\"}[5m])",
+          "legendFormat": "AP"
+        },
+        {
+          "refId": "C",
+          "expr": "rate(validation_request_total{bounded_context=\"finance-ar\"}[5m])",
+          "legendFormat": "AR"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "bargauge",
+      "title": "Slowest Validation Rules (Avg ms, 5m)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(5, (increase(validation_rule_duration_seconds_sum{bounded_context=\"finance-accounting\"}[5m]) / increase(validation_rule_duration_seconds_count{bounded_context=\"finance-accounting\"}[5m])) * 1000)",
+          "legendFormat": "{{rule}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Validation Success vs Failure (Last 5m)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 16 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "orientation": "auto",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 - (sum(rate(validation_request_total{bounded_context=\"finance-accounting\",outcome=\"failure\"}[5m])) / sum(rate(validation_request_total{bounded_context=\"finance-accounting\"}[5m])) * 100)",
+          "legendFormat": "Success %"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Endpoint Latency Leaderboard (p95 ms)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 22 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "align": "auto" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum(rate(validation_request_duration_seconds_bucket{bounded_context=\"finance-accounting\"}[5m])) by (le,path)) * 1000",
+          "legendFormat": "{{path}}"
+        }
+      ]
+    }
+  ],
+  "time": { "from": "now-6h", "to": "now" },
+  "annotations": { "list": [] },
+  "templating": { "list": [] }
+}

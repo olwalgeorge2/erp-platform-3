@@ -55,3 +55,28 @@ quarkus:
 mp:
   openapi:
     filter: com.erp.financial.shared.openapi.FinanceErrorResponsesFilter
+
+validation:
+  metrics:
+    context: finance-ar
+  security:
+    rate-limit:
+      enabled: true
+      default:
+        limit: 100
+        window-seconds: 60
+      sox:
+        limit: 20
+        window-seconds: 60
+      user:
+        limit: 500
+        window-seconds: 60
+      sox-path-prefixes: /api/v1/finance/ar/invoices
+    abuse:
+      threshold: 25
+      window-seconds: 60
+  performance:
+    cache:
+      customer:
+        max-size: 10000
+        ttl: PT5M

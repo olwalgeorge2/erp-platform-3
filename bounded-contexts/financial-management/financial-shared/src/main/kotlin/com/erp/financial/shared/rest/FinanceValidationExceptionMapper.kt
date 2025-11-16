@@ -2,8 +2,10 @@ package com.erp.financial.shared.rest
 
 import com.erp.financial.shared.api.ErrorResponse
 import com.erp.financial.shared.api.ValidationError
+import com.erp.financial.shared.validation.FinanceValidationErrorCode
 import com.erp.financial.shared.validation.FinanceValidationException
 import com.erp.financial.shared.validation.ValidationAuditLogger
+import com.erp.financial.shared.validation.ValidationMessageResolver
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.micrometer.core.instrument.MeterRegistry
 import jakarta.inject.Inject
@@ -48,19 +50,31 @@ class FinanceValidationExceptionMapper : ExceptionMapper<FinanceValidationExcept
         // Enhanced audit logging with full context
         logValidationFailure(exception)
 
+        val safeMessage =
+            if (SECURE_ERROR_CODES.contains(exception.errorCode)) {
+                ValidationMessageResolver.resolve(
+                    exception.errorCode,
+                    exception.locale,
+                    exception.field,
+                )
+            } else {
+                exception.message
+                    ?: ValidationMessageResolver.resolve(exception.errorCode, exception.locale, exception.field)
+            }
+
         return Response
             .status(UNPROCESSABLE_ENTITY)
             .entity(
                 ErrorResponse(
                     code = exception.errorCode.code,
-                    message = exception.message ?: exception.errorCode.code,
+                    message = safeMessage,
                     details = emptyMap(),
                     validationErrors =
                         listOf(
                             ValidationError(
                                 field = exception.field,
                                 code = exception.errorCode.code,
-                                message = exception.message ?: exception.errorCode.code,
+                                message = safeMessage,
                                 rejectedValue = exception.rejectedValue,
                             ),
                         ),
@@ -103,5 +117,10 @@ class FinanceValidationExceptionMapper : ExceptionMapper<FinanceValidationExcept
 
     companion object {
         private const val UNPROCESSABLE_ENTITY = 422
+        private val SECURE_ERROR_CODES =
+            setOf(
+                FinanceValidationErrorCode.FINANCE_RATE_LIMIT_EXCEEDED,
+                FinanceValidationErrorCode.FINANCE_DEPENDENCY_UNAVAILABLE,
+            )
     }
 }

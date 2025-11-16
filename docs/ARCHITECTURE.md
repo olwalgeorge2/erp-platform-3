@@ -179,7 +179,7 @@ Central entry point for all client requests.
 - Rate limiting and throttling
 - Authentication and authorization
 - API composition and aggregation
-- Cross-cutting concerns (logging, tracing)
+- Cross-cutting concerns (logging, tracing, validation guard rails per ADR-010)
 
 **Configuration**:
 - `config/api-gateway.env` - Environment configuration

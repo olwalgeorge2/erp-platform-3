@@ -1,7 +1,7 @@
 components:
   schemas:
-    GatewayErrorResponse:
-      description: Canonical gateway error payload (see docs/contracts/error-responses.yaml).
+    ValidationProblemDetail:
+      description: Canonical validation error payload shared across ERP services.
       type: object
       required:
         - code
@@ -9,16 +9,49 @@ components:
       properties:
         code:
           type: string
-          description: Stable machine-readable identifier (e.g., ROUTE_NOT_FOUND).
+          description: Stable machine-readable identifier (e.g., GATEWAY_ROUTE_NOT_FOUND).
         message:
           type: string
-          description: Sanitized human-readable message.
+          description: User-facing description safe to display.
         traceId:
           type: string
           nullable: true
-          description: Correlation identifier echoed from X-Trace-Id/traceparent.
+          description: Correlation identifier propagated to downstream services.
+        details:
+          type: object
+          additionalProperties: true
+          description: Optional metadata (routeId, upstream service, rate-limit info).
+        validationErrors:
+          type: array
+          description: Downstream validation errors surfaced by the gateway.
+          items:
+            $ref: '#/components/schemas/ValidationError'
       example:
-        code: ROUTE_NOT_FOUND
-        message: Route not found
-        traceId: 1bfcc505029705a2f683f847cae4f567
+        code: GATEWAY_ROUTE_NOT_FOUND
+        message: Route /api/v1/foo not found
+        traceId: 5de31c0a-1e4d-4f4d-8d5d-18cb9a2f9f22
+        details:
+          requestPath: /api/v1/foo
+        validationErrors: []
+    ValidationError:
+      description: Detailed information about a specific invalid field/parameter.
+      type: object
+      required:
+        - field
+        - code
+        - message
+      properties:
+        field:
+          type: string
+          description: Name of the invalid input field or parameter.
+        code:
+          type: string
+          description: Stable validation error code.
+        message:
+          type: string
+          description: Localized validation message suitable for UI display.
+        rejectedValue:
+          type: string
+          nullable: true
+          description: Original value that failed validation, if available.
 paths: {}

@@ -39,7 +39,7 @@ class DefaultResponsesFilter : OASFilter {
     }
 
     private fun errorResponse(description: String): APIResponse {
-        val schema: Schema = OASFactory.createSchema().ref("#/components/schemas/IdentityErrorResponse")
+        val schema: Schema = OASFactory.createSchema().ref("#/components/schemas/ValidationProblemDetail")
         val media: MediaType = OASFactory.createMediaType().schema(schema)
         val content: Content = OASFactory.createContent().addMediaType("application/json", media)
         return OASFactory.createAPIResponse().description(description).content(content)

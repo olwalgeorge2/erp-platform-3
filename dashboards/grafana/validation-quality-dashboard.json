@@ -1,0 +1,120 @@
+{
+  "title": "Validation Quality - Finance",
+  "uid": "validation-quality",
+  "timezone": "browser",
+  "schemaVersion": 27,
+  "version": 1,
+  "style": "dark",
+  "editable": true,
+  "graphTooltip": 0,
+  "description": "Validation failure analytics for finance bounded contexts.",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Validation Failure Rate by Error Code",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(finance_validation_errors_total[5m])",
+          "legendFormat": "{{error_code}}"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Validation Failures by Endpoint",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right" }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (path) (rate(validation_request_total{bounded_context=\"finance-accounting\",outcome=\"failure\"}[5m]))",
+          "legendFormat": "{{path}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "bargauge",
+      "title": "Most Frequent Validation Rules (5m)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "lcd",
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(5, sum by (rule) (rate(validation_rule_total{bounded_context=\"finance-accounting\",result=\"fail\"}[5m])))",
+          "legendFormat": "{{rule}}"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Failure Percentage (5m)",
+      "datasource": "Prometheus",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 16 },
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "decimals": 2 },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "values": false },
+        "orientation": "auto",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(rate(validation_request_total{bounded_context=\"finance-accounting\",outcome=\"failure\"}[5m])) / sum(rate(validation_request_total{bounded_context=\"finance-accounting\"}[5m]))) * 100",
+          "legendFormat": "Failure %"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "logs",
+      "title": "SOX / PII Validation Failures",
+      "datasource": "Loki",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 22 },
+      "options": {
+        "showLabels": false,
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "{app=\"finance\"} |= \"Finance validation failure\" | json | duration_ms > 0"
+        }
+      ]
+    }
+  ],
+  "time": { "from": "now-6h", "to": "now" },
+  "annotations": { "list": [] },
+  "templating": { "list": [] }
+}

@@ -1,6 +1,7 @@
 package com.erp.financial.shared.validation.validators
 
 import com.erp.financial.shared.validation.constraints.ValidDateRange
+import com.erp.financial.shared.validation.metrics.ValidationMetrics
 import jakarta.validation.ConstraintValidator
 import jakarta.validation.ConstraintValidatorContext
 import java.time.Instant
@@ -33,50 +34,60 @@ class DateRangeValidator : ConstraintValidator<ValidDateRange, Any> {
         value: Any?,
         context: ConstraintValidatorContext,
     ): Boolean {
-        if (value == null) {
-            return true // Use @NotNull for null checks
+        val startTime = System.nanoTime()
+        val result =
+            try {
+                if (value == null) {
+                    true // Use @NotNull for null checks
+                } else {
+                    validateRange(value, context)
+                }
+            } catch (e: Exception) {
+                context.disableDefaultConstraintViolation()
+                context
+                    .buildConstraintViolationWithTemplate(
+                        "Failed to validate date range: ${e.message}",
+                    ).addConstraintViolation()
+                false
+            }
+        ValidationMetrics.recordRule("date_range", System.nanoTime() - startTime, result)
+        return result
+    }
+
+    private fun validateRange(
+        value: Any,
+        context: ConstraintValidatorContext,
+    ): Boolean {
+        val startValue = getFieldValue(value, startField)
+        val endValue = getFieldValue(value, endField)
+
+        // If end date is null, the range is open-ended (valid)
+        if (endValue == null) {
+            return true
         }
 
-        try {
-            val startValue = getFieldValue(value, startField)
-            val endValue = getFieldValue(value, endField)
+        // Both dates must be present for comparison
+        if (startValue == null) {
+            return true // Field-level validation should catch this
+        }
 
-            // If end date is null, the range is open-ended (valid)
-            if (endValue == null) {
-                return true
+        return when {
+            startValue is LocalDate && endValue is LocalDate ->
+                !startValue.isAfter(endValue)
+            startValue is Instant && endValue is Instant ->
+                !startValue.isAfter(endValue)
+            startValue is LocalDateTime && endValue is LocalDateTime ->
+                !startValue.isAfter(endValue)
+            startValue is Temporal && endValue is Temporal ->
+                compareTemporals(startValue, endValue)
+            else -> {
+                context.disableDefaultConstraintViolation()
+                context
+                    .buildConstraintViolationWithTemplate(
+                        "Unsupported date types: ${startValue::class.simpleName} and ${endValue::class.simpleName}",
+                    ).addConstraintViolation()
+                false
             }
-
-            // Both dates must be present for comparison
-            if (startValue == null) {
-                return true // Field-level validation should catch this
-            }
-
-            // Compare dates based on their type
-            return when {
-                startValue is LocalDate && endValue is LocalDate ->
-                    !startValue.isAfter(endValue)
-                startValue is Instant && endValue is Instant ->
-                    !startValue.isAfter(endValue)
-                startValue is LocalDateTime && endValue is LocalDateTime ->
-                    !startValue.isAfter(endValue)
-                startValue is Temporal && endValue is Temporal ->
-                    compareTemporals(startValue, endValue)
-                else -> {
-                    context.disableDefaultConstraintViolation()
-                    context
-                        .buildConstraintViolationWithTemplate(
-                            "Unsupported date types: ${startValue::class.simpleName} and ${endValue::class.simpleName}",
-                        ).addConstraintViolation()
-                    false
-                }
-            }
-        } catch (e: Exception) {
-            context.disableDefaultConstraintViolation()
-            context
-                .buildConstraintViolationWithTemplate(
-                    "Failed to validate date range: ${e.message}",
-                ).addConstraintViolation()
-            return false
         }
     }
 

@@ -1,5 +1,6 @@
 package com.erp.finance.accounting.application.service
 
+import com.erp.finance.accounting.application.cache.LedgerExistenceCache
 import com.erp.finance.accounting.application.port.input.dto.AccountingPeriodDto
 import com.erp.finance.accounting.application.port.input.dto.LedgerPeriodInfoDto
 import com.erp.finance.accounting.application.port.input.query.FinanceQueryUseCase
@@ -12,29 +13,23 @@ import com.erp.finance.accounting.application.port.input.query.dto.TrialBalanceQ
 import com.erp.finance.accounting.application.port.input.query.dto.TrialBalanceResult
 import com.erp.finance.accounting.application.port.output.AccountingPeriodRepository
 import com.erp.finance.accounting.application.port.output.CompanyCodeLedgerRepository
-import com.erp.finance.accounting.application.port.output.LedgerRepository
 import com.erp.finance.accounting.application.port.output.TrialBalanceRepository
 import com.erp.finance.accounting.domain.model.AccountingPeriod
 import com.erp.finance.accounting.domain.model.AccountingPeriodStatus
-import com.erp.finance.accounting.domain.model.LedgerId
 import io.micrometer.core.annotation.Timed
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
 class FinanceQueryService(
     private val trialBalanceRepository: TrialBalanceRepository,
-    private val ledgerRepository: LedgerRepository,
+    private val ledgerCache: LedgerExistenceCache,
     private val companyCodeLedgerRepository: CompanyCodeLedgerRepository,
     private val accountingPeriodRepository: AccountingPeriodRepository,
 ) : FinanceQueryUseCase {
     @Timed(value = "finance.trialbalance.fetch", percentiles = [0.5, 0.95, 0.99])
     override fun getTrialBalance(query: TrialBalanceQuery): TrialBalanceResult {
         val ledger =
-            ledgerRepository.findById(
-                com.erp.finance.accounting.domain.model
-                    .LedgerId(query.ledgerId),
-                query.tenantId,
-            )
+            ledgerCache.find(query.tenantId, query.ledgerId)
                 ?: error("Ledger ${query.ledgerId} not found for tenant ${query.tenantId}")
 
         val rows =
@@ -69,7 +64,7 @@ class FinanceQueryService(
     @Timed(value = "finance.glsummary.fetch", percentiles = [0.5, 0.95, 0.99])
     override fun getGlSummary(query: GlSummaryQuery): GlSummaryResult {
         val ledger =
-            ledgerRepository.findById(LedgerId(query.ledgerId), query.tenantId)
+            ledgerCache.find(query.tenantId, query.ledgerId)
                 ?: error("Ledger ${query.ledgerId} not found for tenant ${query.tenantId}")
 
         val rows =
@@ -110,7 +105,7 @@ class FinanceQueryService(
         val ledger =
             ledgerIds
                 .asSequence()
-                .mapNotNull { ledgerRepository.findById(LedgerId(it), query.tenantId) }
+                .mapNotNull { ledgerCache.find(query.tenantId, it) }
                 .firstOrNull()
                 ?: return null
 

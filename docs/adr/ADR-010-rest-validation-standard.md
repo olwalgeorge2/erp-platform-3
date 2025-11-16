@@ -34,6 +34,15 @@ Identity and API Gateway services have successfully implemented foundational val
 
 Adopt the following enterprise-grade validation standard across all REST APIs:
 
+## Implementation Status (November 2025)
+
+| Phase | Summary | References |
+|-------|---------|------------|
+| Phase 4a – Observability | `ValidationMetricsFilter`, Grafana dashboards (`validation-performance`, `validation-quality`), Prometheus alerts (`validation-alerts.yml`) now deployed for finance services. | `bounded-contexts/financial-management/financial-shared/validation/metrics`, `dashboards/grafana/*.json` |
+| Phase 4b – Security | Rate limiting (`ValidationRateLimitFilter`), circuit breakers (`ValidationCircuitBreaker`), secure error envelopes (`FINANCE_RATE_LIMIT_EXCEEDED`, `FINANCE_DEPENDENCY_UNAVAILABLE`). | `financial-shared/validation/security`, `monitoring/prometheus/validation-alerts.yml` |
+| Phase 4c – Performance | Vendor/customer existence caches with Micrometer metrics + configurable TTL/size knobs. | `ap-application/cache`, `ar-application/cache`, service `application.yml` |
+| Phase 4d – Documentation | Developer guide, architecture overview, and operations runbook published; ADR-010 updated to reflect live implementation. | `docs/guides/VALIDATION_DEVELOPER_GUIDE.md`, `docs/VALIDATION_ARCHITECTURE.md`, `docs/runbooks/VALIDATION_OPERATIONS.md` |
+
 ### 1. Validated DTOs (Foundational)
 - Every REST endpoint MUST use `@Valid @BeanParam` request objects
 - DTOs convert to commands/queries via `toCommand()/toQuery()` methods
@@ -1718,3 +1727,4 @@ This ADR integrates with:
 2. Implement GraphQL validation pattern alignment
 3. Deploy validation performance optimization (target: sub-500μs P95)
 4. Machine learning-based validation anomaly detection
+\n## Documentation & References\n\n- docs/guides/VALIDATION_DEVELOPER_GUIDE.md\n- docs/VALIDATION_ARCHITECTURE.md\n- docs/runbooks/VALIDATION_OPERATIONS.md\n- docs/REST_VALIDATION_PATTERN.md\n- docs/REST_VALIDATION_IMPLEMENTATION_SUMMARY.md

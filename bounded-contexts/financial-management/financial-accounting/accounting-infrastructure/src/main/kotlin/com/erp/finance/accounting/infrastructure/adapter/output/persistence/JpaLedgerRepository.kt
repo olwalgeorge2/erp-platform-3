@@ -52,4 +52,17 @@ class JpaLedgerRepository(
             .resultList
             .firstOrNull()
             ?.toDomain()
+
+    override fun findRecent(limit: Int): List<Ledger> =
+        entityManager
+            .createQuery(
+                """
+                SELECT l
+                FROM LedgerEntity l
+                ORDER BY l.updatedAt DESC
+                """.trimIndent(),
+                LedgerEntity::class.java,
+            ).setMaxResults(limit)
+            .resultList
+            .map { it.toDomain() }
 }

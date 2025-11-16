@@ -1,5 +1,7 @@
 package com.erp.finance.accounting.application.service
 
+import com.erp.finance.accounting.application.cache.ChartOfAccountsCache
+import com.erp.finance.accounting.application.cache.LedgerExistenceCache
 import com.erp.finance.accounting.application.port.input.command.CloseAccountingPeriodCommand
 import com.erp.finance.accounting.application.port.input.command.DefineAccountCommand
 import com.erp.finance.accounting.application.port.input.command.JournalEntryLineCommand
@@ -26,6 +28,8 @@ import com.erp.finance.accounting.domain.model.LedgerId
 import com.erp.finance.accounting.domain.model.Money
 import com.erp.finance.accounting.domain.policy.ExchangeRate
 import com.erp.finance.accounting.domain.policy.ExchangeRateProvider
+import com.erp.financial.shared.validation.security.ValidationCircuitBreaker
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertSame
@@ -33,6 +37,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -45,6 +50,8 @@ class AccountingCommandHandlerTest {
     private lateinit var eventPublisher: RecordingFinanceEventPublisher
     private lateinit var exchangeRateProvider: StubExchangeRateProvider
     private lateinit var dimensionValidator: RecordingDimensionAssignmentValidator
+    private lateinit var ledgerCache: LedgerExistenceCache
+    private lateinit var chartCache: ChartOfAccountsCache
     private lateinit var handler: AccountingCommandHandler
 
     @BeforeEach
@@ -56,6 +63,24 @@ class AccountingCommandHandlerTest {
         eventPublisher = RecordingFinanceEventPublisher()
         exchangeRateProvider = StubExchangeRateProvider()
         dimensionValidator = RecordingDimensionAssignmentValidator()
+        val meterRegistry = SimpleMeterRegistry()
+        val circuitBreaker = ValidationCircuitBreaker()
+        ledgerCache =
+            LedgerExistenceCache(
+                ledgerRepository = ledgerRepository,
+                validationCircuitBreaker = circuitBreaker,
+                meterRegistry = meterRegistry,
+                maxSize = 1000,
+                ttl = Duration.ofMinutes(5),
+            )
+        chartCache =
+            ChartOfAccountsCache(
+                chartRepository = chartRepository,
+                validationCircuitBreaker = circuitBreaker,
+                meterRegistry = meterRegistry,
+                maxSize = 1000,
+                ttl = Duration.ofMinutes(5),
+            )
         handler =
             AccountingCommandHandler(
                 ledgerRepository = ledgerRepository,
@@ -65,6 +90,8 @@ class AccountingCommandHandlerTest {
                 eventPublisher = eventPublisher,
                 exchangeRateProvider = exchangeRateProvider,
                 dimensionAssignmentValidator = dimensionValidator,
+                ledgerCache = ledgerCache,
+                chartCache = chartCache,
             )
     }
 
@@ -416,6 +443,12 @@ private class InMemoryLedgerRepository : LedgerRepository {
         id: LedgerId,
         tenantId: UUID,
     ): Ledger? = storage[id to tenantId]
+
+    override fun findRecent(limit: Int): List<Ledger> =
+        storage
+            .values
+            .sortedByDescending { it.updatedAt }
+            .take(limit)
 }
 
 private class InMemoryChartRepository : ChartOfAccountsRepository {
@@ -437,6 +470,12 @@ private class InMemoryChartRepository : ChartOfAccountsRepository {
         id: ChartOfAccountsId,
         tenantId: UUID,
     ): ChartOfAccounts? = storage[id to tenantId]
+
+    override fun findRecent(limit: Int): List<ChartOfAccounts> =
+        storage
+            .values
+            .sortedByDescending { it.updatedAt }
+            .take(limit)
 }
 
 private class InMemoryAccountingPeriodRepository : AccountingPeriodRepository {

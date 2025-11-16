@@ -1,5 +1,6 @@
 package com.erp.financial.ap.application.service
 
+import com.erp.financial.ap.application.cache.VendorExistenceCache
 import com.erp.financial.ap.application.port.input.VendorCommandUseCase
 import com.erp.financial.ap.application.port.input.command.RegisterVendorCommand
 import com.erp.financial.ap.application.port.input.command.UpdateVendorCommand
@@ -18,6 +19,7 @@ import java.util.UUID
 class VendorCommandService(
     private val vendorRepository: VendorRepository,
     private val clock: Clock,
+    private val vendorExistenceCache: VendorExistenceCache,
 ) : VendorCommandUseCase {
     override fun registerVendor(command: RegisterVendorCommand): Vendor {
         vendorRepository
@@ -32,41 +34,48 @@ class VendorCommandService(
                 profile = command.profile,
                 clock = clock,
             )
-        return vendorRepository.save(vendor)
+        val saved = vendorRepository.save(vendor)
+        vendorExistenceCache.put(saved)
+        return saved
     }
 
     override fun updateVendor(command: UpdateVendorCommand): Vendor {
         val vendorId = VendorId(command.vendorId)
         val existing =
-            vendorRepository.findById(command.tenantId, vendorId)
+            vendorExistenceCache.find(command.tenantId, command.vendorId)
                 ?: throw IllegalArgumentException("Vendor not found")
         val updated = existing.updateProfile(command.profile, clock)
-        return vendorRepository.save(updated)
+        val saved = vendorRepository.save(updated)
+        vendorExistenceCache.put(saved)
+        return saved
     }
 
     override fun updateVendorStatus(command: UpdateVendorStatusCommand): Vendor {
         val vendorId = VendorId(command.vendorId)
         val existing =
-            vendorRepository.findById(command.tenantId, vendorId)
+            vendorExistenceCache.find(command.tenantId, command.vendorId)
                 ?: throw IllegalArgumentException("Vendor not found")
         val updated =
             when (command.targetStatus) {
                 MasterDataStatus.ACTIVE -> existing.activate(clock)
                 MasterDataStatus.INACTIVE -> existing.deactivate(clock)
             }
-        return vendorRepository.save(updated)
+        val saved = vendorRepository.save(updated)
+        vendorExistenceCache.put(saved)
+        return saved
     }
 
     override fun listVendors(query: ListVendorsQuery): List<Vendor> =
         vendorRepository.list(query.tenantId, query.companyCodeId, query.status)
 
     override fun getVendor(query: VendorDetailQuery): Vendor? =
-        vendorRepository.findById(query.tenantId, VendorId(query.vendorId))
+        vendorExistenceCache.find(query.tenantId, query.vendorId)
 
     override fun deleteVendor(
         tenantId: UUID,
         vendorId: UUID,
     ) {
         vendorRepository.delete(tenantId, VendorId(vendorId))
+        vendorExistenceCache.evict(tenantId, vendorId)
     }
 }

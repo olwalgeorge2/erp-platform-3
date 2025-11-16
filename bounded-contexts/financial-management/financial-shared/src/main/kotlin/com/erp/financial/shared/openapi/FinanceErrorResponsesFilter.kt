@@ -10,7 +10,7 @@ import org.eclipse.microprofile.openapi.models.responses.APIResponse
 
 /**
  * Ensures every operation documents the shared finance validation error envelope so UI and
- * integration consumers can rely on the expanded error-code set exposed via ErrorResponse.
+ * integration consumers can rely on the expanded error-code set exposed via ValidationProblemDetail.
  */
 class FinanceErrorResponsesFilter : OASFilter {
     override fun filterOperation(operation: Operation?): Operation? {
@@ -31,7 +31,7 @@ class FinanceErrorResponsesFilter : OASFilter {
     }
 
     private fun errorResponse(description: String): APIResponse {
-        val schema: Schema = OASFactory.createSchema().ref("#/components/schemas/ErrorResponse")
+        val schema: Schema = OASFactory.createSchema().ref("#/components/schemas/ValidationProblemDetail")
         val media: MediaType = OASFactory.createMediaType().schema(schema)
         val content: Content = OASFactory.createContent().addMediaType("application/json", media)
         return OASFactory.createAPIResponse().description(description).content(content)

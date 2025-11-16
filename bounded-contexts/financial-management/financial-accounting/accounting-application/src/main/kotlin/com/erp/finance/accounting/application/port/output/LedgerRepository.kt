@@ -11,4 +11,8 @@ interface LedgerRepository {
         id: LedgerId,
         tenantId: UUID,
     ): Ledger?
+
+    fun findRecent(
+        limit: Int,
+    ): List<Ledger>
 }

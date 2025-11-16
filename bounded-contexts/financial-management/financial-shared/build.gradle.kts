@@ -18,9 +18,11 @@ dependencies {
 
     // Metrics for validation monitoring
     implementation("io.quarkus:quarkus-micrometer-registry-prometheus:${libs.versions.quarkus.get()}")
+    implementation("io.quarkus:quarkus-smallrye-fault-tolerance:${libs.versions.quarkus.get()}")
 
     // Input sanitization (XSS/injection prevention)
     implementation("com.googlecode.owasp-java-html-sanitizer:owasp-java-html-sanitizer:20220608.1")
+    implementation("com.github.ben-manes.caffeine:caffeine:3.1.8")
 
     // Test dependencies
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")

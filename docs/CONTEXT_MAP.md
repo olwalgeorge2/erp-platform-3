@@ -47,12 +47,17 @@ Each bounded context follows a **three-layer hexagonal architecture** to maintai
   - OpenTelemetry integration for distributed tracing
   - Structured JSON logging
   - Metrics collection and health checks
-  
+
+- **Validation**: Cross-cutting layer documented in `docs/VALIDATION_ARCHITECTURE.md`
+  - Shared DTO/validator library (`financial-shared/validation`)
+  - Security filters (rate limiting, audit logging) applied via API Gateway + finance shared modules
+  - Metrics/dashboards/runbooks for ADR-010 compliance
+
 - **Security**: Unified through `platform-shared/common-security`
   - JWT token validation
   - Role-based access control (RBAC)
   - Multi-tenancy isolation
-  
+
 - **CQRS & Event Sourcing**: Enabled via `platform-infrastructure/cqrs` and `platform-infrastructure/eventing`
   - Command/query separation for complex workflows
   - Event store for audit trails and temporal queries

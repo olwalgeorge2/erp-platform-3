@@ -187,6 +187,32 @@ Bean Validation annotations auto-generate OpenAPI/Swagger constraints:
 ```
 Automatically appears in API docs as "minimum: 1, maximum: 1000"
 
+### 6. **Observability & Alerting**
+- Micrometer-based timers/counters (`validation_request_duration_seconds`, `validation_rule_duration_seconds`, `validation_request_total`) expose latency/throughput per endpoint and validator
+- Grafana dashboards (`validation-performance-dashboard.json`, `validation-quality-dashboard.json`) highlight p50/p95/p99 latency, slowest rules, and top failing endpoints/error codes
+- Prometheus alerts guardrails: `FinanceValidationLatencyHigh` (p95 > 100 ms) and `FinanceValidationFailureRateHigh` (> 5 % failures) augment existing SOX/PII alerts in `monitoring/prometheus/validation-alerts.yml`
+- Validation audit logs now include `duration_ms` plus slow-path warnings (> 50 ms) for correlation with metrics
+
+### 7. **Security Hardening**
+- `ValidationRateLimitFilter` enforces configurable per-IP/per-user buckets (default, SOX-critical, and user buckets) with 429 responses surfaced through the shared error envelope (`FINANCE_RATE_LIMIT_EXCEEDED`)
+- `ValidationRateLimiter` tracks windowed counters via Caffeine and raises abuse signals when thresholds are breached, feeding `validation.rate_limit.violations` metrics and audit logs
+- Rate-limit configuration lives under `validation.security.rate-limit.*` in each finance service `application.yml`, allowing environment-specific tuning without code changes
+- `ValidationCircuitBreaker` guards vendor/customer/bill repository lookups via SmallRye Fault Tolerance; dependency failures emit the sanitized `FINANCE_DEPENDENCY_UNAVAILABLE` response to avoid leaking internals
+
+### 8. **Performance Optimizations**
+- Accounts Payable/Receivable services cache vendor/customer existence checks (`VendorExistenceCache`, `CustomerExistenceCache`) using Caffeine
+- Accounting service now includes `LedgerExistenceCache`, `ChartOfAccountsCache`, and an `AccountingCacheWarmer` that preloads recent ledgers/charts at startup
+- Cache metrics (size / hit ratio / miss ratio) exposed via Micrometer gauges `validation.cache.*` with cache-name tags; warmup telemetry recorded in logs
+- `validation.performance.cache.*` knobs in each service `application.yml` control TTL, max size, and warmup counts; caches evict on create/update/delete operations to prevent stale reads
+- Benchmark evidence (`docs/evidence/validation/phase4c/CACHE_BENCHMARK_RESULTS.md`) shows ≥0.9 hit rates and >50% latency reduction for accounting/AP validations
+
+### 9. **Documentation & Runbooks**
+- ADR-010 updated with implementation status, observability/security/performance references
+- Developer guide (`docs/guides/VALIDATION_DEVELOPER_GUIDE.md`) covers validator creation, testing, performance tips
+- Migration guide (`docs/guides/VALIDATION_MIGRATION_GUIDE.md`) + architecture overview (`docs/VALIDATION_ARCHITECTURE.md`) published
+- Operator runbook (`docs/runbooks/VALIDATION_OPERATIONS.md`) details alerts, troubleshooting, escalation
+- OpenAPI schema for validation errors consolidated under `META-INF/openapi/error-responses.yaml`; finance, identity, and gateway services now reference the shared `ValidationProblemDetail` spec in their OpenAPI outputs
+
 ## Key Implementation Patterns
 
 ### Pattern 1: Simple UUID Validation

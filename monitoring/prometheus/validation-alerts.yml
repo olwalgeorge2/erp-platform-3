@@ -44,6 +44,39 @@ groups:
           summary: "Multiple validation failures containing PII detected"
           description: "{{ $value }} validation failures with PII (email, phone, SSN, address) in the last 10 minutes. Verify data masking is working correctly."
 
+      - alert: FinanceValidationLatencyHigh
+        expr: |
+          histogram_quantile(0.95, sum(rate(validation_request_duration_seconds_bucket{bounded_context="finance-accounting"}[5m])) by (le)) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          context: finance
+        annotations:
+          summary: "Finance validation latency p95 above 100ms"
+          description: "Finance validation latency p95 is {{ $value | humanizeDuration }} (threshold 100ms). Investigate slow validators or downstream dependencies."
+
+      - alert: FinanceValidationFailureRateHigh
+        expr: |
+          (sum(rate(validation_request_total{bounded_context="finance-accounting",outcome="failure"}[10m])) / sum(rate(validation_request_total{bounded_context="finance-accounting"}[10m]))) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          context: finance
+        annotations:
+          summary: "Finance validation failure rate above 5%"
+          description: "Finance validation failures exceed 5% of total requests. Review dashboards for top failing rules and endpoints."
+
+      - alert: FinanceRateLimitAbuse
+        expr: rate(validation_rate_limit_violations_total[5m]) > 0.5
+        for: 2m
+        labels:
+          severity: high
+          context: finance
+          security: abuse-detection
+        annotations:
+          summary: "Repeated validation rate limit violations detected"
+          description: "{{ $value | humanize }} rate limit violations/sec recorded in the last 5 minutes. Potential misuse or attack. Review audit logs for offending IP/user."
+
       # Identity Context - Security Alerts
       - alert: IdentityAuthenticationFailureSpike
         expr: |

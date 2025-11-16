@@ -8,4 +8,5 @@ class FinanceValidationException(
     val rejectedValue: String?,
     val locale: Locale,
     message: String,
-) : RuntimeException(message)
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)

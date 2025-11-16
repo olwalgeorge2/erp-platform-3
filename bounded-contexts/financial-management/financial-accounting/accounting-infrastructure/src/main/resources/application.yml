@@ -125,3 +125,35 @@ financial-accounting:
     default-currency: USD
     require-balanced-entries: true
     enable-period-validation: true
+
+validation:
+  metrics:
+    context: finance-accounting
+  performance:
+    cache:
+      ledger:
+        max-size: 5000
+        ttl: PT10M
+      chart:
+        max-size: 2000
+        ttl: PT10M
+      warmup:
+        enabled: true
+        ledgers: 50
+        charts: 25
+  security:
+    rate-limit:
+      enabled: true
+      default:
+        limit: 100
+        window-seconds: 60
+      sox:
+        limit: 20
+        window-seconds: 60
+      user:
+        limit: 500
+        window-seconds: 60
+      sox-path-prefixes: /api/v1/finance/journal-entries,/api/v1/finance/ap/invoices,/api/v1/finance/ar/invoices
+    abuse:
+      threshold: 25
+      window-seconds: 60

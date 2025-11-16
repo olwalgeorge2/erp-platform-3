@@ -1,5 +1,7 @@
 package com.erp.finance.accounting.infrastructure.service
 
+import com.erp.finance.accounting.application.cache.ChartOfAccountsCache
+import com.erp.finance.accounting.application.cache.LedgerExistenceCache
 import com.erp.finance.accounting.application.port.input.command.CloseAccountingPeriodCommand
 import com.erp.finance.accounting.application.port.input.command.CreateLedgerCommand
 import com.erp.finance.accounting.application.port.input.command.DefineAccountCommand
@@ -27,6 +29,7 @@ import com.erp.finance.accounting.domain.model.LedgerId
 import com.erp.finance.accounting.domain.model.Money
 import com.erp.finance.accounting.domain.policy.ExchangeRate
 import com.erp.finance.accounting.domain.policy.ExchangeRateProvider
+import com.erp.financial.shared.validation.security.ValidationCircuitBreaker
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -35,6 +38,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -60,6 +64,23 @@ class FinanceCommandServiceTest {
         eventPublisher = RecordingFinanceEventPublisher()
         meterRegistry = SimpleMeterRegistry()
         exchangeRateProvider = StubExchangeRateProvider()
+        val circuitBreaker = ValidationCircuitBreaker()
+        val ledgerCache =
+            LedgerExistenceCache(
+                ledgerRepository = ledgerRepository,
+                validationCircuitBreaker = circuitBreaker,
+                meterRegistry = meterRegistry,
+                maxSize = 1000,
+                ttl = Duration.ofMinutes(5),
+            )
+        val chartCache =
+            ChartOfAccountsCache(
+                chartRepository = chartRepository,
+                validationCircuitBreaker = circuitBreaker,
+                meterRegistry = meterRegistry,
+                maxSize = 1000,
+                ttl = Duration.ofMinutes(5),
+            )
         val handler =
             AccountingCommandHandler(
                 ledgerRepository = ledgerRepository,
@@ -69,6 +90,8 @@ class FinanceCommandServiceTest {
                 eventPublisher = eventPublisher,
                 exchangeRateProvider = exchangeRateProvider,
                 dimensionAssignmentValidator = NoOpDimensionValidator(),
+                ledgerCache = ledgerCache,
+                chartCache = chartCache,
             )
         service = FinanceCommandService(handler, meterRegistry)
     }
@@ -378,6 +401,12 @@ private class InMemoryLedgerRepository : LedgerRepository {
         id: LedgerId,
         tenantId: UUID,
     ): Ledger? = storage[id to tenantId]
+
+    override fun findRecent(limit: Int): List<Ledger> =
+        storage
+            .values
+            .sortedByDescending { it.updatedAt }
+            .take(limit)
 }
 
 private class InMemoryChartRepository : ChartOfAccountsRepository {
@@ -392,6 +421,12 @@ private class InMemoryChartRepository : ChartOfAccountsRepository {
         id: ChartOfAccountsId,
         tenantId: UUID,
     ): ChartOfAccounts? = storage[id to tenantId]
+
+    override fun findRecent(limit: Int): List<ChartOfAccounts> =
+        storage
+            .values
+            .sortedByDescending { it.updatedAt }
+            .take(limit)
 }
 
 private class InMemoryAccountingPeriodRepository : AccountingPeriodRepository {

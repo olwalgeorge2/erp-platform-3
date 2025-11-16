@@ -1,7 +1,7 @@
 components:
   schemas:
-    ErrorResponse:
-      description: Canonical finance error payload shared by accounting/AP/AR services.
+    ValidationProblemDetail:
+      description: Canonical validation error payload shared by accounting/AP/AR services.
       type: object
       required:
         - code
@@ -9,10 +9,14 @@ components:
       properties:
         code:
           type: string
-          description: Stable machine-readable identifier (e.g., FINANCE_INVALID_VENDOR_NUMBER).
+          description: Stable machine-readable identifier (e.g., FINANCE_INVALID_CUSTOMER_NUMBER).
         message:
           type: string
           description: Localized message intended for UI display.
+        traceId:
+          type: string
+          nullable: true
+          description: Correlation identifier emitted in logs/metrics.
         details:
           type: object
           additionalProperties: true
@@ -23,12 +27,13 @@ components:
           items:
             $ref: '#/components/schemas/ValidationError'
       example:
-        code: FINANCE_INVALID_VENDOR_NUMBER
-        message: Vendor number must not be blank.
+        code: FINANCE_INVALID_CUSTOMER_NUMBER
+        message: Customer number must not be blank.
+        traceId: 5de31c0a-1e4d-4f4d-8d5d-18cb9a2f9f22
         validationErrors:
-          - field: vendorNumber
-            code: FINANCE_INVALID_VENDOR_NUMBER
-            message: Vendor number must not be blank.
+          - field: customerNumber
+            code: FINANCE_INVALID_CUSTOMER_NUMBER
+            message: Customer number must not be blank.
             rejectedValue: ""
     ValidationError:
       description: Detailed information about a specific invalid field/parameter.

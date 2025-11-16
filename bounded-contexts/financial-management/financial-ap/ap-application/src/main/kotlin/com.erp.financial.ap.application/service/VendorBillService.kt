@@ -1,5 +1,6 @@
 package com.erp.financial.ap.application.service
 
+import com.erp.financial.ap.application.cache.VendorExistenceCache
 import com.erp.financial.ap.application.port.input.BillCommandUseCase
 import com.erp.financial.ap.application.port.input.command.CreateVendorBillCommand
 import com.erp.financial.ap.application.port.input.command.PostVendorBillCommand
@@ -16,6 +17,7 @@ import com.erp.financial.ap.domain.model.bill.BillStatus
 import com.erp.financial.ap.domain.model.bill.VendorBill
 import com.erp.financial.ap.domain.model.vendor.VendorId
 import com.erp.financial.shared.Money
+import com.erp.financial.shared.validation.security.ValidationCircuitBreaker
 import jakarta.enterprise.context.ApplicationScoped
 import java.time.Clock
 import java.time.LocalDate
@@ -30,10 +32,12 @@ class VendorBillService
         private val financialPostingPort: FinancialPostingPort,
         private val openItemRepository: ApOpenItemRepository,
         private val clock: Clock,
+        private val validationCircuitBreaker: ValidationCircuitBreaker,
+        private val vendorExistenceCache: VendorExistenceCache,
     ) : BillCommandUseCase {
         override fun createBill(command: CreateVendorBillCommand): VendorBill {
             val vendor =
-                vendorRepository.findById(command.tenantId, VendorId(command.vendorId))
+                vendorExistenceCache.find(command.tenantId, command.vendorId)
                     ?: throw IllegalArgumentException("Vendor not found")
             val currency = command.currency.uppercase()
             val defaultDimensions =
@@ -102,6 +106,7 @@ class VendorBillService
             tenantId: UUID,
             billId: UUID,
         ): VendorBill =
-            billRepository.findById(tenantId, BillId(billId))
-                ?: throw IllegalArgumentException("Bill not found")
+            validationCircuitBreaker.guard("bill_lookup") {
+                billRepository.findById(tenantId, BillId(billId))
+            } ?: throw IllegalArgumentException("Bill not found")
     }

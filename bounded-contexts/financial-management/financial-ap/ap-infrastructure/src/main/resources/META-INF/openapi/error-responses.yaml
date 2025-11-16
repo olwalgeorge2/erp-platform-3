@@ -1,7 +1,7 @@
 components:
   schemas:
-    ErrorResponse:
-      description: Canonical finance error payload shared by accounting/AP/AR services.
+    ValidationProblemDetail:
+      description: Canonical validation error payload shared by accounting/AP/AR services.
       type: object
       required:
         - code
@@ -13,6 +13,10 @@ components:
         message:
           type: string
           description: Localized message intended for UI display.
+        traceId:
+          type: string
+          nullable: true
+          description: Correlation identifier emitted in logs/metrics.
         details:
           type: object
           additionalProperties: true
@@ -25,6 +29,7 @@ components:
       example:
         code: FINANCE_INVALID_VENDOR_NUMBER
         message: Vendor number must not be blank.
+        traceId: 5de31c0a-1e4d-4f4d-8d5d-18cb9a2f9f22
         validationErrors:
           - field: vendorNumber
             code: FINANCE_INVALID_VENDOR_NUMBER

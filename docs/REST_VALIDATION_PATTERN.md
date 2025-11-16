@@ -1305,6 +1305,8 @@ Exception mappers translate validation exceptions into standardized HTTP respons
 
 This structured format enables API consumers to programmatically handle errors, display user-friendly messages, and implement retry logic based on error types.
 
+**OpenAPI Reference**: `META-INF/openapi/error-responses.yaml` defines the shared `ValidationProblemDetail` schema used by finance/identity/gateway services. When adding new error codes, update this file plus the localized message bundles to keep API documentation synchronized.
+
 ### 5. Audit Logging for Compliance
 
 A JAX-RS filter intercepts all HTTP 4xx responses and logs comprehensive audit events including:
@@ -1319,22 +1321,30 @@ These audit logs satisfy SOX, GDPR, and financial regulatory requirements by pro
 
 ### 6. Observability: Metrics & Dashboards
 
-Validation metrics are exposed via Prometheus counters and timers, tagged by:
-- Error code (enabling trending of specific validation failures)
-- API endpoint (identifying problematic or heavily validated endpoints)
-- Tenant ID (detecting tenant-specific issues or abuse patterns)
-- HTTP status code (distinguishing format errors from business rule violations)
+Validation metrics are exposed via Prometheus counters and timers registered by the `ValidationMetricsFilter` and custom constraint validators. Every measurement is tagged with:
+- `bounded_context` (`finance-accounting`, `finance-ap`, `finance-ar`, …)
+- HTTP `method`, normalized `path`, and HTTP `status`
+- Validation `outcome` (success/failure) and `error_code`
+- Validator `rule` name and pass/fail result
 
-Grafana dashboards visualize:
-- **Time series**: Validation error rate per endpoint over time
-- **Bar charts**: Top 10 most frequent error codes
-- **Pie charts**: Validation error distribution by tenant
-- **Gauges**: P95/P99 validation response time
+**Key metric families**
 
-Prometheus alerts trigger on anomalies such as:
-- Spike in RATE_LIMIT_EXCEEDED errors (potential DOS attack)
-- Sudden increase in ENTITY_NOT_FOUND (potential data integrity issue)
-- High validation error rate from specific tenant (integration problem)
+| Metric | Type | Description |
+|--------|------|-------------|
+| `validation_request_duration_seconds` | Histogram | Wall-clock time from REST boundary through validation (p50/p95/p99 derived via histogram_quantile) |
+| `validation_request_total` | Counter | Request volume split by method/path/outcome |
+| `validation_rule_duration_seconds` | Histogram | Execution time per custom validator (`account_code`, `amount`, `currency_code`, `date_range`, …) |
+| `validation_rule_total` | Counter | Pass/fail counts per validator |
+| `finance_validation_errors_total` | Counter | Legacy error envelope counter (still exported for compatibility) |
+
+Grafana dashboards (stored under `dashboards/grafana/`) provide two curated views:
+- `validation-performance-dashboard.json` — request latency distribution, throughput, and slowest validation rules
+- `validation-quality-dashboard.json` — failure rates by error code/endpoint plus audit log excerpts for SOX/PII investigations
+
+Prometheus alert rules (`monitoring/prometheus/validation-alerts.yml`) include:
+- `FinanceValidationLatencyHigh` — triggers if p95 latency exceeds 100 ms for 5 minutes
+- `FinanceValidationFailureRateHigh` — triggers if validation failures exceed 5 % of requests for 10 minutes
+- Existing SOX/PII/edge-security alerts remain in place and consume the enriched audit logs and metrics
 
 ### 7. OpenAPI 3.1 Documentation
 
@@ -1363,69 +1373,92 @@ Legend: ✅ Complete | 🔄 In Progress | ⬜ Not Started
 
 ### Rate Limiting Integration
 
+Finance contexts ship a shared `ValidationRateLimitFilter` that executes before authentication, classifying every request into configurable buckets (`validation-default`, `validation-sox`, `validation-user`). The filter leverages an in-memory token bucket backed by Caffeine and aborts with a structured `FINANCE_RATE_LIMIT_EXCEEDED` response when limits are exceeded:
+
 ```kotlin
 @Provider
-@Priority(Priorities.USER - 100)  // Execute before authentication
-class ValidationRateLimitFilter(
-    private val rateLimiter: RateLimiterService,
-    private val metricsService: ValidationMetricsService,
+@Priority(Priorities.AUTHENTICATION - 10)
+class ValidationRateLimitFilter @Inject constructor(
+    private val rateLimiter: ValidationRateLimiter,
 ) : ContainerRequestFilter {
-    
-    override fun filter(requestContext: ContainerRequestContext) {
-        val clientIp = extractClientIp(requestContext)
-        val endpoint = requestContext.uriInfo.path
-        
-        // Apply aggressive rate limiting for validation-heavy endpoints
-        val limit = when {
-            endpoint.contains("/search") -> RateLimit(requests = 100, window = Duration.ofMinutes(1))
-            endpoint.contains("/list") -> RateLimit(requests = 200, window = Duration.ofMinutes(1))
-            else -> RateLimit(requests = 500, window = Duration.ofMinutes(1))
+    @Context
+    private var securityContext: SecurityContext? = null
+
+    override fun filter(ctx: ContainerRequestContext) {
+        val path = "/" + ctx.uriInfo.path.trimStart('/')
+        val clientIp = extractClientIp(ctx)
+        rateLimiter.checkIpLimit(clientIp, path).takeIf { !it.allowed }?.let {
+            reject(ctx, it, path); return
         }
-        
-        if (!rateLimiter.allowRequest(clientIp, endpoint, limit)) {
-            metricsService.recordValidationFailure(
-                errorCode = "RATE_LIMIT_EXCEEDED",
-                endpoint = endpoint,
-                tenantId = requestContext.getHeaderString("X-Tenant-ID"),
-                statusCode = 429,
-            )
-            
-            throw DomainValidationException(
-                ValidationErrorCode.RATE_LIMIT_EXCEEDED,
-                rejectedValue = clientIp,
-            )
+        rateLimiter.checkUserLimit(securityContext?.userPrincipal?.name, path)?.takeIf { !it.allowed }?.let {
+            reject(ctx, it, path)
         }
+    }
+
+    private fun reject(ctx: ContainerRequestContext, decision: RateLimitDecision, path: String) {
+        ValidationMetrics.recordRateLimitViolation(decision.bucket, decision.keyType)
+        ctx.abortWith(
+            Response.status(Response.Status.TOO_MANY_REQUESTS)
+                .entity(ErrorResponse(FINANCE_RATE_LIMIT_EXCEEDED.code,
+                    message = ValidationMessageResolver.resolve(FINANCE_RATE_LIMIT_EXCEEDED, localeFrom(ctx), path)))
+                .header("X-RateLimit-Limit", rateLimiter.bucketLimit(decision.bucket))
+                .header("X-RateLimit-Remaining", decision.remaining)
+                .header("X-RateLimit-Reset", decision.resetEpochSeconds)
+                .build()
+        )
     }
 }
 ```
 
 ### Circuit Breaker for Validation-Heavy Operations
 
+Finance services wrap repository-backed validators with a shared `ValidationCircuitBreaker` that uses SmallRye Fault Tolerance annotations. Dependency failures raise a sanitized `FINANCE_DEPENDENCY_UNAVAILABLE` response so attackers cannot infer internal topology.
+
 ```kotlin
 @ApplicationScoped
 class ValidationCircuitBreaker {
-    private val circuitBreaker = CircuitBreaker.of(
-        "validation-circuit",
-        CircuitBreakerConfig.custom()
-            .failureRateThreshold(50.0f)  // Open if 50% of requests fail validation
-            .waitDurationInOpenState(Duration.ofSeconds(30))
-            .slidingWindowSize(100)
-            .build()
-    )
-    
-    fun <T> executeValidation(block: () -> T): T {
-        return circuitBreaker.executeSupplier(block)
-    }
+    @CircuitBreaker(requestVolumeThreshold = 10, failureRatio = 0.5, delay = 5000, successThreshold = 3)
+    @Timeout(750) // fail fast if repository stalls
+    private fun <T> execute(supplier: Supplier<T>): T = supplier.get()
+
+    fun <T> guard(operation: String, block: () -> T): T =
+        try {
+            execute(Supplier(block))
+        } catch (ex: Exception) {
+            throw FinanceValidationException(
+                errorCode = FinanceValidationErrorCode.FINANCE_DEPENDENCY_UNAVAILABLE,
+                field = operation,
+                rejectedValue = null,
+                locale = Locale.getDefault(),
+                message = "Validation dependency unavailable for $operation. Please retry later.",
+                cause = ex,
+            )
+        }
 }
 
-// Usage in DTO
-fun toCommand(): CreateJournalEntryCommand {
-    return circuitBreaker.executeValidation {
-        // Expensive validation logic
-        validateComplexBusinessRules()
-        // ... create command
+// Usage inside services
+val vendor =
+    validationCircuitBreaker.guard("vendor_lookup") {
+        vendorRepository.findById(command.tenantId, VendorId(command.vendorId))
+    } ?: throw IllegalArgumentException("Vendor not found")
+```
+
+### Secure Error Responses
+
+Some validation failures must not reveal internals (rate limits, circuit-breaker trips, dependency outages). Mark these error codes as "secure" and resolve their messages via `ValidationMessageResolver` inside the exception mapper:
+
+```kotlin
+private val SECURE_ERROR_CODES = setOf(
+    FinanceValidationErrorCode.FINANCE_RATE_LIMIT_EXCEEDED,
+    FinanceValidationErrorCode.FINANCE_DEPENDENCY_UNAVAILABLE,
+)
+
+val safeMessage =
+    if (SECURE_ERROR_CODES.contains(exception.errorCode)) {
+        ValidationMessageResolver.resolve(exception.errorCode, exception.locale, exception.field)
+    } else {
+        exception.message ?: exception.errorCode.code
     }
-}
 ```
 
 ### Input Size Limits
@@ -1467,44 +1500,83 @@ class InputSizeLimitFilter : ContainerRequestFilter {
 
 ### Validation Caching
 
+Finance services now use Caffeine for high-volume existence checks. Example: `VendorExistenceCache`.
+
 ```kotlin
 @ApplicationScoped
-class ValidationCache(
-    private val cacheManager: CacheManager,
+class VendorExistenceCache(
+    private val vendorRepository: VendorRepository,
+    private val validationCircuitBreaker: ValidationCircuitBreaker,
+    private val meterRegistry: MeterRegistry,
+    @ConfigProperty(name = "validation.performance.cache.vendor.max-size", defaultValue = "10000")
+    private val maxSize: Long,
+    @ConfigProperty(name = "validation.performance.cache.vendor.ttl", defaultValue = "PT5M")
+    private val ttl: Duration,
 ) {
-    private val tenantCache = cacheManager.getCache<UUID, Boolean>("tenant-exists")
-    private val ledgerCache = cacheManager.getCache<Pair<UUID, UUID>, Boolean>("ledger-active")
-    
-    fun isTenantActive(tenantId: UUID, repository: TenantRepository): Boolean {
-        return tenantCache.get(tenantId) {
-            repository.existsAndActive(tenantId)
-        }
-    }
-    
-    fun isLedgerActive(tenantId: UUID, ledgerId: UUID, repository: LedgerRepository): Boolean {
-        return ledgerCache.get(tenantId to ledgerId) {
-            repository.findByIdAndTenantId(ledgerId, tenantId)?.status == LedgerStatus.ACTIVE
-        }
-    }
-}
+    private data class CacheKey(val tenantId: UUID, val vendorId: UUID)
+    private val cache =
+        Caffeine.newBuilder()
+            .expireAfterWrite(ttl)
+            .maximumSize(maxSize)
+            .recordStats()
+            .build<CacheKey, Optional<Vendor>> { key ->
+                Optional.ofNullable(
+                    validationCircuitBreaker.guard("vendor_lookup") {
+                        vendorRepository.findById(key.tenantId, VendorId(key.vendorId))
+                    },
+                )
+            }
 
-// Configure cache
-@Bean
-fun cacheConfiguration(): CacheManagerConfiguration {
-    return CacheManagerConfiguration.builder()
-        .withCache("tenant-exists", CacheConfiguration.builder()
-            .expireAfterWrite(Duration.ofMinutes(5))
-            .maximumSize(10_000)
-            .build()
-        )
-        .withCache("ledger-active", CacheConfiguration.builder()
-            .expireAfterWrite(Duration.ofMinutes(2))
-            .maximumSize(50_000)
-            .build()
-        )
-        .build()
+    init {
+        val tags = Tags.of("cache", "vendor-existence")
+        meterRegistry.gauge("validation.cache.size", tags, cache) { it.estimatedSize().toDouble() }
+        meterRegistry.gauge("validation.cache.hitratio", tags, cache) { it.stats().hitRate() }
+        meterRegistry.gauge("validation.cache.missratio", tags, cache) { it.stats().missRate() }
+    }
+
+    fun find(tenantId: UUID, vendorId: UUID): Vendor? =
+        cache.get(CacheKey(tenantId, vendorId)).orElse(null)
+
+    fun put(vendor: Vendor) =
+        cache.put(CacheKey(vendor.tenantId, vendor.id.value), Optional.of(vendor))
+
+    fun evict(tenantId: UUID, vendorId: UUID) =
+        cache.invalidate(CacheKey(tenantId, vendorId))
 }
 ```
+
+Configuration knobs (per service):
+
+```yaml
+validation:
+  performance:
+    cache:
+      vendor:
+        max-size: 10000
+        ttl: PT5M
+
+Accounting services follow the same pattern via `LedgerExistenceCache` (ledger + chart lookups) and `ChartOfAccountsCache` (account resolution). These caches expose the same Micrometer gauges and use ValidationCircuitBreaker to guard repository calls.
+
+```yaml
+validation:
+  performance:
+    cache:
+      ledger:
+        max-size: 5000
+        ttl: PT10M
+      chart:
+        max-size: 2000
+        ttl: PT10M
+    warmup:
+      enabled: true
+      ledgers: 50
+      charts: 25
+```
+
+`AccountingCacheWarmer` preloads the most recently touched ledgers/charts on startup (using new `findRecent(limit)` repository methods) so that finance queries/journal posting hit the cache immediately. Warmup telemetry and benchmarking evidence live in `docs/evidence/validation/phase4c/CACHE_BENCHMARK_RESULTS.md` (target hit rate ≥ 0.9, > 50% latency reduction).
+```
+
+Customer caches follow the same pattern; accounting caches will reuse these building blocks when ledger/account lookups migrate.
 
 ### Async Validation for Non-Critical Checks
 
